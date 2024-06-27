@@ -9,8 +9,7 @@ from IPython.display import display
 from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 
 from .util import log, qpDict
-from .pd_util import _check_df, diff
-from .pd_util import diff as mv_diff
+from .pd_util import _check_df
 
 from .types import qp_int
 from .types import qp_float
@@ -624,7 +623,7 @@ class DataFrameQuery:
         
         else:
             #show difference before and after filtering
-            result = mv_diff(
+            result = qp.diff(
                 df_filtered, self.df, show=diff,
                 max_cols=max_cols, max_rows=max_rows,
                 verbosity=verbosity)  
@@ -718,13 +717,15 @@ def _parse_expression(pd_object, expression, mode, verbosity=3):
 
         if mode in ['filter series', 'filter index'] and condition['operator'] in _operators_only_df.values_flat():
             if verbosity >= 1:
-                log(f'operator "{condition['operator']}" only works with dataframes. Ignoring condition "{condition_str}"',
+                operator_temp = condition['operator']
+                log(f'operator "{operator_temp}" only works with dataframes. Ignoring condition "{condition_str}"',
                     level='error', source='_parse_expression', input=pd_object.qp._input)
             continue
         
         if condition['operator'] in _operators2.values_flat() and len(condition_str) > 0:
             if verbosity >= 2:
-                log(f'operator "{condition['operator']}" does not need a value for comparison. Ignoring value "{condition_str}"',
+                operator_temp = condition['operator']
+                log(f'operator "{operator_temp}" does not need a value for comparison. Ignoring value "{condition_str}"',
                     level='warning', source='_parse_expression', input=pd_object.qp._input)
 
 
@@ -772,13 +773,15 @@ def _parse_expression_modify(pd_object, expression, mode, verbosity=3):
 
         if mode in ['modify series', 'modify index'] and condition['modifier'] in _modifiers_only_df.values_flat():
             if verbosity >= 1:
-                log(f'modifier "{condition['modifier']}" only works with dataframes. Ignoring condition "{condition_str}"',
+                modifier_temp = condition['modifier']
+                log(f'modifier "{modifier_temp}" only works with dataframes. Ignoring condition "{condition_str}"',
                     level='error', source='_parse_expression', input=pd_object.qp._input)
             continue
 
         if condition['modifier'] in _modifiers2.values_flat() and len(condition_str) > 0:
             if verbosity >= 2:
-                log(f'modifier "{condition["modifier"]}" does not need a value for comparison. Ignoring value "{condition_str}"',
+                modifier_temp = condition['modifier']
+                log(f'modifier "{modifier_temp}" does not need a value for comparison. Ignoring value "{condition_str}"',
                     level='warning', source='_parse_expression', input=pd_object.qp._input)
 
 
@@ -882,7 +885,8 @@ def _apply_condition(pd_object, condition, operators, verbosity=3, df=None, seri
 
         case _:
             if verbosity >= 1:
-                log(f'operator "{condition["operator"]}" is not implemented', level='error', source='_apply_condition()', input=pd_object.qp._input)
+                operator_temp = condition['operator']
+                log(f'operator "{operator_temp}" is not implemented', level='error', source='_apply_condition()', input=pd_object.qp._input)
             filtered = None
 
 

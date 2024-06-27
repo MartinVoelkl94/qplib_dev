@@ -10,3 +10,6 @@
 
 #not needed
 **/*.bkp
+
+#personal notes
+python.md

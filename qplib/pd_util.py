@@ -331,7 +331,10 @@ def diff(df_new, df_old, show='mix', verbosity=3,
     #replace "<" and ">" with html entities to prevent them from being interpreted as html tags
     rows_no_metadata = [row for row in df_diff.index if row != '#']
     cols_no_metadata = [col for col in df_diff.columns if not col.startswith('#')]
-    df_diff.loc[rows_no_metadata, cols_no_metadata] = df_diff.loc[rows_no_metadata, cols_no_metadata].map(lambda x: _try_replace_gt_lt(x))
+    if pd.__version__ >= '2.1.0':
+        df_diff.loc[rows_no_metadata, cols_no_metadata] = df_diff.loc[rows_no_metadata, cols_no_metadata].map(lambda x: _try_replace_gt_lt(x))
+    else:
+        df_diff.loc[rows_no_metadata, cols_no_metadata] = df_diff.loc[rows_no_metadata, cols_no_metadata].applymap(lambda x: _try_replace_gt_lt(x))
 
 
     result = df_diff.style.apply(lambda x: _apply_style(x, df_diff_style), axis=None)
@@ -339,6 +342,7 @@ def diff(df_new, df_old, show='mix', verbosity=3,
 
 
 def _prepare_df(df):
+    df = copy.deepcopy(df)
     if len(df.index) != len(df.index.unique()):
         log('index is not unique', 'error', source='qp.diff()')
 
