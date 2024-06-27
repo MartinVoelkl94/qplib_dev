@@ -1,0 +1,12 @@
+#bloated
+**/archive/*
+
+#too large
+**cards.csv  
+
+#filesize would distort the repo
+**/*.html
+**/*.asc
+
+#not needed
+**/*.bkp
