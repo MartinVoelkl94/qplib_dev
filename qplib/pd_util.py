@@ -342,7 +342,7 @@ def diff(df_new, df_old, show='mix', verbosity=3,
 
 
 def _prepare_df(df):
-    df = copy.deepcopy(df)
+    df = df.copy()
     if len(df.index) != len(df.index.unique()):
         log('index is not unique', 'error', source='qp.diff()')
 

@@ -26,7 +26,6 @@ from .pd_util import indexQpExtension, seriesQpExtension, dfQpExtension
 
 
 
-
 _operators1 = qpDict({
     #need a value for comparison or modification
     'bigger_equal': '>=',
@@ -445,7 +444,7 @@ class DataFrameQuery:
             diff=None,  #[None, 'mix', 'old', 'new', 'new+']
             max_cols=200,  #maximum number of columns to display. None: show all
             max_rows=20,  #maximum number of rows to display. None: show all
-            inplace=False,  #make modifications inplace or just return a new dataframe
+            inplace=True,  #make modifications inplace or just return a new dataframe
             verbosity=3,  #verbosity level for logging. 0: no logging, 1: errors, 2: warnings, 3: info, 4: debug
             **kwargs
             ):
@@ -478,16 +477,23 @@ class DataFrameQuery:
         self.df.qp._input = input_str + "\n\t)"
 
 
+    
         if inplace is False:
-            df = copy.deepcopy(self.df)
+            df = self.df.copy()
         else:
             df = self.df
+            
+        df.qp = self.df.qp
+
+        
 
         #inserting metadata row at the top, sadly a bit hacky
         #because there does not seem to be an inplace function for that
         if '#' not in df.index:
-            if verbosity >= 3:
-                log(f'inserting metadata row "#" at the top', level='info', source='df.q()')
+            if verbosity >= 2:
+                log(f'a row named "#" containing metadata at location 0 is expected but was not found. '
+                    +'adding metadata row now. its advised to prepare the data with df=df.format().',
+                    level='warning', source='df.q()')
             df_old = df.copy()
             index_old = df.index
             index_new = pd.Index(['#', *index_old])
@@ -499,15 +505,14 @@ class DataFrameQuery:
 
         #inserting metadata column at the start
         if '#' not in df.columns:
-            if verbosity >= 3:
-                log(f'inserting metadata column "#" at the start', level='info', source='df.q()')
+            if verbosity >= 2:
+                log(f'a column named "#" containing metadata at location 0 is expected but was not found. '
+                    +'adding metadata column now. its advised to prepare the data with df=df.format().',
+                    level='warning', source='df.q()')
             df.insert(0, '#', '')
 
 
-        df_tagged = df
-        df = df.iloc[1:, 1:]
-        df_tagged.qp = self.df.qp
-        df.qp = self.df.qp
+
 
 
         
@@ -531,7 +536,7 @@ class DataFrameQuery:
 
                 for i_condition,condition in enumerate(ast['conditions']):
                     if condition['by_tag'] == 'row or col metadata':
-                        cols_filtered_new = _apply_condition(df_tagged.iloc[0, 1:], condition, _operators, verbosity, df=df)
+                        cols_filtered_new = _apply_condition(df.loc['#'], condition, _operators, verbosity, df=df)
                     else:
                         cols_filtered_new = _apply_condition(df.columns, condition, _operators, verbosity, df=df)
 
@@ -549,9 +554,9 @@ class DataFrameQuery:
                 ast = _parse_expression(df, expression, expression_type, verbosity)
 
                 for i_condition,condition in enumerate(ast['conditions']):
-                    for i_col,col in enumerate(df.columns[cols_filtered_condition]):
+                    for i_col,col in enumerate(df.columns[cols_filtered_condition][1:]):  #ignore metadata column
                         if condition['by_tag'] == 'row or col metadata':
-                            rows_filtered_new = _apply_condition(df_tagged.iloc[1:, 0], condition, _operators, verbosity, df=df)
+                            rows_filtered_new = _apply_condition(df['#'], condition, _operators, verbosity, df=df)
                         else:
                             rows_filtered_new = _apply_condition(df[col], condition, _operators, verbosity, df=df)
 
@@ -568,19 +573,20 @@ class DataFrameQuery:
             elif expression_type == 'modify':
                 cols_filtered_no_metadata = [col for col in df.columns[cols_filtered] if not col.startswith('#')]
                 rows_filtered_no_metadata = [row for row in df.index[rows_filtered] if row != '#']
+
                 ast = _parse_expression_modify(df, expression, expression_type, verbosity)
 
                 for modification in ast['modifications']:
                             
                     #tag columns
                     if modification['modifier'] in _modifiers['set_col_tags']:
-                        df_tagged.loc['#', cols_filtered_no_metadata] = df_tagged.loc['#', cols_filtered_no_metadata].apply(
+                        df.loc['#', cols_filtered_no_metadata] = df.loc['#', cols_filtered_no_metadata].apply(
                             lambda x: eval(modification['value'])
                             )
                     
                     #tag rows
                     elif modification['modifier'] in _modifiers['set_row_tags']:
-                        df_tagged.loc[rows_filtered_no_metadata, '#'] = df_tagged.loc[rows_filtered_no_metadata, '#'].apply(
+                        df.loc[rows_filtered_no_metadata, '#'] = df.loc[rows_filtered_no_metadata, '#'].apply(
                             lambda x: eval(modification['value'])
                             )
                     
@@ -589,15 +595,7 @@ class DataFrameQuery:
                         df.loc[:, :] = _apply_modification_df(df, rows_filtered_no_metadata, cols_filtered_no_metadata, modification, verbosity).loc[:, :]
 
 
-        rows_filtered = pd.Index(['#', *df.index[rows_filtered]])
-        cols_filtered = pd.Index(['#', *df.columns[cols_filtered]])
-        
-        df_tagged.iloc[1:, 1:] = df.loc[:,:]
-        df_filtered = df_tagged.loc[rows_filtered, cols_filtered]
-        df_filtered.qp = self.df.qp
-        
-        if inplace is True:
-            self.df.loc[:,:] = df_tagged.loc[:,:]
+
 
 
 
@@ -605,13 +603,13 @@ class DataFrameQuery:
         #            display settings            #
         ##########################################
    
-            
+        df_filtered = df.loc[rows_filtered, cols_filtered]
+        df_filtered.qp = self.df.qp
+    
         if diff is None:
-            pd.set_option('display.max_columns', max_cols)
-            pd.set_option('display.max_rows', max_rows)
 
-            cols_num = len(df_filtered.columns)
-            rows_num = len(df_filtered.index)
+            cols_num = len(df.columns[cols_filtered])
+            rows_num = len(df.index[rows_filtered])
 
             if verbosity >= 2:
                 if max_cols is not None and max_cols < cols_num:
@@ -619,9 +617,15 @@ class DataFrameQuery:
                 if max_rows is not None and max_rows < rows_num:
                     log(f'showing {max_rows} out of {rows_num} rows', level='warning', source='df.q', input=df.qp._input)
  
+            pd.set_option('display.max_columns', max_cols)
+            pd.set_option('display.max_rows', max_rows)
+            pd.set_option('display.min_rows', max_rows)
+
             return df_filtered
         
         else:
+
+
             #show difference before and after filtering
             result = qp.diff(
                 df_filtered, self.df, show=diff,
@@ -893,6 +897,9 @@ def _apply_condition(pd_object, condition, operators, verbosity=3, df=None, seri
     if condition['negate']:
         filtered = ~filtered
 
+    if condition['mode'] in ['col', 'row']:
+        filtered.iloc[0] = True  #metadata row/column should always be included
+
     return filtered
 
 def _apply_modification(pd_object, indices, modification, verbosity=3, series=None, index=None):
@@ -1114,14 +1121,14 @@ class DataFrameQueryInteractiveMode:
 
         #show differences
         ui_diff = widgets.ToggleButtons(
-            options=['mix', 'old', 'new', 'new+', None],
+            options=[None, 'mix', 'old', 'new', 'new+'],
             description='show differences mode:',
             tooltips=[
+                'dont show differences, just show the new (filtered) dataframe.',
                 'show new (filtered) dataframe plus all the removed (filtered) values from the old dataframe. values affected by the filters are marked green (newly added), yellow (modified), red (deleted)',
                 'show old (unfiltered) dataframe. values affected by the filters are marked green (newly added), yellow (modified), red (deleted)',
                 'show new (filtered) dataframe. values affected by the filters are marked green (newly added), yellow (modified), red (deleted)',
                 'show new (filtered) dataframe but also adds metadata columns with the prefix "#". If a value changed, the metadata column contains the old value. values affected by the filters are marked green (newly added), yellow (modified), red (deleted)',
-                'dont show differences, just show the new (filtered) dataframe.',
                 ],
             )
         kwargs['diff'] = ui_diff
@@ -1224,5 +1231,3 @@ def _interactive_mode(**kwargs):
     display(result)
     print('input code: ', df.qp._input)
     return result
-
-
