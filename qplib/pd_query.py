@@ -852,9 +852,12 @@ def _apply_condition(pd_object, condition, operators, verbosity=3, df=None, seri
 
         #lambda function
         case operators.lambda_condition:
-            filtered = pd_object.apply(lambda x, df=df, series=series, index=index, pd=pd, np=np: eval(value))
+            filtered_no_metadata = pd_object.iloc[1:].apply(lambda x, df=df.iloc[1:,1:], series=series, index=index, pd=pd, np=np: eval(value))
+            filtered = pd.concat([pd.Series({'#': True}), filtered_no_metadata], axis=0)
         case operators.lambda_condition_col:
-            filtered = eval(value, {'col': pd_object, 'df': df, 'pd': pd, 'np': np, 'qp': qp})
+            filtered_no_metadata = eval(value, {'col': pd_object.iloc[1:], 'df': df.iloc[1:,1:], 'pd': pd, 'np': np, 'qp': qp})
+            filtered = pd.concat([pd.Series({'#': True}), filtered_no_metadata], axis=0)
+
 
 
         #type checks
@@ -1231,3 +1234,6 @@ def _interactive_mode(**kwargs):
     display(result)
     print('input code: ', df.qp._input)
     return result
+
+
+
