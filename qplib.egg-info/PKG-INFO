@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: qplib
-Version: 0.2.4
+Version: 0.2.6
 Summary: query and pandas utilities library
 Author-email: martin v <martinv16248@gmail.com>
 License: MIT License
