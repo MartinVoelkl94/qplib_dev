@@ -11,127 +11,107 @@ from .types import qp_num
 from .types import qp_na
 from .types import qp_nk
 
+logs = pd.DataFrame(columns=['level', 'message', 'source', 'input', 'time'])
 
 
-class qpDict(dict):
-    """
-    dictionary where key:value pairs and attributes are interchangeable.
-    """
-
-    def __init__(self, iterable={}):
-        super().__init__((key,val) for key,val in iterable.items())
-        for key, val in iterable.items():
-            if key not in self.__dict__.keys():
-                setattr(self, key, val)
-            else:
-                log('key is already used as dictionary attribute.', level='error', source='qpDict.__init__', input=key)
-
-    def __setattr__(self, key, val):
-        super().__setattr__(key, val)
-        super().__setitem__(key, val)
-
-    def __setitem__(self, key, val):
-        super().__setitem__(key, val)
-        super().__setattr__(key, val)
-
-    def __delattr__(self, key):
-        super().__delattr__(key)
-        super().__delitem__(key)
-
-    def __delitem__(self, key):
-        super().__delitem__(key)
-        super().__delattr__(key)
-
-    def values_flat(self):
-        values_flat = []
-        for val in self.values():
-            if isinstance(val, dict):
-                values_flat.extend(val.values())
-            elif isinstance(val, qpDict):
-                values_flat.extend(val.values_flat())
-            elif hasattr(val, '__iter__') and not isinstance(val, str):
-                values_flat.extend(val)
-            else:
-                values_flat.append(val)
-        return values_flat
-
-
-
-
-def log(message=None, level='info', source='', input='', clear=False):
+def log(message=None, level='info', source='', input='', clear=False, verbosity=4):
     """
     A very basic "logger".
     For more extensive logging purposes use a logging module.
     This is mostly meant to be used as a replacement for print() statements. 
 
-    usage if qplib is imported as qp:
-        qp.log('message', level='info') or qp.logs('message'): add info log entry
-        qp.log('message', level='warning'): add warning log entry
-        qp.log('message', level='error'): add error log entry
-        qp.log(clear=True): clear all log entries
-        qp.log(): return dataframe of log entries
-        qp.util.logs: location of dataframe containing log entries
+    examples:
+
+    from qplib import log
+
+    log('message', level='info') or qp.logs('message')  #add info log entry
+    log('message', level='warning')  #add warning log entry
+    log('message', level='error')  #add error log entry
+    log(clear=True)  #clear all log entries
+    log()  #return dataframe of log entries
+    util.logs  #location of dataframe containing log entries
     
     """
 
-    if 'logs' not in globals().keys():
-        globals()['logs'] = pd.DataFrame(columns=['level', 'message', 'source', 'input', 'time'])
-        print('created dataframe qp.util.logs for tracking log entries')
-        print('use qp.log(message, level, source) or qp.log(message) to add log entries')
-        print('logs are saved in qp.util.logs')
+    if verbosity < 1:
+        return
+    
+    global logs
 
     if clear:
-        globals()['logs'] = pd.DataFrame(columns=['level', 'message', 'source', 'input', 'time'])
+        logs = pd.DataFrame(columns=['level', 'message', 'source', 'input', 'time'])
         print('cleared all logs in qp.util.logs.')
         return
     
     if message is None:
-        return globals()['logs']
+        return logs
     
-    idx = len(globals()['logs'])
+    
+    idx = len(logs)
+    level = level.lower()
 
-    match level.lower():
+    match level:
+        case 'trace':
+            logs.loc[idx, 'level'] = 'trace'
+            level_int = 5
+            color = 'lightgrey'
         case 'debug':
-            globals()['logs'].loc[idx, 'level'] = 'debug'
+            logs.loc[idx, 'level'] = 'debug'
+            level_int = 4
+            color = 'skyblue'
         case 'info':
-            globals()['logs'].loc[idx, 'level'] = 'info'
+            logs.loc[idx, 'level'] = 'info'
+            level_int = 3
+            color = '#c0e7b0' #lightgreen
         case 'warning':
-            globals()['logs'].loc[idx, 'level'] = 'Warning'
+            logs.loc[idx, 'level'] = 'Warning'
+            level_int = 2
+            color = 'orange'
         case 'error':
-            globals()['logs'].loc[idx, 'level'] = 'ERROR'
+            logs.loc[idx, 'level'] = 'ERROR'
+            level_int = 1
+            color = 'red'
 
-    globals()['logs'].loc[idx, 'message'] = message
-    globals()['logs'].loc[idx, 'source'] = source
-    globals()['logs'].loc[idx, 'input'] = input
-    globals()['logs'].loc[idx, 'time'] = pd.Timestamp.now()
+    logs.loc[idx, 'message'] = message
+    logs.loc[idx, 'source'] = source
+    logs.loc[idx, 'input'] = input
+    logs.loc[idx, 'time'] = pd.Timestamp.now()
 
-    if level.lower() != 'debug':
-        # df2.style.hide(axis=1)
-        display(globals()['logs'].tail(1).style.hide(axis=1).apply(
-            lambda x: [
-                'background-color: orange' if x['level'] == 'Warning'
-                else 'background-color: red' if x['level'] == 'ERROR'
-                else 'background-color: #59A859'
-                for i in x],
-            axis=1))
+    if level_int <= verbosity:
+        display(logs.tail(1).style.hide(axis=1).apply(
+                lambda x: [f'background-color: {color}' for i in x], axis=1
+                )
+            )
 
 
-def header(word='header', width=42, filler=' '):
-    """
-    Prints a header with a word in the middle and a border around it.
-    """
+
+def header(word='header', slim=True, width=None, filler=' '):
+    if slim is True:
+        if width is None:
+            width = 60
+        
+        if len(word) > width - 10:
+            width = len(word) + 10
+        if len(word) % 2 == 1:
+            width += 1
+
+        border = int((width - len(word) - 10) / 2)
+        text = '#' * border + '     ' + word + '     ' + '#' * border
     
-    if len(word) > width - 2:
-        width = len(word) + 2
-    if len(word) % 2 == 1:
-        width += 1
-    
-    border = '#' * width
-    filler = ' ' * int(((len(border) - len(word) - 2)/2))
+    else:
+        if width is None:
+            width = 42
 
-    text = border + '\n'\
-        + '#' + filler + word + filler + '#' + '\n'\
-        + border
+        if len(word) > width - 2:
+            width = len(word) + 2
+        if len(word) % 2 == 1:
+            width += 1
+        
+        border = '#' * width
+        filler = ' ' * int(((len(border) - len(word) - 2)/2))
+        text = border + '\n'\
+            + '#' + filler + word + filler + '#' + '\n'\
+            + border
     
     print(text)
 

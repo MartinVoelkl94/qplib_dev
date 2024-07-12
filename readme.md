@@ -1,22 +1,15 @@
 # qplib
 
-query and pandas utilities library for data exploration/analysis/modification of small to medium datasets.  
-<br>
-<br>
-<br>
+A query language for pandas data exploration/analysis/modification.
 
-
-## Query function df.q()
-
-Can be used on pandas Series and Index objects, but the main use is filtering Dataframes.  
-The filtered results can then also be used to add/remove/change data and metadata in the Dataframe.  
 It is implemented as an [accessor extension](https://pandas.pydata.org/docs/development/extending.html), meaning it can be called from a dataframe without any further preparation.  
 
-An interactive wrapper can be called with df.qi() to help with the query creation and exploring the various options.  
-Note that this wrapper is much slower and struggles with large datasets.  
+An interactive wrapper can be called with df.qi() to help with the query creation and for exploring the various operators.
 <br>
 <br>
 
+
+# other utilities
 
 ## logging with qp.log()
 

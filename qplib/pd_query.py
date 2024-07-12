@@ -8,431 +8,575 @@ import qplib as qp
 from IPython.display import display
 from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 
-from .util import log, qpDict
-from .pd_util import _check_df
-
-from .types import qp_int
-from .types import qp_float
-from .types import qp_num
-from .types import qp_bool
-from .types import qp_date
-from .types import qp_datetime
-from .types import qp_na
-from .types import qp_nk
-from .types import qp_yn
-
-from .pd_util import indexQpExtension, seriesQpExtension, dfQpExtension
+from .util import log
+from .types import qp_int, qp_float, qp_num, qp_bool, qp_datetime, qp_date, qp_na, qp_nk, qp_yn, qpDict
+from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension, seriesQpExtension, dfQpExtension
 
 
 
 
-_operators1 = qpDict({
-    #need a value for comparison or modification
-    'bigger_equal': '>=',
-    'smaller_equal': '<=',
-    'bigger': '>',
-    'smaller': '<',
-    'strict_equal': '==',
-    'equal': '=',
-    'regex_match': '~~',
-    'regex_search': '~',
-    'strict_contains': '(())',
-    'contains': '()',
-
-    'lambda_condition': '?',
-    'lambda_condition_col': 'col?',
-    })
-_operators2 = qpDict({
-    #these dont need a values for comparison or modification
-    'is_str': 'is str',
-    'is_int': 'is int',
-    'is_float': 'is float',
-    'is_num': 'is num',
-    'is_bool': 'is bool',
-
-    'is_datetime': 'is datetime',
-    'is_date': 'is date',
-
-    'is_any': 'is any',
-    'is_na': 'is na',
-    'is_nk': 'is nk',
-    'is_yn': 'is yn',
-    'is_yes': 'is yes',
-    'is_no': 'is no',
-    })
-_operators = qpDict({**_operators1, **_operators2})
-_operators_only_df = qpDict({
-    'lambda_condition_col': _operators['lambda_condition_col'],
-    })
-
-_modifiers1 = qpDict({
-    #need a value for comparison or modification
-    'set_x': ['x=', 'x ='],
-    'set_col': ['col=', 'col ='],
-    'set_row': ['row=', 'row ='],
-    'set_col_tags': ['col#=', 'col# =', 'col #=', 'col # ='],
-    'set_row_tags': ['row#=', 'row# =', 'row #=', 'row # ='],
-    })
-_modifiers2 = qpDict({
-    #these dont need a values for comparison or modification
-    'to_str': 'to str',
-    'to_int': 'to int',
-    'to_float': 'to float',
-    'to_num': 'to num',
-    'to_bool': 'to bool',
-
-    'to_datetime': 'to datetime',
-    'to_date': 'to date',
-
-    'to_na': 'to na',
-    'to_nk': 'to nk',
-    'to_yn': 'to yn',
-    })
-_modifiers = qpDict({**_modifiers1, **_modifiers2})
-_modifiers_only_df = qpDict({
-    'set_col': _modifiers['set_col'],
-    'set_row': _modifiers['set_row'],
-    'set_col_tags': _modifiers['set_col_tags'],
-    'set_row_tags': _modifiers['set_row_tags'],
-    })
 
 
 
-@pd.api.extensions.register_index_accessor('q')
-class IndexQuery:
-    """
-    A custom query language for filtering and modifying data  in pandas Indices.
-
-    each query consists of 2 string expressions, each of which can be left empty:
-        1. filter: '=abc', '!=1', 'is int && >0'
-        2. data modification: 'to num', 'x= str(x)'
-
-    eg.: se.q('is str', 'x= "prefix" + x')
-
-    multiple conditions in an expression as well as multiple whole queries can be connected.
-
-    Connectors:
-        &&: the previous conditions AND this new conditions have to apply
-        //: the previous conditions OR this new conditions have to apply
-        >>: ignore previous conditions and use these new conditions INSTEAD
-
-    Operators:
-        >: bigger
-        <: smaller
-        >=: bigger or equal
-        <=: smaller or equal
-        
-        ~: contains a regex pattern (re.search)
-        ~~: matches a regex pattern (re.match)
-
-        =: equal
-        ==: strictly equal (case sensitive)
-
-        (): contains a string
-        (()): contains a string (case sensitive)
-
-        ?: filter using a python expression (must evaluate to True or False)
-
-        is str: is a string
-        is int: is an integer
-        is float: is a float
-        is num: is a number (int or float)
-        is bool: is a boolean
-
-        is date: is a date (quite format lenient but defaults to european formats)
-        is datetime: is a datetime
-
-        is any: matches any value, use to select all
-        is na: not available data (quite lenient)
-        is nk: not known data (quite lenient)
-        is yk: is a yes or no value
-        is yes: is a yes value
-        is no: is a no value
-
-    Modifiers:
-        x=: set x to a value
-
-        to str: convert to string
-        to int: convert to integer
-        to float: convert to float
-        to num: convert to number
-        to bool: convert to boolean
-
-        to date: convert to date
-        to datetime: convert to datetime
-
-        to na: convert to not available
-        to nk: convert to not known
-        to yn: convert to yes or no
-    """
 
 
-    def __init__(self, idx: pd.Index):
-        idx.qp._operators = _operators
-        idx.qp._operators_only_df = _operators_only_df
-        idx.qp._modifiers = _modifiers
-        idx.qp._modifiers_only_df = _modifiers_only_df
-        self.idx = idx 
+##################     syntax symbols     ##################
+
+class Symbol:
+    def __init__(self, symbol, description, unary=False, binary=False, modes=None):
+        #default symbol = None
+        self.symbol = symbol
+        self.description = description
+        self.unary = unary
+        self.binary = binary
+        self.modes = modes
+    def __repr__(self):
+        return f"Symbol('{self.symbol}': '{self.description})'"
 
 
-    #wip
-    # def check(self):
-    #     _check_index(self.idx)
+COMMENT = Symbol('#', 'comment', 'comments out the rest of the line')
 
+#there are 4 different types of instructions
+FILTER_COLS = Symbol('', 'default. filter columns by a condition')
+FILTER_ROWS = Symbol('´', 'filter rows by a condition')
+MODIFY_VALS = Symbol('´´', 'modify the currently selected values')
+MODIFY_DF = Symbol('´´´', 'ignore the current selection and modify the whole dataframe. eg for adding new cols')
+
+
+#filter conditions can be combined with the previous conditions
+CONNECTOR_RESET = Symbol('', 'default. only the current condition must be fulfilled')
+CONNECTOR_AND =   Symbol('&&', 'this condition and the previous condition/s must be fulfilled')
+CONNECTOR_OR =    Symbol('//', 'this condition or the previous condition/s must be fulfilled')
+
+#when filtering rows, the condition can be applied to all or any of the previously selected columns
+COLS_ANY = Symbol('any', 'default. any of the currently selected columns must fulfill the condition')
+COLS_ALL = Symbol('all', 'all of the currently selected columns must fulfill the condition')
+
+#negation of filter conditions
+NEGATE_FALSE = Symbol('', 'default. dont negate the condition')
+NEGATE_TRUE = Symbol('!', 'negate the condition')
+
+
+
+#binary operators for filtering
+
+OP_BIGGER_EQUAL = Symbol('>=', 'bigger or equal', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_SMALLER_EQUAL = Symbol('<=', 'smaller or equal', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_BIGGER = Symbol('>', 'bigger', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_SMALLER = Symbol('<', 'smaller', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+
+OP_STRICT_EQUAL = Symbol('==', 'strict equal', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_EQUAL = Symbol('=', 'default. equal', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+
+OP_REGEX_MATCH = Symbol('~~', 'regex match', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_REGEX_SEARCH = Symbol('~', 'regex search', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+
+OP_STRICT_CONTAINS = Symbol('(())', 'strict contains', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_CONTAINS = Symbol('()', 'contains', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+
+OP_X_EVAL = Symbol('x?', 'filter values by evaluating a python expression on each value', binary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_COL_EVAL = Symbol('col?', 'filter rows by evaluating a python expression on a whole column', binary=True, modes=[FILTER_ROWS])
+
+
+#unary operators for filtering
+
+OP_IS_STR = Symbol('is str', 'is string', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_INT = Symbol('is int', 'is integer', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_FLOAT = Symbol('is float', 'is float', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_NUM = Symbol('is num', 'is number', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_BOOL = Symbol('is bool', 'is boolean', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+
+OP_IS_DATETIME = Symbol('is datetime', 'is datetime', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_DATE = Symbol('is date', 'is date', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+
+OP_IS_ANY = Symbol('is any', 'is any value', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_NA = Symbol('is na', 'is missing value', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_NK = Symbol('is nk', 'is not known value', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_YN = Symbol('is yn', 'is yes or no value', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_YES = Symbol('is yes', 'is yes value', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+OP_IS_NO = Symbol('is no', 'is no value', unary=True, modes=[FILTER_COLS, FILTER_ROWS])
+
+
+
+#binary operators for modifying values
+OP_SET_VAL = Symbol('=', 'default. change currently selected values to the provided string', binary=True, modes=[MODIFY_VALS])
+OP_ADD_VAL = Symbol('+=', 'add str to currently selected values (they are coerced to string)', binary=True, modes=[MODIFY_VALS])
+
+OP_SET_X_EVAL = Symbol('x=', 'change values by evaluating a python expression for each currently selected value', binary=True, modes=[MODIFY_VALS])
+OP_SET_COL_EVAL = Symbol('col=', 'change values by evaluating a python expression for each currently selected column', binary=True, modes=[MODIFY_VALS])
+OP_SET_HEADER_EVAL = Symbol('header=', 'change values by evaluating a python expression for each currently selected headers', binary=True, modes=[MODIFY_VALS])
+
+#unary operators for modifying values
+OP_TO_STR = Symbol('to str', 'convert currently selected values to string', unary=True, modes=[MODIFY_VALS])
+OP_TO_INT = Symbol('to int', 'convert currently selected values to integer', unary=True, modes=[MODIFY_VALS])
+OP_TO_FLOAT = Symbol('to float', 'convert currently selected values to float', unary=True, modes=[MODIFY_VALS])
+OP_TO_NUM = Symbol('to num', 'convert currently selected values to number', unary=True, modes=[MODIFY_VALS])
+OP_TO_BOOL = Symbol('to bool', 'convert currently selected values to boolean', unary=True, modes=[MODIFY_VALS])
+
+OP_TO_DATETIME = Symbol('to datetime', 'convert currently selected values to datetime', unary=True, modes=[MODIFY_VALS])
+OP_TO_DATE = Symbol('to date', 'convert currently selected values to date', unary=True, modes=[MODIFY_VALS])
+
+OP_TO_NA = Symbol('to na', 'convert currently selected values to missing value', unary=True, modes=[MODIFY_VALS])
+OP_TO_NK = Symbol('to nk', 'convert currently selected values to not known value', unary=True, modes=[MODIFY_VALS])
+OP_TO_YN = Symbol('to yn', 'convert currently selected values to yes or no value', unary=True, modes=[MODIFY_VALS])
+
+
+#binary operators for modifying the whole dataframe
+OP_ADD_COL = Symbol('=', 'add a new string column to the dataframe and select it instead of current selection', binary=True, modes=[MODIFY_DF])
+
+
+
+######################     parsing     ######################
+
+def _parse_line(line, verbosity):
+
+    instructions = []
+    line = line.strip()
+    if line == '' or line.startswith(COMMENT.symbol):
+        return None
+
+    line = line.split(COMMENT.symbol)[0]
+    #wip: add option to escape # with \#
+
+
+    strings = re.split(f'({MODIFY_DF.symbol}|{MODIFY_VALS.symbol}|{FILTER_ROWS.symbol})', line)
+    for i, string in enumerate(strings):
+        if string in ['', FILTER_ROWS.symbol, MODIFY_VALS.symbol, MODIFY_DF.symbol]:
+            continue
+
+        if i == 0:
+            mode = ''
+        elif strings[i-1] in [FILTER_ROWS.symbol, MODIFY_VALS.symbol, MODIFY_DF.symbol]:
+            mode = strings[i-1]
+
+
+        substrings = re.split(f'({CONNECTOR_AND.symbol}|{CONNECTOR_OR.symbol})', string)
+
+        for j, substring in enumerate(substrings):
+            substring = substring.strip()
+            if substring in [CONNECTOR_AND.symbol, CONNECTOR_OR.symbol, '']:
+                continue
+            elif j == 0:
+                connector = ''
+            else:
+                connector = substrings[j-1]
+
+            token = mode + connector + substring
+
+            if mode in ['', FILTER_ROWS.symbol]:
+                instruction = InstructionFilter(token, verbosity=verbosity)
+                instructions.append(instruction)
+            elif mode == MODIFY_VALS.symbol:
+                instruction = InstructionModifyVals(token, verbosity=verbosity)
+                instructions.append(instruction)
+            elif mode == MODIFY_DF.symbol:
+                instruction = InstructionModifyDf(token, verbosity=verbosity)
+                instructions.append(instruction)
+            else:
+                log(f'mode is not implemented. \n<br>line:{line} \n<br>token: {token} \n<br>mode: {mode} ',
+                    level='error', source='_parse_line', input=line, verbosity=verbosity)
+                
+            log(f'parsed token "{token}" in line "{line}"',
+                level='trace', source='_parse_line', verbosity=verbosity)
+
+
+    if len(instructions) == 0:
+        return None
+    else:
+        return instructions
+
+
+class InstructionFilter:
+    def __init__(self, token, verbosity=3):
+        self.parse(token, verbosity=verbosity)
 
     def __repr__(self):
-        return 'docstring of dataframe accessor pd_object.q():' + self.__doc__
+        return self.__str__()
     
+    def __str__(self):
+        string = f"""
+            \n<br>{self.mode}
+            \n<br>{self.connector.symbol}
+            \n<br>{self.which_cols}
+            \n<br>{self.negate.symbol}
+            \n<br>{self.operator.symbol}
+            \n<br>{self.value}
+            """
+        return string
 
-    def __call__(self, *expressions, verbosity=3):
+    def parse(self, token, verbosity=3):
+        self.token = token
+        self.mode, token = _read_symbol(token, [FILTER_ROWS], FILTER_COLS, verbosity)
+        self.connector, token = _read_symbol(token, [CONNECTOR_AND, CONNECTOR_OR], CONNECTOR_RESET, verbosity)
 
-        #setup
-        idx = self.idx
-        idx.qp = self.idx.qp
-        idx.qp._input = f".q{expressions}"
+        #row conditions also specify in which cols the condition is applied
+        if self.mode == FILTER_ROWS:
+            self.which_cols, token = _read_symbol(token, [COLS_ALL], COLS_ANY, verbosity)
+        else:
+            self.which_cols = None
         
-        index_expression = index_condition = pd.Index([True for i in idx])
-        for i_expression,expression in enumerate(expressions):
-            expression_type = ['filter index', 'modify index'][i_expression%2]
-            if expression == '':
-                continue
+        self.negate, token = _read_symbol(token, [NEGATE_TRUE], NEGATE_FALSE, verbosity)
+        self.operator, token = _read_symbol(
+            token,
+            symbols = [
+                OP_BIGGER_EQUAL, OP_SMALLER_EQUAL, OP_BIGGER, OP_SMALLER,
+                OP_STRICT_EQUAL, OP_EQUAL,
+                OP_REGEX_MATCH, OP_REGEX_SEARCH,
+                OP_STRICT_CONTAINS, OP_CONTAINS,
+                OP_X_EVAL, OP_COL_EVAL,
+                OP_IS_STR, OP_IS_INT, OP_IS_FLOAT, OP_IS_NUM, OP_IS_BOOL,
+                OP_IS_DATE, OP_IS_DATETIME,
+                OP_IS_ANY, OP_IS_NA, OP_IS_NK, OP_IS_YN, OP_IS_YES, OP_IS_NO,
+                ],
+            default = OP_EQUAL,
+            verbosity = verbosity,
+            )
+        self.value = token.strip()
 
 
-            if expression_type == 'filter index':
-                ast = _parse_expression(idx, expression, 'filter index', verbosity)
+        if self.operator.unary and len(self.value)>0:
+            log(f'unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
+                level='warning', source='_parse_token', verbosity=verbosity)
+            self.value = ''
+    
+        log(f'parsed token "{self.token}" as instruction: {self.__str__()}',
+            level='debug', source='_parse_token', verbosity=verbosity)
 
-                for condition in ast['conditions']:
-                    index_new = _apply_condition(idx, condition, _operators, verbosity, index=idx)
+    def filter(self, df, cols_filtered, rows_filtered, verbosity=3):
+        if self.mode == FILTER_COLS:
+            cols_filtered_new = self._filter_series(df.columns.to_series(), verbosity)
+            cols_filtered = _update_index(cols_filtered, cols_filtered_new, self.connector, verbosity)
 
-                    index_condition = _update_index(index_condition, index_new, condition['condition_connector'], i=None, verbosity=verbosity)
-                index_expression = _update_index(index_expression, index_condition, ast['connector'], i=None, verbosity=verbosity)
-
-                if index_expression.any() == False and verbosity >= 2:
-                        log(f'no values fulfill the condition(s) in "{expression}"', level='warning', source='idx.q', input=idx.qp._input)
-
-
-            elif expression_type == 'modify index':
-                ast = _parse_expression_modify(idx, expression, expression_type, verbosity)
-
-                for modification in ast['modifications']:
-                    se = idx.to_series()
-                    se.qp = idx.qp
-                    idx = pd.Index(_apply_modification(se, index_expression, modification, verbosity, index=idx))
-                    idx.qp = self.idx.qp
-        
+            if cols_filtered_new.any() == False:
+                log(f'no columns fulfill the condition in "{self.token}"',
+                    level='warning', source='df.q', input=self.token, verbosity=verbosity)
+            
+            return cols_filtered
 
 
-        idx_filtered = idx[index_expression]
-        idx_filtered.qp = idx.qp
+        elif self.mode == FILTER_ROWS:
+            if cols_filtered.any() == False:
+                log(f'row filter cannot be applied when no columns where selected',
+                    level='warning', source='df.q', input=self.token, verbosity=verbosity)
+                return rows_filtered
+                
 
-        return idx_filtered
+            rows_filtered_temp = None
+            for i, col in enumerate(df.columns[cols_filtered]):
+                rows_filtered_new = self._filter_series(df[col], verbosity, df)
+                rows_filtered_temp = _update_index(rows_filtered_temp, rows_filtered_new, self.which_cols, verbosity)
+            rows_filtered = _update_index(rows_filtered, rows_filtered_temp, self.connector, verbosity)
 
+            if rows_filtered_temp.any() == False:
+                log(f'no rows fulfill the condition in "{self.token}"',
+                    level='warning', source='df.q', input=self.token, verbosity=verbosity)
+                
+            return rows_filtered
 
-@pd.api.extensions.register_series_accessor('q')
-class SeriesQuery:
-    """
-    A custom query language for filtering and modifying data  in pandas Series.
-
-    each query consists of 2 string expressions, each of which can be left empty:
-        1. filter: '=abc', '!=1', 'is int && >0'
-        2. data modification: 'to num', 'x= str(x)'
-
-    eg.: se.q('is str', 'x= "prefix" + x')
-
-    multiple conditions in an expression as well as multiple whole queries can be connected.
-
-    Connectors:
-        &&: the previous conditions AND this new conditions have to apply
-        //: the previous conditions OR this new conditions have to apply
-        >>: ignore previous conditions and use these new conditions INSTEAD
-
-    Operators:
-        >: bigger
-        <: smaller
-        >=: bigger or equal
-        <=: smaller or equal
-        
-        ~: contains a regex pattern (re.search)
-        ~~: matches a regex pattern (re.match)
-
-        =: equal
-        ==: strictly equal (case sensitive)
-
-        (): contains a string
-        (()): contains a string (case sensitive)
-
-        ?: filter using a python expression (must evaluate to True or False)
-
-        is str: is a string
-        is int: is an integer
-        is float: is a float
-        is num: is a number (int or float)
-        is bool: is a boolean
-
-        is date: is a date (quite format lenient but defaults to european formats)
-        is datetime: is a datetime
-
-        is any: matches any value, use to select all
-        is na: not available data (quite lenient)
-        is nk: not known data (quite lenient)
-        is yk: is a yes or no value
-        is yes: is a yes value
-        is no: is a no value
-
-    Modifiers:
-        x=: set x to a value
-
-        to str: convert to string
-        to int: convert to integer
-        to float: convert to float
-        to num: convert to number
-        to bool: convert to boolean
-
-        to date: convert to date
-        to datetime: convert to datetime
-
-        to na: convert to not available
-        to nk: convert to not known
-        to yn: convert to yes or no
-    """
+    def _filter_series(self, series, verbosity=3, df=None,):
+        operator = self.operator
+        value = self.value
 
 
-    def __init__(self, se: pd.Series):
-        se.qp._operators = _operators
-        se.qp._operators_only_df = _operators_only_df
-        se.qp._modifiers = _modifiers
-        se.qp._modifiers_only_df = _modifiers_only_df
-        self.se = se 
+        if operator == OP_BIGGER_EQUAL:
+            filtered = pd.to_numeric(series, errors='coerce') >= pd.to_numeric(value)
+        elif operator == OP_SMALLER_EQUAL:
+            filtered = pd.to_numeric(series, errors='coerce') <= pd.to_numeric(value)
+        elif operator == OP_BIGGER:
+            filtered = pd.to_numeric(series, errors='coerce') > pd.to_numeric(value)
+        elif operator == OP_SMALLER:
+            filtered = pd.to_numeric(series, errors='coerce') < pd.to_numeric(value)
+            
+            
+        #regex comparison
+        elif operator == OP_REGEX_MATCH:
+            filtered = series.astype(str).str.fullmatch(value) 
+        elif operator == OP_REGEX_SEARCH:
+            filtered = series.astype(str).str.contains(value)
 
 
-    #wip
-    # def check(self):
-    #     _check_series(self.se)
+        #string equality comparison
+        elif operator == OP_STRICT_EQUAL:
+            filtered = series.astype(str) == value
+        elif operator == OP_EQUAL:
+            value_lenient = [value]
+            try:
+                value_lenient.append(str(float(value)))
+                value_lenient.append(str(int(float(value))))
+            except:
+                value_lenient.append(value.lower())
+            filtered = series.astype(str).str.lower().isin(value_lenient)
+            
+        #substring comparison
+        elif operator == OP_STRICT_CONTAINS:
+            filtered = series.astype(str).str.contains(value, case=True, regex=False)
+        elif operator == OP_CONTAINS:
+            filtered = series.astype(str).str.contains(value, case=False, regex=False)
 
+
+        #lambda function
+        elif operator == OP_X_EVAL:
+            filtered = series.apply(lambda x: eval(value, {'x': x, 'col': series, 'df': df, 'pd': pd, 'np': np, 'qp': qp}))
+        elif operator == OP_COL_EVAL:
+            filtered = eval(value, {'col': series, 'df': df, 'pd': pd, 'np': np, 'qp': qp})
+
+
+        #type checks
+        elif operator == OP_IS_STR:
+            filtered = series.apply(lambda x: isinstance(x, str))
+        elif operator == OP_IS_INT:
+            filtered = series.apply(lambda x: isinstance(x, int))
+        elif operator == OP_IS_FLOAT:
+            filtered = series.apply(lambda x: isinstance(x, float))
+        elif operator == OP_IS_NUM:
+            filtered = series.apply(lambda x: qp_num(x, errors='ERROR')) != 'ERROR'
+        elif operator == OP_IS_BOOL:
+            filtered = series.apply(lambda x: isinstance(x, bool))
+
+        elif operator == OP_IS_DATETIME:
+            filtered = series.apply(lambda x: qp_datetime(x, errors='ERROR')) != 'ERROR'
+        elif operator == OP_IS_DATE:
+            filtered = series.apply(lambda x: qp_date(x, errors='ERROR')) != 'ERROR'
+
+        elif operator == OP_IS_ANY:
+            filtered = series.apply(lambda x: True)
+        elif operator == OP_IS_NA:
+            filtered = series.apply(lambda x: qp_na(x, errors='ERROR')) != 'ERROR'
+        elif operator == OP_IS_NK:
+            filtered = series.apply(lambda x: qp_nk(x, errors='ERROR')) != 'ERROR'
+        elif operator == OP_IS_YN:
+            filtered = series.apply(lambda x: qp_yn(x, errors='ERROR')) != 'ERROR'
+        elif operator == OP_IS_YES:
+            filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', yes=1)) == 1
+        elif operator == OP_IS_NO:
+            filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', no=0)) == 0
+
+        else:
+            log(f'operator "{operator}" is not implemented',
+                level='error', source='_filter()', input=series.qp._input, verbosity=verbosity)
+            filtered = None
+
+
+        if self.negate == NEGATE_TRUE:
+            filtered = ~filtered
+
+        return filtered
+
+
+class InstructionModifyVals:
+    def __init__(self, token, verbosity=3):
+        self.parse(token, verbosity=verbosity)
 
     def __repr__(self):
-        return 'docstring of dataframe accessor pd_object.q():' + self.__doc__
+        return self.__str__()
     
+    def __str__(self):
+        string = f"""
+            \n<br>{self.mode}
+            \n<br>{self.connector.symbol}
+            \n<br>{self.operator.symbol}
+            \n<br>{self.value}
+            """
+        return string
 
-    def __call__(self, *expressions, verbosity=3):
 
-        #setup
-        se = copy.deepcopy(self.se)
-        se.qp = self.se.qp
-        se.qp._input = f".q{expressions}"
+    def parse(self, token, verbosity=3):
+        self.token = token
+        self.mode, token = _read_symbol(token, [MODIFY_VALS], MODIFY_VALS, verbosity)
+        self.connector, token = _read_symbol(token, [CONNECTOR_AND], CONNECTOR_AND, verbosity)
+        self.operator, token = _read_symbol(
+            token,
+            symbols = [
+                OP_SET_VAL, OP_ADD_VAL,
+                OP_SET_X_EVAL, OP_SET_COL_EVAL, OP_SET_HEADER_EVAL,
+                OP_TO_STR, OP_TO_INT, OP_TO_FLOAT, OP_TO_NUM, OP_TO_BOOL,
+                OP_TO_DATETIME, OP_TO_DATE,
+                OP_TO_NA, OP_TO_NK, OP_TO_YN,
+                ],
+            default = OP_SET_VAL,
+            verbosity = verbosity,
+            )
+        self.value = token.strip()
+    
+        log(f'parsed token "{self.token}" as instruction: {self.__str__()}',
+            level='debug', source='_parse_token', verbosity=verbosity)
+
+        if self.operator.unary and len(self.value)>0:
+            log(f'unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
+                level='warning', source='_parse_token', verbosity=verbosity)
+            self.value = ''
+
+
+    def modify_vals(self, df, cols_filtered, rows_filtered, verbosity=3):
+        operator = self.operator
+        value = self.value
+        cols = cols_filtered
+        rows = rows_filtered
+
         
-        index_expression = index_condition = pd.Index([True for i in se])
-        for i_expression,expression in enumerate(expressions):
-            expression_type = ['filter series', 'modify series'][i_expression%2]
-            if expression == '':
-                continue
+        if pd.__version__ >= '2.1.0':
+            #data modification
+            if operator == OP_SET_VAL:
+                df.loc[rows, cols] = value
+            elif operator == OP_ADD_VAL:
+                df.loc[rows, cols] = df.loc[rows, cols].astype(str) + value
+            
+            elif operator == OP_SET_X_EVAL:
+                df.loc[rows, cols] = df.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': df, 'pd': pd, 'np': np, 'qp': qp}))
+            elif operator == OP_SET_COL_EVAL:
+                df.loc[:, cols] = df.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': df, 'pd': pd, 'np': np, 'qp': qp}), axis=0)
+            elif operator == OP_SET_HEADER_EVAL:
+                df.columns = df.columns.map(lambda x: eval(value, {'header': x, 'df': df, 'pd': pd, 'np': np, 'qp': qp}))
 
 
-            if expression_type == 'filter series':
-                ast = _parse_expression(se, expression, expression_type, verbosity)
+            #type conversion
+            elif operator == OP_TO_STR:
+                df.loc[rows, cols] = df.loc[rows, cols].map(str)
+            elif operator == OP_TO_INT:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_int)
+            elif operator == OP_TO_FLOAT:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_float)
+            elif operator == OP_TO_NUM:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_num)
+            elif operator == OP_TO_BOOL:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_bool)
+            
+            elif operator == OP_TO_DATETIME:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_datetime)
+            elif operator == OP_TO_DATE:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_date)
 
-                for condition in ast['conditions']:
-                    index_new = _apply_condition(se, condition, _operators, verbosity, series=se)
+            elif operator == OP_TO_NA:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_na)
+            elif operator == OP_TO_NK:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_nk)
+            elif operator == OP_TO_YN:
+                df.loc[rows, cols] = df.loc[rows, cols].map(qp_yn)
 
-                    index_condition = _update_index(index_condition, index_new, condition['condition_connector'], i=None, verbosity=verbosity)
-                index_expression = _update_index(index_expression, index_condition, ast['connector'], i=None, verbosity=verbosity)
+        else:
+            #data modification
+            if operator == OP_SET_VAL:
+                df.loc[rows, cols] = value
+            elif operator == OP_ADD_VAL:
+                df.loc[rows, cols] = df.loc[rows, cols].astype(str) + value
+            
+            elif operator == OP_SET_X_EVAL:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': df, 'pd': pd, 'np': np, 'qp': qp}))
+            elif operator == OP_SET_COL_EVAL:
+                df.loc[:, cols] = df.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': df, 'pd': pd, 'np': np, 'qp': qp}), axis=0)
+            elif operator == OP_SET_HEADER_EVAL:
+                df.columns = df.columns.applymap(lambda x: eval(value, {'header': x, 'df': df, 'pd': pd, 'np': np, 'qp': qp}))
 
-                if index_expression.any() == False and verbosity >= 2:
-                    log(f'no values fulfill the condition(s) in "{expression}"', level='warning', source='se.q', input=se.qp._input)
+
+            #type conversion
+            elif operator == OP_TO_STR:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(str)
+            elif operator == OP_TO_INT:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_int)
+            elif operator == OP_TO_FLOAT:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_float)
+            elif operator == OP_TO_NUM:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_num)
+            elif operator == OP_TO_BOOL:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_bool)
+            
+            elif operator == OP_TO_DATETIME:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_datetime)
+            elif operator == OP_TO_DATE:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_date)
+
+            elif operator == OP_TO_NA:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_na)
+            elif operator == OP_TO_NK:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_nk)
+            elif operator == OP_TO_YN:
+                df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_yn)
+
+        return df
 
 
-            elif expression_type == 'modify series':
-                ast = _parse_expression_modify(se, expression, expression_type, verbosity)
+class InstructionModifyDf:
+    def __init__(self, token, verbosity=3):
+        self.parse(token, verbosity=verbosity)
 
-                for modification in ast['modifications']:
-                    se = _apply_modification(se, index_expression, modification, verbosity, series=se)
-                    se.qp = self.se.qp
+    def __repr__(self):
+        return self.__str__()
+    
+    def __str__(self):
+        string = f"""
+            \n<br>{self.mode}
+            \n<br>{self.connector.symbol}
+            \n<br>{self.operator.symbol}
+            \n<br>{self.value}
+            """
+        return string
 
 
-        se_filtered = se[index_expression]
-        se_filtered.qp = se.qp
-        return se_filtered
+    def parse(self, token, verbosity=3):
+        self.token = token
+        self.mode, token = _read_symbol(token, [MODIFY_DF], MODIFY_DF, verbosity)
+        self.connector, token = _read_symbol(token, [CONNECTOR_AND], CONNECTOR_AND, verbosity)
+        self.operator, token = _read_symbol(
+            token,
+            symbols = [
+                OP_ADD_COL,
+                ],
+            default = OP_ADD_COL,
+            verbosity = verbosity,
+            )
+        self.value = token.strip()
+    
+        log(f'parsed token "{self.token}" as instruction: {self.__str__()}',
+            level='debug', source='_parse_token', verbosity=verbosity)
 
+        if self.operator.unary and len(self.value)>0:
+            log(f'unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
+                level='warning', source='_parse_token', verbosity=verbosity)
+            self.value = ''
+
+
+def _read_symbol(token, symbols, default, verbosity=3):
+    """
+    Reads the first characters of a token and returns the corresponding symbol name and the remaining token.
+    Keys in symbol_dictionary which are None are used as default values.
+    """
+
+    for symbol in symbols:
+        if token.startswith(symbol.symbol):
+            log(f'found symbol "{symbol}" in token "{token}"',
+                level='trace', source='_read_symbol', verbosity=verbosity)
+            return symbol, token[len(symbol.symbol):].strip()
+    
+    log(f'no symbol found in token "{token}". using default "{default}"',
+        level='trace', source='_read_symbol', verbosity=verbosity)
+    if token.startswith(default.symbol):
+        token = token[len(default.symbol):].strip()
+    return default, token
+
+def _update_index(values, values_new, connector, verbosity=3):
+    if values is None:
+        values = values_new
+    elif connector == CONNECTOR_RESET:
+        values = values_new
+    elif connector in [CONNECTOR_AND, COLS_ALL]:
+        values &= values_new
+    elif connector in [CONNECTOR_OR, COLS_ANY]:
+        values |= values_new
+    return values
+
+
+
+#####################     query api     #####################
 
 @pd.api.extensions.register_dataframe_accessor('q')
 class DataFrameQuery:
     """
-    A custom query language for filtering and modifying data and metadata in pandas DataFrames.
-
-    each query consists of 3 string expressions, any of which can be left empty:
-        1. column filter: '=col1', '!=col2', '()1 // ()2'
-        2. row filter: 'is date', 'is int && >0', '? len(str(x)) > 5'
-        3. (meta-)data modification: 'x= str(x)', 'col#= integer column', 'row#= positive'
-
-    eg.: df.q('=col1', 'is int && >0', 'row#= positive')
-
-    multiple conditions in an expression as well as multiple whole queries can be connected.
-
-    Connectors:
-        &&: the previous conditions AND this new conditions have to apply
-        //: the previous conditions OR this new conditions have to apply
-        >>: ignore previous conditions and use these new conditions INSTEAD
-
-    Operators:
-        >: bigger
-        <: smaller
-        >=: bigger or equal
-        <=: smaller or equal
-        
-        ~: contains a regex pattern (re.search)
-        ~~: matches a regex pattern (re.match)
-
-        =: equal
-        ==: strictly equal (case sensitive)
-
-        (): contains a string
-        (()): contains a string (case sensitive)
-
-        ?: filter using a python expression (must evaluate to True or False)
-
-        is str: is a string
-        is int: is an integer
-        is float: is a float
-        is num: is a number (int or float)
-        is bool: is a boolean
-
-        is date: is a date (quite format lenient but defaults to european formats)
-        is datetime: is a datetime
-
-        is any: matches any value, use to select all
-        is na: not available data (quite lenient)
-        is nk: not known data (quite lenient)
-        is yk: is a yes or no value
-        is yes: is a yes value
-        is no: is a no value
-
-    Modifiers:
-        x=: set x to a value
-        col=: set whole column to a value
-        row=: set whole row to a value
-        col#=: tag columns
-        row#=: tag rows
-
-        to str: convert to string
-        to int: convert to integer
-        to float: convert to float
-        to num: convert to number
-        to bool: convert to boolean
-
-        to date: convert to date
-        to datetime: convert to datetime
-
-        to na: convert to not available
-        to nk: convert to not known
-        to yn: convert to yes or no
     """
 
 
     def __init__(self, df: pd.DataFrame):
         _check_df(df)
         self.df = df
-        self.df.qp._operators = _operators
-        self.df.qp._modifiers = _modifiers
 
 
     def __repr__(self):
@@ -440,33 +584,27 @@ class DataFrameQuery:
     
 
     def __call__(self,
-            *expressions,  #string expressions for filtering and modifying data
-            diff=None,  #[None, 'mix', 'old', 'new', 'new+']
-            max_cols=200,  #maximum number of columns to display. None: show all
-            max_rows=20,  #maximum number of rows to display. None: show all
-            inplace=True,  #make modifications inplace or just return a new dataframe
+            code='',  #code in string form for filtering and modifying data
+            inplace=True,  #make modifications inplace or just return a new dataframe.
             verbosity=3,  #verbosity level for logging. 0: no logging, 1: errors, 2: warnings, 3: info, 4: debug
+            diff=None,  #[None, 'mix', 'old', 'new', 'new+']
+            diff_max_cols=200,  #maximum number of columns to display when using diff. None: show all
+            diff_max_rows=20,  #maximum number of rows to display when using diff. None: show all
             **kwargs
             ):
 
-        ###########################################
-        #                  setup                  #
-        ###########################################
+        #######################     setup     #######################
 
         #input string for logging
-        input_str = ".q("
-        for i,expression in enumerate(expressions):
-            if (i+1)%3 == 1:
-                input_str += f"\n\t{expression !r},"
-            else:
-                input_str += f" {expression !r},"
+        code_str = code.replace('\n', '\n\t')
+        input_str = f".q(\n\tr\"\"\"\n\t{code_str}\n\t\"\"\","
    
         if diff is not None:
             input_str += f"\n\tdiff='{diff}',"
-        if max_cols is not None:
-            input_str += f"\n\tmax_cols={max_cols},"
-        if max_rows is not None:
-            input_str += f"\n\tmax_rows={max_rows},"
+        # if max_cols is not None:
+        #     input_str += f"\n\tmax_cols={max_cols},"
+        # if max_rows is not None:
+        #     input_str += f"\n\tmax_rows={max_rows},"
         
         input_str += f"\n\tinplace={inplace},"
         input_str += f"\n\tverbosity={verbosity},"
@@ -476,562 +614,80 @@ class DataFrameQuery:
 
         self.df.qp._input = input_str + "\n\t)"
 
-
-    
+                
         if inplace is False:
             df = self.df.copy()
         else:
-            df = self.df
-            
-        df.qp = self.df.qp
-
-        
-
-        #inserting metadata row at the top, sadly a bit hacky
-        #because there does not seem to be an inplace function for that
-        if '#' not in df.index:
-            if verbosity >= 2:
-                log(f'a row named "#" containing metadata at location 0 is expected but was not found. '
-                    +'adding metadata row now. its advised to prepare the data with df=df.format().',
-                    level='warning', source='df.q()')
-            df_old = df.copy()
-            index_old = df.index
-            index_new = pd.Index(['#', *index_old])
-            
-            df.loc['#'] = ''
-            df.set_index(index_new, inplace=True)
-            df.loc[index_old, :] = df_old
-            df.loc['#'] = ''
-
-        #inserting metadata column at the start
-        if '#' not in df.columns:
-            if verbosity >= 2:
-                log(f'a column named "#" containing metadata at location 0 is expected but was not found. '
-                    +'adding metadata column now. its advised to prepare the data with df=df.format().',
-                    level='warning', source='df.q()')
-            df.insert(0, '#', '')
+            df = self.df  
+        df.qp = self.df.qp 
 
 
 
+        #######################     main     #######################
 
+        cols_filtered = pd.Index([True for col in df.columns])
+        rows_filtered = pd.Index([True for row in df.index])
 
-        
-        ###########################################
-        #               run queries               #
-        ###########################################
-
-        cols_filtered = cols_filtered_condition = pd.Index([True for col in df.columns])
-        rows_filtered = rows_filtered_condition = rows_filtered_col = pd.Index([True for row in df.index])
-        
-
-        for i_expression,expression in enumerate(expressions):
-            expression_type = ['col', 'row', 'modify'][i_expression%3]
-            if expression == '':
+        instructions = []
+        for line in code.split('\n'):
+            instructions_temp = _parse_line(line, verbosity=verbosity)
+            if instructions_temp is None:
                 continue
+            instructions += instructions_temp
+        
+        if len(instructions) == 0:
+            log(f'no instructions found in code "{code}"',
+                level='warning', source='df.q', verbosity=verbosity)
+            return df
 
 
-            #filter columns
-            if expression_type == 'col':
-                ast = _parse_expression(df, expression, expression_type, verbosity)
 
-                for i_condition,condition in enumerate(ast['conditions']):
-                    if condition['by_tag'] == 'row or col metadata':
-                        cols_filtered_new = _apply_condition(df.loc['#'], condition, _operators, verbosity, df=df)
+        for instruction in instructions:
+            
+            if instruction.mode == FILTER_COLS:
+                cols_filtered = instruction.filter(df, cols_filtered, rows_filtered, verbosity=verbosity)
+
+            elif instruction.mode == FILTER_ROWS:
+                rows_filtered = instruction.filter(df, cols_filtered, rows_filtered, verbosity=verbosity)
+
+            elif instruction.mode == MODIFY_VALS:
+                df.loc[:, :] = instruction.modify_vals(df, cols_filtered, rows_filtered, verbosity=verbosity).loc[:, :]
+
+            elif instruction.mode == MODIFY_DF:
+                if instruction.operator == OP_ADD_COL:
+                    if instruction.value in df.columns:
+                        log(f'column "{instruction.value}" already exists in dataframe. selecting col instead of creating a new one',
+                            level='warning', source='df.q', verbosity=verbosity)
+                        cols_filtered = pd.Index([True if col == instruction.value else False for col in df.columns])
                     else:
-                        cols_filtered_new = _apply_condition(df.columns, condition, _operators, verbosity, df=df)
-
-                    cols_filtered_condition = _update_index(cols_filtered_condition, cols_filtered_new, condition['condition_connector'], i_condition, verbosity=verbosity)
-                cols_filtered = _update_index(cols_filtered, cols_filtered_condition, ast['connector'], i_expression, verbosity=verbosity)
-
-                if cols_filtered.any() == False and verbosity >= 2:
-                    log(f'no columns fulfill the condition(s) in "{expression}"', level='warning', source='df.q', input=df.qp._input)
-
-                
+                        df[instruction.value] = ''
+                        cols_filtered = pd.Index([True if col == instruction.value else False for col in df.columns])
+                        
 
 
-            #filter rows
-            elif expression_type == 'row':
-                ast = _parse_expression(df, expression, expression_type, verbosity)
+        #################     display settings     #################
 
-                for i_condition,condition in enumerate(ast['conditions']):
-                    for i_col,col in enumerate(df.columns[cols_filtered_condition][1:]):  #ignore metadata column
-                        if condition['by_tag'] == 'row or col metadata':
-                            rows_filtered_new = _apply_condition(df['#'], condition, _operators, verbosity, df=df)
-                        else:
-                            rows_filtered_new = _apply_condition(df[col], condition, _operators, verbosity, df=df)
-
-                        rows_filtered_col = _update_index(rows_filtered_col, rows_filtered_new, condition['which_cols'], i_col, verbosity=verbosity)
-                    rows_filtered_condition = _update_index(rows_filtered_condition, rows_filtered_col, condition['condition_connector'], i_condition, verbosity=verbosity)
-                rows_filtered = _update_index(rows_filtered, rows_filtered_condition, ast['connector'], i_expression-1, verbosity=verbosity)
-
-                if rows_filtered.any() == False and verbosity >= 2:
-                    log(f'no rows fulfill the condition(s) in "{expression}"', level='warning', source='df.q', input=df.qp._input)
-
-
-
-            #modify data
-            elif expression_type == 'modify':
-                cols_filtered_no_metadata = [col for col in df.columns[cols_filtered] if not col.startswith('#')]
-                rows_filtered_no_metadata = [row for row in df.index[rows_filtered] if row != '#']
-
-                ast = _parse_expression_modify(df, expression, expression_type, verbosity)
-
-                for modification in ast['modifications']:
-                            
-                    #tag columns
-                    if modification['modifier'] in _modifiers['set_col_tags']:
-                        df.loc['#', cols_filtered_no_metadata] = df.loc['#', cols_filtered_no_metadata].apply(
-                            lambda x: eval(modification['value'])
-                            )
-                    
-                    #tag rows
-                    elif modification['modifier'] in _modifiers['set_row_tags']:
-                        df.loc[rows_filtered_no_metadata, '#'] = df.loc[rows_filtered_no_metadata, '#'].apply(
-                            lambda x: eval(modification['value'])
-                            )
-                    
-                    #modify filtered data
-                    else:
-                        df.loc[:, :] = _apply_modification_df(df, rows_filtered_no_metadata, cols_filtered_no_metadata, modification, verbosity).loc[:, :]
-
-
-
-
-
-
-        ##########################################
-        #            display settings            #
-        ##########################################
-   
         df_filtered = df.loc[rows_filtered, cols_filtered]
         df_filtered.qp = self.df.qp
     
         if diff is None:
-
-            cols_num = len(df.columns[cols_filtered])
-            rows_num = len(df.index[rows_filtered])
-
-            if verbosity >= 2:
-                if max_cols is not None and max_cols < cols_num:
-                    log(f'showing {max_cols} out of {cols_num} columns', level='warning', source='df.q', input=df.qp._input)
-                if max_rows is not None and max_rows < rows_num:
-                    log(f'showing {max_rows} out of {rows_num} rows', level='warning', source='df.q', input=df.qp._input)
- 
-            pd.set_option('display.max_columns', max_cols)
-            pd.set_option('display.max_rows', max_rows)
-            pd.set_option('display.min_rows', max_rows)
-
-            return df_filtered
-        
+            return df_filtered 
         else:
-
-
             #show difference before and after filtering
-            result = qp.diff(
+
+            if 'meta' in df.columns and 'meta' not in df_filtered.columns:
+                df_filtered.insert(0, 'meta', df.loc[rows_filtered, 'meta'])
+
+            result = _show_differences(
                 df_filtered, self.df, show=diff,
-                max_cols=max_cols, max_rows=max_rows,
+                max_cols=diff_max_cols, max_rows=diff_max_rows,
                 verbosity=verbosity)  
             return  result
-
-
-
-def _parse_expression(pd_object, expression, mode, verbosity=3):
-
-    ast = {
-        'expression': expression,
-        'mode': mode,
-        'connector': None,
-        'conditions': [],
-        }
-    
-    if expression[:2] not in ['&&', '//', '>>']:
-        expression = '>>' + expression
-
-    ast['connector'] = expression[:2]
-
-
-    expressions = re.split('(&&|//|>>)', expression)
-    for ind in range(len(expressions)):
-
-        condition = {'expression': expressions[ind], 'mode': mode}
-        condition_str = expressions[ind].strip()
-
-        if len(condition_str) == 0 or condition_str in ['&&', '//', '>>']:
-            continue
-
-        
-        if expressions[ind-1] == '&&':  #and
-            condition['condition_connector'] = '&&'
-        elif expressions[ind-1] == '//':  #inclusive or
-            condition['condition_connector'] = '//'
-        elif expressions[ind-1] == '>>':  #reset
-            condition['condition_connector'] = '>>'
-
-        
-        #row conditions also specify in which cols the condition is applied. default: any
-        if mode == 'row':
-            if condition_str.startswith('any'):
-                condition['which_cols'] = 'any'
-                condition_str = condition_str[3:].lstrip()
-            elif condition_str.startswith('all'):
-                condition['which_cols'] = 'all'
-                condition_str = condition_str[3:].lstrip()
-            else:
-                condition['which_cols'] = 'any'
-
-
-        #rows and cols can be filtered by metadata
-        if condition_str.startswith('#'):
-            condition['by_tag'] = 'row or col metadata'
-            condition_str = condition_str[1:].lstrip()
-        else:
-            condition['by_tag'] = False
-
-        #wip
-        # if condition_str.startswith('x#'):
-        #     condition['by_tag_value'] = 'value metadata'
-        #     condition_str = condition_str[1:].lstrip()
-        # else:
-        #     condition['by_tag_value'] = False
-
-        
-
-
-        #should the condition be negated. default: False
-        if condition_str.startswith('!'):
-            condition['negate'] = True
-            condition_str = condition_str[1:].lstrip()
-        else:
-            condition['negate'] = False
-
-
-        #operator for condition. default: =
-        for operator in _operators.values_flat():
-            if condition_str.startswith(operator):
-                condition['operator'] = operator
-                condition_str = condition_str[len(operator):].lstrip()
-                break
-        
-        if 'operator' not in condition:
-            if verbosity >= 3:
-                log(f'no operator found in condition "{condition_str}". Using default operator "="',
-                    level='info', source='_parse_expression', input=pd_object.qp._input)
-            condition['operator'] = '='
-
-
-        if mode in ['filter series', 'filter index'] and condition['operator'] in _operators_only_df.values_flat():
-            if verbosity >= 1:
-                operator_temp = condition['operator']
-                log(f'operator "{operator_temp}" only works with dataframes. Ignoring condition "{condition_str}"',
-                    level='error', source='_parse_expression', input=pd_object.qp._input)
-            continue
-        
-        if condition['operator'] in _operators2.values_flat() and len(condition_str) > 0:
-            if verbosity >= 2:
-                operator_temp = condition['operator']
-                log(f'operator "{operator_temp}" does not need a value for comparison. Ignoring value "{condition_str}"',
-                    level='warning', source='_parse_expression', input=pd_object.qp._input)
-
-
-        #value for comparison
-        condition['value'] = condition_str.strip()
-    
-        ast['conditions'].append(condition)
-
-    if verbosity >= 4:
-        display(f'abstract syntax tree for expression "{expression}":', ast)
-        
-    return ast
-
-def _parse_expression_modify(pd_object, expression, mode, verbosity=3):
-
-    ast = {
-        'expression': expression,
-        'mode': mode,
-        'modifications': [],
-        }
     
 
-    expressions = re.split('(&&)', expression)
-    for ind in range(len(expressions)):
-
-        condition = {}
-        condition_str = expressions[ind].strip()
-
-        if len(condition_str) == 0 or condition_str in ['&&']:
-            continue
 
 
-        #modifier to use. default: "set x:"
-        for modifier in _modifiers.values_flat():
-            if condition_str.startswith(modifier):
-                condition['modifier'] = modifier
-                condition_str = condition_str[len(modifier):].lstrip()
-                break
-        
-        if 'modifier' not in condition:
-            if verbosity > 3:
-                log(f'no modifier found in condition "{condition_str}". Using default modifier "x="',
-                    level='info', source='_parse_expression', input=pd_object.qp._input)
-            condition['modifier'] = 'x='
-
-        if mode in ['modify series', 'modify index'] and condition['modifier'] in _modifiers_only_df.values_flat():
-            if verbosity >= 1:
-                modifier_temp = condition['modifier']
-                log(f'modifier "{modifier_temp}" only works with dataframes. Ignoring condition "{condition_str}"',
-                    level='error', source='_parse_expression', input=pd_object.qp._input)
-            continue
-
-        if condition['modifier'] in _modifiers2.values_flat() and len(condition_str) > 0:
-            if verbosity >= 2:
-                modifier_temp = condition['modifier']
-                log(f'modifier "{modifier_temp}" does not need a value for comparison. Ignoring value "{condition_str}"',
-                    level='warning', source='_parse_expression', input=pd_object.qp._input)
-
-
-        #expression used for modification
-        condition['value'] = condition_str.strip()
-    
-        ast['modifications'].append(condition)
-        
-    if verbosity >= 4:
-        display(f'abstract syntax tree for expression "{expression}":', ast)
-    
-    return ast
-
-
-def _apply_condition(pd_object, condition, operators, verbosity=3, df=None, series=None, index=None):
-    """
-    filters a pandas object using a query condition
-    """
-
-    value = condition['value']
-
-    if isinstance(pd_object, pd.Index):
-        pd_object = pd_object.to_series()
-
-    
-    match condition['operator']:
-        #numeric comparison
-        case operators.bigger_equal:
-            filtered = pd.to_numeric(pd_object, errors='coerce') >= pd.to_numeric(value)
-        case operators.smaller_equal:
-            filtered = pd.to_numeric(pd_object, errors='coerce') <= pd.to_numeric(value)
-        case operators.bigger:
-            filtered = pd.to_numeric(pd_object, errors='coerce') > pd.to_numeric(value)
-        case operators.smaller:
-            filtered = pd.to_numeric(pd_object, errors='coerce') < pd.to_numeric(value)
-        
-        
-        #regex comparison
-        case operators.regex_match:
-            filtered = pd_object.astype(str).str.fullmatch(value) 
-        case operators.regex_search:
-            filtered = pd_object.astype(str).str.contains(value)
-
-
-        #string equality comparison
-        case operators.strict_equal:
-            filtered = pd_object.astype(str) == value
-        case operators.equal:
-            value_lenient = [value]
-            try:
-                value_lenient.append(str(float(value)))
-                value_lenient.append(str(int(float(value))))
-            except:
-                value_lenient.append(value.lower())
-            filtered = pd_object.astype(str).str.lower().isin(value_lenient)
-        
-        #substring comparison
-        case operators.strict_contains:
-            filtered = pd_object.astype(str).str.contains(value, case=True, regex=False)
-        case operators.contains:
-            filtered = pd_object.astype(str).str.contains(value, case=False, regex=False)
-
-
-
-        #lambda function
-        case operators.lambda_condition:
-            filtered_no_metadata = pd_object.iloc[1:].apply(lambda x, df=df.iloc[1:,1:], series=series, index=index, pd=pd, np=np: eval(value))
-            filtered = pd.concat([pd.Series({'#': True}), filtered_no_metadata], axis=0)
-        case operators.lambda_condition_col:
-            filtered_no_metadata = eval(value, {'col': pd_object.iloc[1:], 'df': df.iloc[1:,1:], 'pd': pd, 'np': np, 'qp': qp})
-            filtered = pd.concat([pd.Series({'#': True}), filtered_no_metadata], axis=0)
-
-
-
-        #type checks
-        case operators.is_bool:
-            filtered = pd_object.apply(lambda x: isinstance(x, bool))
-        case operators.is_str:
-            filtered = pd_object.apply(lambda x: isinstance(x, str))
-        case operators.is_int:
-            filtered = pd_object.apply(lambda x: isinstance(x, int))
-        case operators.is_float:
-            filtered = pd_object.apply(lambda x: isinstance(x, float))
-        case operators.is_num:
-            filtered = pd_object.apply(lambda x: qp_num(x, errors='ERROR')) != 'ERROR'
-
-        case operators.is_date:
-            filtered = pd_object.apply(lambda x: qp_date(x, errors='ERROR')) != 'ERROR'
-        case operators.is_datetime:
-            filtered = pd_object.apply(lambda x: qp_datetime(x, errors='ERROR')) != 'ERROR'
-
-        case operators.is_any:
-            filtered = pd_object.apply(lambda x: True)
-        case operators.is_na:
-            filtered = pd_object.apply(lambda x: qp_na(x, errors='ERROR')) != 'ERROR'
-        case operators.is_nk:
-            filtered = pd_object.apply(lambda x: qp_nk(x, errors='ERROR')) != 'ERROR'
-        case operators.is_yn:
-            filtered = pd_object.apply(lambda x: qp_yn(x, errors='ERROR')) != 'ERROR'
-        case operators.is_yes:
-            filtered = pd_object.apply(lambda x: qp_yn(x, errors='ERROR', yes=1)) == 1
-        case operators.is_no:
-            filtered = pd_object.apply(lambda x: qp_yn(x, errors='ERROR', no=0)) == 0
-
-        case _:
-            if verbosity >= 1:
-                operator_temp = condition['operator']
-                log(f'operator "{operator_temp}" is not implemented', level='error', source='_apply_condition()', input=pd_object.qp._input)
-            filtered = None
-
-
-    if condition['negate']:
-        filtered = ~filtered
-
-    if condition['mode'] in ['col', 'row']:
-        filtered.iloc[0] = True  #metadata row/column should always be included
-
-    return filtered
-
-def _apply_modification(pd_object, indices, modification, verbosity=3, series=None, index=None):
-    modifiers = pd_object.qp._modifiers
-
-    #data modification
-    if modification['modifier'] in modifiers['set_x']:
-        pd_object[indices] = pd_object[indices].map(lambda x, pd=pd, np=np, qp=qp: eval(modification['value']))
-
-    #type conversion
-    elif modification['modifier'] == modifiers['to_str']:
-        pd_object[indices] = pd_object[indices].map(str)
-    elif modification['modifier'] == modifiers['to_int']:
-        pd_object[indices] = pd_object[indices].map(qp_int)
-    elif modification['modifier'] == modifiers['to_float']:
-        pd_object[indices] = pd_object[indices].map(qp_float)
-    elif modification['modifier'] == modifiers['to_num']:
-        pd_object[indices] = pd_object[indices].map(qp_num)
-    elif modification['modifier'] == modifiers['to_bool']:
-        pd_object[indices] = pd_object[indices].map(qp_bool)
-    
-    elif modification['modifier'] == modifiers['to_date']:
-        pd_object[indices] = pd_object[indices].map(qp_date)
-    elif modification['modifier'] == modifiers['to_datetime']:
-        pd_object[indices] = pd_object[indices].map(qp_datetime)
-    elif modification['modifier'] == modifiers['to_na']:
-        pd_object[indices] = pd_object[indices].map(qp_na)
-    elif modification['modifier'] == modifiers['to_nk']:
-        pd_object[indices] = pd_object[indices].map(qp_nk)
-    elif modification['modifier'] == modifiers['to_yn']:
-        pd_object[indices] = pd_object[indices].map(qp_yn)
-
-    return pd_object
-
-def _apply_modification_df(df, rows, cols, modification, verbosity=3):
-    modifiers = df.qp._modifiers
-
-    if pd.__version__ >= '2.1.0':
-        #data modification
-        if modification['modifier'] in modifiers['set_x']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(lambda x, df=df, pd=pd, np=np, qp=qp: eval(modification['value']))
-                
-
-        elif modification['modifier'] in modifiers['set_col']:
-            df.loc[:, cols] = df.loc[:, cols].apply(lambda x, df=df, pd=pd, np=np, qp=qp: eval(modification['value']), axis=0)
-
-        elif modification['modifier'] in modifiers['set_row']:
-            df.loc[rows, :] = df.loc[rows, :].apply(lambda x, df=df, pd=pd, np=np, qp=qp: eval(modification['value']), axis=1)
-
-
-        #type conversion
-        elif modification['modifier'] == modifiers['to_str']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(str)
-        elif modification['modifier'] == modifiers['to_int']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_int)
-        elif modification['modifier'] == modifiers['to_float']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_float)
-        elif modification['modifier'] == modifiers['to_num']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_num)
-        elif modification['modifier'] == modifiers['to_bool']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_bool)
-        
-        elif modification['modifier'] == modifiers['to_date']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_date)
-        elif modification['modifier'] == modifiers['to_datetime']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_datetime)
-
-        elif modification['modifier'] == modifiers['to_na']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_na)
-        elif modification['modifier'] == modifiers['to_nk']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_nk)
-        elif modification['modifier'] == modifiers['to_yn']:
-            df.loc[rows, cols] = df.loc[rows, cols].map(qp_yn)
-
-    else:
-        #data modification
-        if modification['modifier'] in modifiers['set_x']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(lambda x, df=df, pd=pd, np=np, qp=qp: eval(modification['value']))
-                
-
-        elif modification['modifier'] in modifiers['set_col']:
-            df.loc[:, cols] = df.loc[:, cols].apply(lambda x, df=df, pd=pd, np=np, qp=qp: eval(modification['value']), axis=0)
-
-        elif modification['modifier'] in modifiers['set_row']:
-            df.loc[rows, :] = df.loc[rows, :].apply(lambda x, df=df, pd=pd, np=np, qp=qp: eval(modification['value']), axis=1)
-
-
-        #type conversion
-        elif modification['modifier'] == modifiers['to_str']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(str)
-        elif modification['modifier'] == modifiers['to_int']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_int)
-        elif modification['modifier'] == modifiers['to_float']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_float)
-        elif modification['modifier'] == modifiers['to_num']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_num)
-        elif modification['modifier'] == modifiers['to_bool']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_bool)
-        
-        elif modification['modifier'] == modifiers['to_date']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_date)
-        elif modification['modifier'] == modifiers['to_datetime']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_datetime)
-
-        elif modification['modifier'] == modifiers['to_na']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_na)
-        elif modification['modifier'] == modifiers['to_nk']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_nk)
-        elif modification['modifier'] == modifiers['to_yn']:
-            df.loc[rows, cols] = df.loc[rows, cols].applymap(qp_yn) 
-
-    return df
-    
-
-def _update_index(values, values_new, connector, i, verbosity=3):
-    if i == 0:
-        values = values_new
-    elif connector == '>>':
-        values = values_new
-    elif connector in ['&&', 'all']:
-        values &= values_new
-    elif connector in ['//', 'any']:
-        values |= values_new
-    else:
-        if verbosity >= 1:
-            log(f'connector "{connector}" is not implemented', level='error', source='_update_index()')
-    return values
-
-
+#################     interactive mode     #################
 
 @pd.api.extensions.register_dataframe_accessor('qi')
 class DataFrameQueryInteractiveMode:
@@ -1044,85 +700,16 @@ class DataFrameQueryInteractiveMode:
     def __call__(self, num_filters=5):
         kwargs = {'df': fixed(self.df)}
 
-
-        ###########################################
-        #            tab0 queries&diff            #
-        ###########################################
-
-        ui_label_filter_cols = widgets.Label(value='filter columns')
-        ui_label_filter_rows = widgets.Label(value='filter rows')
-        ui_label_modify_data = widgets.Label(value='modify data')
-        ui_expressions = [ui_label_filter_cols, ui_label_filter_rows, ui_label_modify_data]
+        #code input
+        ui_code = widgets.Textarea(
+            value='',
+            placeholder='Enter query code here',
+            layout=Layout(width='95%', height='100%')
+        )
+        kwargs['code'] = ui_code
 
 
 
-        for i in range(num_filters):
-            if i == 0:
-                placeholder_col = '=name'
-                placeholder_row = '()john'
-                placeholder_modify = 'x= x.upper() '
-            elif i == 1:
-                placeholder_col = '// =age'
-                placeholder_row = '&& <0 // >120'
-                placeholder_modify = 'row#= "implausible age" '
-            elif i == 2:
-                placeholder_col = '// =weight // =height'
-                placeholder_row = '!is num'
-                placeholder_modify = 'to num'
-            else:
-                placeholder_col = ''
-                placeholder_row = ''
-                placeholder_modify = ''
-            
-
-            col = widgets.Combobox(
-                value='',
-                placeholder=placeholder_col,
-                options=['=' + col for col in self.df.columns if col != '#'],
-                )
-            kwargs[f'col_expression{i}'] = col
-            ui_expressions.append(col)
-            
-            row = widgets.Combobox(
-                value='',
-                placeholder=placeholder_row,
-                options=[
-                    '>0', '<0', '>=0', '<=0',  #numerical comparison
-                    '=abc', '!=abc', '==AbC', '!==AbC',  #equality checks
-                    '()abc', '(())AbC',  #substring checks
-                    '~*a.c', '~~*a.c',  #regex checks
-                    
-                    '? len(x) > 3',  #lambda function condition for each value
-                    'col? col > df["age"]',  #lambda function condition for whole columns
-
-                    #type checks
-                    'is str', 'is int', 'is float', 'is num', 'is bool',
-                    'is date', 'is datetime',
-                    'is any', 'is na', 'is nk',
-                    'is yn', 'is yes', 'is no'
-                    ]
-                )
-            kwargs[f'row_expression{i}'] = row
-            ui_expressions.append(row)
-            
-            modify = widgets.Combobox(
-                value='',
-                placeholder=placeholder_modify,
-                options=[
-                    'x= x.upper() ', 'col= df["ID"]', 'row= df.loc[0]',  #change data
-                    'col#= "tag" ', 'col#= x + "tag" ', 'row#= "tag" ', 'row#= x + "tag"',  #change metadata
-
-                    #change type
-                    'to str', 'to int', 'to float', 'to num', 'to bool',
-                    'to date', 'to datetime',
-                    'to na', 'to nk', 'to yn',
-                    ]
-                )
-            kwargs[f'modify_expression{i}'] = modify
-            ui_expressions.append(modify)
-        
-
-        #show differences
         ui_diff = widgets.ToggleButtons(
             options=[None, 'mix', 'old', 'new', 'new+'],
             description='show differences mode:',
@@ -1136,25 +723,8 @@ class DataFrameQueryInteractiveMode:
             )
         kwargs['diff'] = ui_diff
 
-
-
-        ###########################################
-        #              tab1 settings              #
-        ###########################################
-
-        ui_inplace = widgets.ToggleButtons(
-            options=[True, False],
-            value=False,
-            description='make modifications inplace:',
-            tooltips=[
-                'make modifications inplace, e.g. change the original dataframe',
-                'return a new dataframe with the modifications',
-                ],
-            )
-        kwargs['inplace'] = ui_inplace
-
         ui_verbosity = widgets.ToggleButtons(
-            options=[0, 1, 2, 3, 4],
+            options=[0, 1, 2, 3, 4, 5],
             value=3,
             description='verbosity level:',
             tooltips=[
@@ -1163,77 +733,72 @@ class DataFrameQueryInteractiveMode:
                 'errors and warnings',
                 'errors, warnings and info',
                 'errors, warnings, info and debug',
+                'errors, warnings, info, debug and trace',
                 ],
             )
         kwargs['verbosity'] = ui_verbosity
 
-
-
-        cols_num = len(self.df.columns)
-        rows_num = len(self.df.index)
-        if '#' not in self.df.columns:
-            cols_num = len(self.df.columns) + 1
-        if '#' not in self.df.index:
-            rows_num = len(self.df.index) + 1
-
-        ui_max_cols = widgets.IntSlider(
-            value=200,
-            min=0,
-            max=cols_num*2-1,  #*2 because of metadata columns which get added by diff='new+'
-            description='columns',
+        ui_inplace = widgets.ToggleButtons(
+            options=[True, False],
+            value=False,
+            description='make modifications inplace:',
+            tooltips=[
+                'make modifications inplace, e.g. change the original dataframe.',
+                'return a new dataframe with the modifications. lower performance.',
+                ],
             )
-        kwargs['max_cols'] = ui_max_cols
+        kwargs['inplace'] = ui_inplace
 
-        ui_max_rows = widgets.IntSlider(
-            value=20,
-            min=0,
-            max=rows_num,
-            description='rows',
+
+        ui_settings = VBox([
+            ui_diff,
+            ui_verbosity,
+            ui_inplace,
+            ])
+        
+
+        ui_help = widgets.Tab(
+            children=[
+                ui_settings,
+                widgets.HTML(value="syntax"),
+                widgets.HTML(value="operators"),
+                widgets.HTML(value="modifiers"),
+                ],
+            titles=['settings', 'syntax', 'operators', 'modifiers'],
+            layout=Layout(width='50%', height='95%')
             )
-        kwargs['max_rows'] = ui_max_rows
+        
 
+        ui_input = VBox([ui_code], layout=Layout(width='50%', height='100%'))
+        ui = HBox([ui_input, ui_help], layout=Layout(width='100%', height='300px'))
 
-
-        ###########################################
-        #                tab2 info                #
-        ###########################################
-
-
-        ui_gridbox = widgets.GridBox(ui_expressions, layout=widgets.Layout(grid_template_columns="repeat(3, 330px)"))   
-        tab0 = VBox([ui_gridbox, ui_diff])
-        tab1 = VBox([ui_inplace, ui_verbosity, HBox([ui_max_cols, ui_max_rows])])
-        ui_tab = widgets.Tab(
-            children=[tab0, tab1],
-            titles=['queries', 'settings'],
-            )
-        ui = VBox([ui_tab])
         display(ui)
-
-
         out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
-
         display(out)
+
 
 def _interactive_mode(**kwargs):
 
     df = kwargs.pop('df')
-    expressions = [val for key, val in kwargs.items() if 'expression' in key]
-
 
     result = df.q(
-        *expressions,
-        diff=kwargs['diff'],
-        max_cols=kwargs['max_cols'],
-        max_rows=kwargs['max_rows'],
+        code=kwargs['code'],
         inplace=kwargs['inplace'],
+        diff=kwargs['diff'],
         verbosity=kwargs['verbosity'],
+        # max_cols=kwargs['max_cols'],
+        # max_rows=kwargs['max_rows'],
         )
 
 
     
     display(result)
     print('input code: ', df.qp._input)
-    return result
+    return result 
+
+
+
+
 
 
 

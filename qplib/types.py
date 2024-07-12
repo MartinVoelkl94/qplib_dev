@@ -216,4 +216,27 @@ def qp_yn(x, errors='coerce', yes='yes', no='no', na=None):
 
 
 
+class qpDict(dict):
+    """
+    qp.dict().values_flat() will unpack nested iterables
+    qp.dict().invert() will invert the key:value pairs to value:key pairs
+    """
+
+    def values_flat(self):
+        values_flat = []
+        for val in self.values():
+            if isinstance(val, dict):
+                values_flat.extend(val.values())
+            elif isinstance(val, qpDict):
+                values_flat.extend(val.values_flat())
+            elif hasattr(val, '__iter__') and not isinstance(val, str):
+                values_flat.extend(val)
+            else:
+                values_flat.append(val)
+        return values_flat
+    
+    def invert(self):
+        return qpDict({val:key for key,val in self.items()})
+
+
 

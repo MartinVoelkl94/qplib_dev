@@ -8,9 +8,10 @@ from IPython.display import display
 from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
 
-from .util import log, qpDict
-from .types import qp_date
-from .types import qp_na
+from .util import log
+from .types import qp_date, qp_na, qpDict
+
+
 
 
 def get_df(size='small'):
@@ -73,7 +74,9 @@ class indexQpExtension(qpDict):
         self._og = index
         self._input = None
         self._operators = None
-        self._annotated = None
+        self._operators_binary = None
+        self._modifiers = None
+        self._modifiers_binary = None
 
 
 @pd.api.extensions.register_series_accessor('qp')
@@ -85,7 +88,9 @@ class seriesQpExtension(qpDict):
         self._og = series
         self._input = None
         self._operators = None
-        self._annotated = None
+        self._operators_binary = None
+        self._modifiers = None
+        self._modifiers_binary = None
 
 
 @pd.api.extensions.register_dataframe_accessor('qp')
@@ -97,44 +102,51 @@ class dfQpExtension(qpDict):
         self._og = df
         self._input = None
         self._operators = None
+        self._operators_binary = None
         self._modifiers = None
-        self._annotated = None
-        self._metadata_added = False
+        self._modifiers_binary = None
 
 
+
+@pd.api.extensions.register_dataframe_accessor('check')
+class dfCheckExtension:
+    def __init__(self, df: pd.DataFrame):
+        self.df = df 
+
+    def __call__(self, verbosity=3):
+        _check_df(self.df, verbosity=verbosity)
+        return self.df
 
 @pd.api.extensions.register_dataframe_accessor('format')
 class dfFormatExtension:
     def __init__(self, df: pd.DataFrame):
         self.df = df 
 
-    def __call__(self, fix_headers=True, add_metadata=True, **kwargs):
-        df = copy.deepcopy(self.df)
-
-        if fix_headers is True:
-            log('striping column headers of leading and trailing whitespace, replacing "//" with "/ /", "&&" with "& &" and ">>" with "> >"', level='info', source='qp.df.format()')
-            df.columns = df.columns\
-                .str.replace('&&', '& &')\
-                .str.replace('//', '/ /')\
-                .str.replace('>>', '> >')\
-                .str.strip()
-            
-        if add_metadata is True:
-            log('adding metadata row and column', level='info', source='qp.df.format()')
-            df = _prepare_df(df)
-            
+    def __call__(self, fix_headers=True, add_metadata=True, verbosity=3):
+        df = _format_df(self.df, fix_headers=fix_headers, add_metadata=add_metadata, verbosity=verbosity)    
         return df
 
-
-def _check_df(df):
+def _check_df(df, verbosity=3):
     """
-    df.q() uses '&&', '//' and '>>' for expression syntax.
+    df.q() uses '&&', '//' and '´' for expression syntax.
     these should not be used in colnames.
     """
+    problems_found = False
+
+    if len(df.index) != len(df.index.unique()):
+        log('index is not unique',
+            level='error', source='qp.pd_util._check_df', verbosity=verbosity)
+        problems_found = True
+
+    if len(df.columns) != len(df.columns.unique()):
+        log('columns are not unique',
+            level='error', source='qp.pd_util._check_df', verbosity=verbosity)
+        problems_found = True
+
     problems = {
         '"&&"': [],
         '"//"': [],
-        '">>"': [],
+        '"´"': [],
         'leading whitespace': [],
         'trailing whitespace': [],
         }
@@ -146,37 +158,62 @@ def _check_df(df):
                 problems['"&&"'].append(col)
             if '//' in col:
                 problems['"//"'].append(col)
-            if '>>' in col:
-                problems['">>"'].append(col)
+            if '´' in col:
+                problems['"´"'].append(col)
 
             if col.startswith(' '):
                 problems['leading whitespace'].append(col)
             if col.endswith(' '):
                 problems['trailing whitespace'].append(col)
 
-            if col.startswith('#'):
-                metadata.append(col)
 
     for problem, cols in problems.items():
         if len(cols) > 0:
-            log(f'the following column headers contain {problem}, use df = df.format(): {cols}', level='warning', source='qp.pd_util._check_df')
+            log(f'the following column headers contain {problem}, use df = df.format(): {cols}',
+                level='warning', source='qp.pd_util._check_df', verbosity=verbosity)
+            problems_found = True
 
-    if df.qp._metadata_added is False and len(metadata) > 0:
-        log('the following column headers starting with "#" will be treated as metadata and ignored by most operations', level='warning', source='qp.pd_util._check_df')
-  
+    if problems_found is False:
+        log('df was checked. no problems found', 'info', source='qp.pd_util._check_df', verbosity=verbosity)
+
+def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
+    qp_old = df.qp
+    df = copy.deepcopy(df)
+
+    if fix_headers is True:
+        log('striping column headers of leading and trailing whitespace, replacing "//" with "/ /", "&&" with "& &" and "´" with "`"',
+            level='info', source='qp.df.format()', verbosity=verbosity)
+        df.columns = df.columns\
+            .str.replace('&&', '& &')\
+            .str.replace('//', '/ /')\
+            .str.replace('´', '`')\
+            .str.strip()
+        
+
+    if 'meta' in df.columns:
+        log('ensuring column "meta" is string')
+        df.loc[:, 'meta'] = df.loc[:, 'meta'].astype(str)
+    elif add_metadata is True:
+        log('adding column "meta" at position 0',
+            level='info', source='df.format()', verbosity=verbosity)
+        metadata_col = pd.Series('', index=df.index, name='meta')
+        df = pd.concat([metadata_col, df], axis=1)
+
+    df.qp = qp_old  
+    return df
 
 
 
-def diff(df_new, df_old, show='mix', verbosity=3,
+def _show_differences(df_new, df_old, show='mix', verbosity=3,
     max_cols=200, max_rows=20,
-    newline='<br>', note=''):
+    newline='<br>'):
     '''
     shows differences between dataframes
     '''
 
     #prepare dataframes
-    df_new = _prepare_df(df_new)
-    df_old = _prepare_df(df_old)
+    df_new = _format_df(df_new, fix_headers=False, add_metadata=True, verbosity=verbosity)
+    df_old = _format_df(df_old, fix_headers=False, add_metadata=True, verbosity=verbosity)
 
 
 
@@ -199,22 +236,23 @@ def diff(df_new, df_old, show='mix', verbosity=3,
         }
 
 
+
     #create dfs showing the highlighted changes dependant on "show" settings
     if show in ['new', 'new+']:
         df_diff = copy.deepcopy(df_new)
         df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
 
-                #add metadata columns
+        #add metadata columns
         if show == 'new+':
-            cols_new = ['#']
+            cols_new = ['meta']
             cols_add = []
             for col in df_diff.columns:
-                if not col.startswith('#'):
+                if not col.startswith('meta: ') and col != 'meta':
                     cols_new.append(col)
-                    cols_new.append(f'#{col}')
+                    cols_new.append(f'meta: {col}')
 
-                    if f'#{col}' not in df_diff.columns:
-                        cols_add.append(f'#{col}')
+                    if f'meta: {col}' not in df_diff.columns:
+                        cols_add.append(f'meta: {col}')
 
             df_diff = pd.concat([df_diff, pd.DataFrame('', index=df_diff.index, columns=cols_add)], axis=1)
             df_diff_style = pd.concat([df_diff_style, pd.DataFrame('font-style: italic', index=df_diff.index, columns=cols_add)], axis=1)
@@ -226,8 +264,7 @@ def diff(df_new, df_old, show='mix', verbosity=3,
         df_diff_style.loc[:, cols_added] = 'background-color: #6dae51'  #green
         df_diff_style.loc[rows_added, :] = 'background-color: #6dae51'  #green
 
-        df_diff.loc['#', cols_added] += 'added col'
-        df_diff.loc[rows_added, '#'] += 'added row'
+        df_diff.loc[rows_added, 'meta'] += 'added row'
 
 
 
@@ -238,8 +275,7 @@ def diff(df_new, df_old, show='mix', verbosity=3,
         df_diff_style.loc[:, cols_removed] = 'background-color: #db2727'  #red
         df_diff_style.loc[rows_removed, :] = 'background-color: #db2727'  #red
 
-        df_diff.loc['#', cols_removed] += 'removed col'
-        df_diff.loc[rows_removed, '#'] += 'removed row'
+        df_diff.loc[rows_removed, 'meta'] += 'removed row'
 
     elif show == 'mix':
         inds_old = df_old.index.difference(df_new.index)
@@ -255,10 +291,8 @@ def diff(df_new, df_old, show='mix', verbosity=3,
         df_diff_style.loc[rows_added, :] = 'background-color: #6dae51'  #green
         df_diff_style.loc[rows_removed, :] = 'background-color: #db2727'  #red
 
-        df_diff.loc['#', cols_added] += 'added col'
-        df_diff.loc['#', cols_removed] += 'removed col'
-        df_diff.loc[rows_added, '#'] += 'added row'
-        df_diff.loc[rows_removed, '#'] += 'removed row'
+        df_diff.loc[rows_added, 'meta'] += 'added row'
+        df_diff.loc[rows_removed, 'meta'] += 'removed row'
 
     else:
         log(f'unknown show mode: {show}', 'error', source='qp.diff()')
@@ -266,20 +300,19 @@ def diff(df_new, df_old, show='mix', verbosity=3,
 
     #highlight values in shared columns
     #column 0 contains metadata and is skipped
-    cols_shared_no_metadata = [col for col in cols_shared if not col.startswith('#')]
-    rows_shared_no_metadata = [row for row in rows_shared if row != '#']
+    cols_shared_no_metadata = [col for col in cols_shared if not col.startswith('meta: ') and col != 'meta']
 
-    df_new_isna = df_new.loc[rows_shared_no_metadata, cols_shared_no_metadata].isna()
-    df_old_isna = df_old.loc[rows_shared_no_metadata, cols_shared_no_metadata].isna()
-    df_new_equals_old = df_new.loc[rows_shared_no_metadata, cols_shared_no_metadata] == df_old.loc[rows_shared_no_metadata, cols_shared_no_metadata]
+    df_new_isna = df_new.loc[rows_shared, cols_shared_no_metadata].isna()
+    df_old_isna = df_old.loc[rows_shared, cols_shared_no_metadata].isna()
+    df_new_equals_old = df_new.loc[rows_shared, cols_shared_no_metadata] == df_old.loc[rows_shared, cols_shared_no_metadata]
 
     df_added = df_old_isna & ~df_new_isna
     df_removed = df_new_isna & ~df_old_isna
     df_changed = ~df_new_isna & ~df_old_isna & ~df_new_equals_old
 
-    df_diff_style.loc[rows_shared_no_metadata, cols_shared_no_metadata] += df_added.mask(df_added, 'background-color: #c0e7b0').where(df_added, '')  #light green
-    df_diff_style.loc[rows_shared_no_metadata, cols_shared_no_metadata] += df_removed.mask(df_removed, 'background-color: #f39191').where(df_removed, '')  #light red
-    df_diff_style.loc[rows_shared_no_metadata, cols_shared_no_metadata] += df_changed.mask(df_changed, 'background-color: #ffd480').where(df_changed, '')  #light orange
+    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_added.mask(df_added, 'background-color: #c0e7b0').where(df_added, '')  #light green
+    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_removed.mask(df_removed, 'background-color: #f39191').where(df_removed, '')  #light red
+    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_changed.mask(df_changed, 'background-color: #ffd480').where(df_changed, '')  #light orange
 
 
 
@@ -291,35 +324,30 @@ def diff(df_new, df_old, show='mix', verbosity=3,
     changes_all['vals removed'] += df_removed_sum.sum()
     changes_all['vals changed'] += df_changed_sum.sum()
 
-    df_diff.loc[rows_shared_no_metadata, '#'] += df_added_sum.apply(lambda x: f'{newline}vals added: {x}' if x > 0 else '')
-    df_diff.loc[rows_shared_no_metadata, '#'] += df_removed_sum.apply(lambda x: f'{newline}vals removed: {x}' if x > 0 else '')
-    df_diff.loc[rows_shared_no_metadata, '#'] += df_changed_sum.apply(lambda x: f'{newline}vals changed: {x}' if x > 0 else '')
-
-
-    df_diff.loc['#', cols_shared_no_metadata] += df_added.sum().apply(lambda x: f'{newline}vals added: {x}' if x > 0 else '')
-    df_diff.loc['#', cols_shared_no_metadata] += df_removed.sum().apply(lambda x: f'{newline}vals removed: {x}' if x > 0 else '')
-    df_diff.loc['#', cols_shared_no_metadata] += df_changed.sum().apply(lambda x: f'{newline}vals changed: {x}' if x > 0 else '')
+    df_diff.loc[rows_shared, 'meta'] += df_added_sum.apply(lambda x: f'{newline}vals added: {x}' if x > 0 else '')
+    df_diff.loc[rows_shared, 'meta'] += df_removed_sum.apply(lambda x: f'{newline}vals removed: {x}' if x > 0 else '')
+    df_diff.loc[rows_shared, 'meta'] += df_changed_sum.apply(lambda x: f'{newline}vals changed: {x}' if x > 0 else '')
 
 
     if show == 'new+':
-        cols_shared_metadata = [f'#{col}' for col in cols_shared_no_metadata]
+        cols_shared_metadata = [f'meta: {col}' for col in cols_shared_no_metadata]
         df_all_modifications = (df_added | df_removed | df_changed)#.add_prefix('#', axis='columns')
     
-        df_old_filtered_values = df_old.loc[rows_shared_no_metadata, cols_shared_no_metadata].where(df_all_modifications, '')
+        df_old_filtered_values = df_old.loc[rows_shared, cols_shared_no_metadata].where(df_all_modifications, '')
         df_old_filtered_text = df_old_filtered_values.mask(df_all_modifications, f'{newline}old: ')
         df_old_filtered = df_old_filtered_text + df_old_filtered_values.astype(str)
 
-        df_diff.loc[rows_shared_no_metadata, cols_shared_metadata] += df_old_filtered.add_prefix('#', axis='columns').values
+        df_diff.loc[rows_shared, cols_shared_metadata] += df_old_filtered.add_prefix('meta', axis='columns').values
 
 
-    if note != '':
-        df_diff.loc['#', '#'] += note
 
-    if verbosity >= 2:
-        if max_cols is not None and max_cols < len(df_diff.columns):
-            log(f'showing {max_cols} out of {len(df_diff.columns)} columns', level='warning', source='qp.diff()')
-        if max_rows is not None and max_rows < len(df_diff.index):
-            log(f'showing {max_rows} out of {len(df_diff.index)} rows', level='warning', source='qp.diff()')
+
+    if max_cols is not None and max_cols < len(df_diff.columns):
+        log(f'showing {max_cols} out of {len(df_diff.columns)} columns',
+            level='warning', source='qp.diff()', verbosity=verbosity)
+    if max_rows is not None and max_rows < len(df_diff.index):
+        log(f'showing {max_rows} out of {len(df_diff.index)} rows',
+            level='warning', source='qp.diff()', verbosity=verbosity)
 
     if verbosity >= 3:
         changes_truncated = {key: val for key,val in changes_all.items() if val > 0}
@@ -329,51 +357,17 @@ def diff(df_new, df_old, show='mix', verbosity=3,
     df_diff_style = df_diff_style.iloc[:max_rows, :max_cols]
 
     #replace "<" and ">" with html entities to prevent them from being interpreted as html tags
-    rows_no_metadata = [row for row in df_diff.index if row != '#']
-    cols_no_metadata = [col for col in df_diff.columns if not col.startswith('#')]
+    cols_no_metadata = [col for col in df_diff.columns if not col.startswith('meta: ') and col != 'meta']
     if pd.__version__ >= '2.1.0':
-        df_diff.loc[rows_no_metadata, cols_no_metadata] = df_diff.loc[rows_no_metadata, cols_no_metadata].map(lambda x: _try_replace_gt_lt(x))
+        df_diff.loc[:, cols_no_metadata] = df_diff.loc[:, cols_no_metadata].map(lambda x: _try_replace_gt_lt(x))
     else:
-        df_diff.loc[rows_no_metadata, cols_no_metadata] = df_diff.loc[rows_no_metadata, cols_no_metadata].applymap(lambda x: _try_replace_gt_lt(x))
+        df_diff.loc[:, cols_no_metadata] = df_diff.loc[:, cols_no_metadata].applymap(lambda x: _try_replace_gt_lt(x))
 
 
     result = df_diff.style.apply(lambda x: _apply_style(x, df_diff_style), axis=None)
     return result
 
 
-def _prepare_df(df):
-    df = df.copy()
-    if len(df.index) != len(df.index.unique()):
-        log('index is not unique', 'error', source='qp.diff()')
-
-    if len(df.columns) != len(df.columns.unique()):
-        log('columns are not unique', 'error', source='qp.diff()')
-
-    #metadata is stored in the first row and column
-    if '#' in df.index:
-        df.loc['#', :] = df.loc['#', :].apply(lambda x: qp_na(x, errors='ignore', na=''))
-    else:
-        #inserting metadata row at the top, sadly a bit hacky
-        #because there does not seem to be an inplace function for that
-        df_temp = df.copy()
-        index_temp = df.index
-        index_changed = pd.Index(['#', *index_temp])
-        
-        df.loc['#'] = ''
-        df.set_index(index_changed, inplace=True)
-        df.loc[index_temp, :] = df_temp
-        df.loc['#'] = ''
-
-    if '#' in df.columns:
-        df.loc[:, '#'] = df.loc[:, '#'].apply(lambda x: qp_na(x, errors='ignore', na=''))
-    else:
-        #inserting metadata column at the start
-        metadata_col = pd.Series('', index=df.index, name='#')
-        df = pd.concat([metadata_col, df], axis=1)
-
-    df.qp._metadata_added = True
-
-    return df
 
 def _try_replace_gt_lt(x):
     if isinstance(x, str):
@@ -414,7 +408,6 @@ class DataFrameSave:
         ):
         save(self.df, path=path, sheet=sheet, index=index, if_sheet_exists=if_sheet_exists, archive=archive, datefmt=datefmt, diff_before=diff_before, diff_show=diff_show)
 
-
 def save(
     df,
     path='df.xlsx', sheet='data1', index=True, if_sheet_exists='replace',
@@ -429,7 +422,7 @@ def save(
     """
     if diff_before is not None:
         df_old, date_old = load(path, sheet, before=diff_before, return_date=True)
-        df = diff(df, df_old, show=diff_show, verbose=False, newline='\n', note=f'changes compared to {date_old}')
+        df = _show_differences(df, df_old, show=diff_show, verbose=False, newline='\n', note=f'changes compared to {date_old}')
         
 
 
@@ -471,7 +464,6 @@ def save(
             with pd.ExcelWriter(path_copy, engine='openpyxl') as writer:
                 df.to_excel(writer, sheet_name=sheet, index=index)      
 
-
 def load(path='df', sheet='data1', index=0, before='now', return_date=False, **kwargs):
     """
     loads .xlsx file from before a given date.
@@ -491,10 +483,8 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, **k
     """
     if os.path.isfile(path):
         df = pd.read_excel(path, sheet_name=sheet, index_col=index, **kwargs)
-        if '#' in df.index:
-            df.loc['#', :] = df.loc['#', :].apply(lambda x: qp_na(x, errors='ignore', na=''))
-        if '#' in df.columns:
-            df.loc[:, '#'] = df.loc[:, '#'].apply(lambda x: qp_na(x, errors='ignore', na=''))
+        if 'meta' in df.columns:
+            df.loc[:, 'meta'] = df.loc[:, 'meta'].apply(lambda x: qp_na(x, errors='ignore', na=''))
         return df
         
     today = datetime.date.today()
@@ -549,10 +539,8 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, **k
         else:
             df = pd.read_excel(path, sheet_name=sheet, index_col=index, **kwargs)
         
-        if '#' in df.index:
-            df.loc['#', :] = df.loc['#', :].apply(lambda x: qp_na(x, errors='ignore', na=''))
-        if '#' in df.columns:
-            df.loc[:, '#'] = df.loc[:, '#'].apply(lambda x: qp_na(x, errors='ignore', na=''))
+        if 'meta' in df.columns:
+            df.loc[:, 'meta'] = df.loc[:, 'meta'].apply(lambda x: qp_na(x, errors='ignore', na=''))
 
         return df
 
