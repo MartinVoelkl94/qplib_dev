@@ -46,6 +46,18 @@ def log(text=None, context='', verbosity=None, clear=False):
     """
 
     time = pd.Timestamp.now()
+    global logs
+    idx = len(logs)
+    
+    if clear:
+        logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
+        print('cleared all logs in qp.util.logs.')
+        return
+    
+    if text is None:
+        return logs
+
+    
     levels = {'trace': 5, 'debug': 4, 'info': 3, 'warning': 2, 'error': 1}
     level = 'info'
     level_int = 3
@@ -63,18 +75,6 @@ def log(text=None, context='', verbosity=None, clear=False):
     elif verbosity < 1:
         return
     
-
-    global logs
-    idx = len(logs)
-
-    if clear:
-        logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
-        print('cleared all logs in qp.util.logs.')
-        return
-    
-    if text is None:
-        return logs
-
     match level:
         case 'trace':
             logs.loc[idx, 'level'] = 'trace'
