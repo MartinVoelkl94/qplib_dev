@@ -173,11 +173,11 @@ def _parse_line(line, verbosity):
                 instruction = InstructionModifyDf(token, verbosity=verbosity)
                 instructions.append(instruction)
             else:
-                log(f'mode is not implemented. \n<br>line:{line} \n<br>token: {token} \n<br>mode: {mode} ',
-                    level='error', source='_parse_line', input=line, verbosity=verbosity)
+                log(f'error: mode is not implemented. \n<br>line:{line} \n<br>token: {token} \n<br>mode: {mode} ',
+                    '_parse_line', verbosity)
                 
-            log(f'parsed token "{token}" in line "{line}"',
-                level='trace', source='_parse_line', verbosity=verbosity)
+            log(f'trace: parsed token "{token}" in line "{line}"',
+                '_parse_line', verbosity)
 
 
     if len(instructions) == 0:
@@ -235,12 +235,11 @@ class InstructionFilter:
 
 
         if self.operator.unary and len(self.value)>0:
-            log(f'unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                level='warning', source='_parse_token', verbosity=verbosity)
+            log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
+                '_parse_token', verbosity)
             self.value = ''
     
-        log(f'parsed token "{self.token}" as instruction: {self.__str__()}',
-            level='debug', source='_parse_token', verbosity=verbosity)
+        log(f'debug: parsed token "{self.token}" as instruction: {self.__str__()}', '_parse_token', verbosity)
 
     def filter(self, df, cols_filtered, rows_filtered, verbosity=3):
         if self.mode == FILTER_COLS:
@@ -248,16 +247,14 @@ class InstructionFilter:
             cols_filtered = _update_index(cols_filtered, cols_filtered_new, self.connector, verbosity)
 
             if cols_filtered_new.any() == False:
-                log(f'no columns fulfill the condition in "{self.token}"',
-                    level='warning', source='df.q', input=self.token, verbosity=verbosity)
+                log(f'warning: no columns fulfill the condition in "{self.token}"', 'df.q', verbosity)
             
             return cols_filtered
 
 
         elif self.mode == FILTER_ROWS:
             if cols_filtered.any() == False:
-                log(f'row filter cannot be applied when no columns where selected',
-                    level='warning', source='df.q', input=self.token, verbosity=verbosity)
+                log(f'warning: row filter cannot be applied when no columns where selected', 'df.q', verbosity)
                 return rows_filtered
                 
 
@@ -268,8 +265,7 @@ class InstructionFilter:
             rows_filtered = _update_index(rows_filtered, rows_filtered_temp, self.connector, verbosity)
 
             if rows_filtered_temp.any() == False:
-                log(f'no rows fulfill the condition in "{self.token}"',
-                    level='warning', source='df.q', input=self.token, verbosity=verbosity)
+                log(f'warning: no rows fulfill the condition in "{self.token}"', 'df.q', verbosity)
                 
             return rows_filtered
 
@@ -352,8 +348,7 @@ class InstructionFilter:
             filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', no=0)) == 0
 
         else:
-            log(f'operator "{operator}" is not implemented',
-                level='error', source='_filter()', input=series.qp._input, verbosity=verbosity)
+            log(f'error: operator "{operator}" is not implemented', '_filter()', verbosity)
             filtered = None
 
 
@@ -398,12 +393,11 @@ class InstructionModifyVals:
             )
         self.value = token.strip()
     
-        log(f'parsed token "{self.token}" as instruction: {self.__str__()}',
-            level='debug', source='_parse_token', verbosity=verbosity)
+        log(f'debug: parsed token "{self.token}" as instruction: {self.__str__()}', '_parse_token', verbosity)
 
         if self.operator.unary and len(self.value)>0:
-            log(f'unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                level='warning', source='_parse_token', verbosity=verbosity)
+            log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
+                '_parse_token', verbosity)
             self.value = ''
 
 
@@ -526,12 +520,11 @@ class InstructionModifyDf:
             )
         self.value = token.strip()
     
-        log(f'parsed token "{self.token}" as instruction: {self.__str__()}',
-            level='debug', source='_parse_token', verbosity=verbosity)
+        log(f'debug: parsed token "{self.token}" as instruction: {self.__str__()}', '_parse_token', verbosity)
 
         if self.operator.unary and len(self.value)>0:
-            log(f'unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                level='warning', source='_parse_token', verbosity=verbosity)
+            log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
+                '_parse_token', verbosity)
             self.value = ''
 
 
@@ -543,12 +536,10 @@ def _read_symbol(token, symbols, default, verbosity=3):
 
     for symbol in symbols:
         if token.startswith(symbol.symbol):
-            log(f'found symbol "{symbol}" in token "{token}"',
-                level='trace', source='_read_symbol', verbosity=verbosity)
+            log(f'trace: found symbol "{symbol}" in token "{token}"', '_read_symbol', verbosity)
             return symbol, token[len(symbol.symbol):].strip()
     
-    log(f'no symbol found in token "{token}". using default "{default}"',
-        level='trace', source='_read_symbol', verbosity=verbosity)
+    log(f'trace: no symbol found in token "{token}". using default "{default}"', '_read_symbol', verbosity)
     if token.startswith(default.symbol):
         token = token[len(default.symbol):].strip()
     return default, token
@@ -636,8 +627,7 @@ class DataFrameQuery:
             instructions += instructions_temp
         
         if len(instructions) == 0:
-            log(f'no instructions found in code "{code}"',
-                level='warning', source='df.q', verbosity=verbosity)
+            log(f'warning: no instructions found in code "{code}"', 'df.q', verbosity)
             return df
 
 
@@ -656,8 +646,8 @@ class DataFrameQuery:
             elif instruction.mode == MODIFY_DF:
                 if instruction.operator == OP_ADD_COL:
                     if instruction.value in df.columns:
-                        log(f'column "{instruction.value}" already exists in dataframe. selecting col instead of creating a new one',
-                            level='warning', source='df.q', verbosity=verbosity)
+                        log(f'warning: column "{instruction.value}" already exists in dataframe. selecting col instead of creating a new one',
+                            'df.q', verbosity)
                         cols_filtered = pd.Index([True if col == instruction.value else False for col in df.columns])
                     else:
                         df[instruction.value] = ''

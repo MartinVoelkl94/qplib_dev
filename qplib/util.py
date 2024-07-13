@@ -11,10 +11,19 @@ from .types import qp_num
 from .types import qp_na
 from .types import qp_nk
 
-logs = pd.DataFrame(columns=['level', 'message', 'source', 'input', 'time'])
 
+GREEN = '#6dae51'
+ORANGE = 'orange'
+RED = '#f73434'
 
-def log(message=None, level='info', source='', input='', clear=False, verbosity=4):
+GREY_LIGHT = 'lightgrey'
+BLUE_LIGHT = 'skyblue'
+GREEN_LIGHT = '#c0e7b0'
+ORANGE_LIGHT = '#f7d67c'
+RED_LIGHT = '#f7746a'
+
+logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
+def log(text=None, context='', verbosity=None, clear=False):
     """
     A very basic "logger".
     For more extensive logging purposes use a logging module.
@@ -24,58 +33,68 @@ def log(message=None, level='info', source='', input='', clear=False, verbosity=
 
     from qplib import log
 
-    log('message', level='info') or qp.logs('message')  #add info log entry
-    log('message', level='warning')  #add warning log entry
-    log('message', level='error')  #add error log entry
+    log('trace: this is a trace entry which will be highlighted grey')
+    log('debug: this is a debug entry which will be highlighted blue')
+    log('info: this is a info entry which will be highlighted green')
+    log('warning: this is a warning entry which will be highlighted orange')
+    log('error: this is a error entry which will be highlighted red')
+
     log(clear=True)  #clear all log entries
     log()  #return dataframe of log entries
-    util.logs  #location of dataframe containing log entries
-    
+    qplib.util.logs  #location of dataframe containing log entries
+
     """
 
-    if verbosity < 1:
+    time = pd.Timestamp.now()
+    levels = {'trace': 5, 'debug': 4, 'info': 3, 'warning': 2, 'error': 1}
+    level = 'info'
+    level_int = 3
+
+    for level_temp in levels.keys():
+        if text.lower().startswith(level_temp):
+            level = level_temp
+            level_int = levels[level]
+            text = text[len(level_temp):].strip()
+            if text[0] in [':', '-', ' ']:
+                text = text[1:].strip()
+
+    if verbosity is None:
+        verbosity = level_int
+    elif verbosity < 1:
         return
     
+
     global logs
+    idx = len(logs)
 
     if clear:
-        logs = pd.DataFrame(columns=['level', 'message', 'source', 'input', 'time'])
+        logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
         print('cleared all logs in qp.util.logs.')
         return
     
-    if message is None:
+    if text is None:
         return logs
-    
-    
-    idx = len(logs)
-    level = level.lower()
 
     match level:
         case 'trace':
             logs.loc[idx, 'level'] = 'trace'
-            level_int = 5
-            color = 'lightgrey'
+            color = GREY_LIGHT
         case 'debug':
             logs.loc[idx, 'level'] = 'debug'
-            level_int = 4
-            color = 'skyblue'
+            color = BLUE_LIGHT
         case 'info':
             logs.loc[idx, 'level'] = 'info'
-            level_int = 3
-            color = '#c0e7b0' #lightgreen
+            color = GREEN_LIGHT
         case 'warning':
             logs.loc[idx, 'level'] = 'Warning'
-            level_int = 2
-            color = 'orange'
+            color = ORANGE_LIGHT
         case 'error':
             logs.loc[idx, 'level'] = 'ERROR'
-            level_int = 1
-            color = 'red'
+            color = RED_LIGHT
 
-    logs.loc[idx, 'message'] = message
-    logs.loc[idx, 'source'] = source
-    logs.loc[idx, 'input'] = input
-    logs.loc[idx, 'time'] = pd.Timestamp.now()
+    logs.loc[idx, 'text'] = text
+    logs.loc[idx, 'context'] = context
+    logs.loc[idx, 'time'] = time
 
     if level_int <= verbosity:
         display(logs.tail(1).style.hide(axis=1).apply(
@@ -129,7 +148,7 @@ def now(fmt='%Y_%m_%d'):
 
 #"bashlike" wrappers and aliases
 
-def ls(path_or_object='', out='df', recursive=False):
+def ls(path_or_object='', out='df', recursive=False, verbosity=3):
     """
     """
 
@@ -137,7 +156,8 @@ def ls(path_or_object='', out='df', recursive=False):
         return _list_files(path_or_object, out, recursive)
     else:
         if out != 'df':
-            log(f'qp.ls() always returns dataframes when used on python objects, ignoring out={out}')
+            log(f'warning: qp.ls() always returns dataframes when used on python objects, ignoring out={out}',
+                f'qp.ls({path_or_object=}, {out=}, {recursive=})', verbosity)
         layers = []
         result = pd.DataFrame()
         result = _ls_object(path_or_object, recursive, result, layers)
@@ -279,7 +299,7 @@ def pwd():
     return os.getcwd()
 
 
-def cd(path=None):
+def cd(path=None, verbosity=3):
     """
     change directory
     """
@@ -291,16 +311,16 @@ def cd(path=None):
 
     dir_old = os.getcwd()
     if dir_old.endswith(path):
-        log(f'already in {path}', level='info', source=f'qp.cd("{path}")')
+        log(f'info: already in {path}', f'qp.cd("{path}")', verbosity)
         return
     
     os.chdir(path)
     dir_new = os.getcwd()
-    log(f'moved from<br>{dir_old}<br>to<br>{dir_new}', level='info', source=f'qp.cd("{path}")')
+    log(f'info: moved from<br>{dir_old}<br>to<br>{dir_new}', f'qp.cd("{path}")', verbosity)
     return
 
 
-def cp(src, dest):
+def cp(src, dest, verbosity=3):
     """
     copy file or directory
     """
@@ -308,23 +328,23 @@ def cp(src, dest):
         shutil.copytree(src, dest)
     else:
         shutil.copy(src, dest)
-    log(f'copied<br>{src}<br>to<br>{dest}', level='info', source=f'qp.cp(source="{src}", destination="{dest}")')
+    log(f'info: copied<br>{src}<br>to<br>{dest}', f'qp.cp({src=}, {dest=})', verbosity)
     return
 
 
-def mkdir(name):
+def mkdir(name, verbosity=3):
     """
     create directory
     """
     if os.path.isdir(name):
-        log(f'directory "{name}" already exists', level='info', source=f'qp.mkdir("{name}")')
+        log(f'info: directory "{name}" already exists', f'qp.mkdir("{name}")', verbosity)
     else:
         os.mkdir(name)
-        log(f'created directory "{name}"', level='info', source=f'qp.mkdir("{name}")')
+        log(f'info: created directory "{name}"', f'qp.mkdir("{name}")', verbosity)
     return
 
 
-def isdir(name):
+def isdir(name, verbosity=3):
     """
     check if directory exists
     """
@@ -334,7 +354,7 @@ def isdir(name):
         return False
   
     
-def isfile(name):
+def isfile(name, verbosity=3):
     """
     check if file exists
     """
@@ -344,7 +364,7 @@ def isfile(name):
         return False
 
 
-def ispath(name):
+def ispath(name, verbosity=3):
     """
     check if path exists
     """

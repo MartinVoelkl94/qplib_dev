@@ -8,7 +8,7 @@ from IPython.display import display
 from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
 
-from .util import log
+from .util import log, GREEN, ORANGE, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
 from .types import qp_date, qp_na, qpDict
 
 
@@ -134,13 +134,11 @@ def _check_df(df, verbosity=3):
     problems_found = False
 
     if len(df.index) != len(df.index.unique()):
-        log('index is not unique',
-            level='error', source='qp.pd_util._check_df', verbosity=verbosity)
+        log('error: index is not unique', 'qp.pd_util._check_df', verbosity)
         problems_found = True
 
     if len(df.columns) != len(df.columns.unique()):
-        log('columns are not unique',
-            level='error', source='qp.pd_util._check_df', verbosity=verbosity)
+        log('error: columns are not unique', 'qp.pd_util._check_df', verbosity)
         problems_found = True
 
     problems = {
@@ -169,20 +167,20 @@ def _check_df(df, verbosity=3):
 
     for problem, cols in problems.items():
         if len(cols) > 0:
-            log(f'the following column headers contain {problem}, use df = df.format(): {cols}',
-                level='warning', source='qp.pd_util._check_df', verbosity=verbosity)
+            log(f'warning: the following column headers contain {problem}, use df = df.format(): {cols}',
+                'qp.pd_util._check_df', verbosity)
             problems_found = True
 
     if problems_found is False:
-        log('df was checked. no problems found', 'info', source='qp.pd_util._check_df', verbosity=verbosity)
+        log('info: df was checked. no problems found', 'qp.pd_util._check_df', verbosity)
 
 def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
     qp_old = df.qp
     df = copy.deepcopy(df)
 
     if fix_headers is True:
-        log('striping column headers of leading and trailing whitespace, replacing "//" with "/ /", "&&" with "& &" and "´" with "`"',
-            level='info', source='qp.df.format()', verbosity=verbosity)
+        log('info: striping column headers of leading and trailing whitespace, replacing "//" with "/ /", "&&" with "& &" and "´" with "`"',
+            'qp.df.format()', verbosity)
         df.columns = df.columns\
             .str.replace('&&', '& &')\
             .str.replace('//', '/ /')\
@@ -191,11 +189,10 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
         
 
     if 'meta' in df.columns:
-        log('ensuring column "meta" is string')
+        log('debug: ensuring column "meta" is string', 'qp.df.format()', verbosity)
         df.loc[:, 'meta'] = df.loc[:, 'meta'].astype(str)
     elif add_metadata is True:
-        log('adding column "meta" at position 0',
-            level='info', source='df.format()', verbosity=verbosity)
+        log('info: adding column "meta" at position 0', 'df.format()', verbosity)
         metadata_col = pd.Series('', index=df.index, name='meta')
         df = pd.concat([metadata_col, df], axis=1)
 
@@ -261,8 +258,8 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
             df_diff_style = df_diff_style[cols_new]
 
 
-        df_diff_style.loc[:, cols_added] = 'background-color: #6dae51'  #green
-        df_diff_style.loc[rows_added, :] = 'background-color: #6dae51'  #green
+        df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
+        df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
 
         df_diff.loc[rows_added, 'meta'] += 'added row'
 
@@ -272,8 +269,8 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
         df_diff = copy.deepcopy(df_old)
         df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
         
-        df_diff_style.loc[:, cols_removed] = 'background-color: #db2727'  #red
-        df_diff_style.loc[rows_removed, :] = 'background-color: #db2727'  #red
+        df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
+        df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
 
         df_diff.loc[rows_removed, 'meta'] += 'removed row'
 
@@ -286,16 +283,16 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
 
         df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
 
-        df_diff_style.loc[:, cols_added] = 'background-color: #6dae51'  #green
-        df_diff_style.loc[:, cols_removed] = 'background-color: #db2727'  #red
-        df_diff_style.loc[rows_added, :] = 'background-color: #6dae51'  #green
-        df_diff_style.loc[rows_removed, :] = 'background-color: #db2727'  #red
+        df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
+        df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
+        df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
+        df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
 
         df_diff.loc[rows_added, 'meta'] += 'added row'
         df_diff.loc[rows_removed, 'meta'] += 'removed row'
 
     else:
-        log(f'unknown show mode: {show}', 'error', source='qp.diff()')
+        log(f'error: unknown show mode: {show}', 'qp.diff()', verbosity)
 
 
     #highlight values in shared columns
@@ -310,9 +307,9 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
     df_removed = df_new_isna & ~df_old_isna
     df_changed = ~df_new_isna & ~df_old_isna & ~df_new_equals_old
 
-    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_added.mask(df_added, 'background-color: #c0e7b0').where(df_added, '')  #light green
-    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_removed.mask(df_removed, 'background-color: #f39191').where(df_removed, '')  #light red
-    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_changed.mask(df_changed, 'background-color: #ffd480').where(df_changed, '')  #light orange
+    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_added.mask(df_added, f'background-color: {GREEN_LIGHT}').where(df_added, '')
+    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_removed.mask(df_removed, f'background-color: {RED_LIGHT}').where(df_removed, '')
+    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_changed.mask(df_changed, f'background-color: {ORANGE_LIGHT}').where(df_changed, '')
 
 
 
@@ -320,9 +317,9 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
     df_removed_sum = df_removed.sum(axis=1)
     df_changed_sum = df_changed.sum(axis=1)
 
-    changes_all['vals added'] += df_added_sum.sum()
-    changes_all['vals removed'] += df_removed_sum.sum()
-    changes_all['vals changed'] += df_changed_sum.sum()
+    changes_all['vals added'] += int(df_added_sum.sum())
+    changes_all['vals removed'] += int(df_removed_sum.sum())
+    changes_all['vals changed'] += int(df_changed_sum.sum())
 
     df_diff.loc[rows_shared, 'meta'] += df_added_sum.apply(lambda x: f'{newline}vals added: {x}' if x > 0 else '')
     df_diff.loc[rows_shared, 'meta'] += df_removed_sum.apply(lambda x: f'{newline}vals removed: {x}' if x > 0 else '')
@@ -343,11 +340,9 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
 
 
     if max_cols is not None and max_cols < len(df_diff.columns):
-        log(f'showing {max_cols} out of {len(df_diff.columns)} columns',
-            level='warning', source='qp.diff()', verbosity=verbosity)
+        log(f'warning: showing {max_cols} out of {len(df_diff.columns)} columns', 'qp.diff()', verbosity)
     if max_rows is not None and max_rows < len(df_diff.index):
-        log(f'showing {max_rows} out of {len(df_diff.index)} rows',
-            level='warning', source='qp.diff()', verbosity=verbosity)
+        log(f'warning: showing {max_rows} out of {len(df_diff.index)} rows', 'qp.diff()', verbosity)
 
     if verbosity >= 3:
         changes_truncated = {key: val for key,val in changes_all.items() if val > 0}
@@ -413,6 +408,7 @@ def save(
     path='df.xlsx', sheet='data1', index=True, if_sheet_exists='replace',
     diff_before=None, diff_show='new+',
     archive=True, datefmt='%Y_%m_%d',
+    verbosity=3,
     ):
     """
     saves a dataframe to a sheet in an excel file. If the file/sheet already exists, the data will be overwritten.
@@ -431,11 +427,11 @@ def save(
 
 
     if os.path.isfile(path):
-        log(f'file "{path}" already exists. data in sheet "{sheet}" will be overwritten', level='warning', source='df.save()')
+        log(f'warning: file "{path}" already exists. data in sheet "{sheet}" will be overwritten', 'df.save()', verbosity)
         with pd.ExcelWriter(path, mode='a', engine='openpyxl', if_sheet_exists=if_sheet_exists) as writer:
             df.to_excel(writer, sheet_name=sheet, index=index)
     else:
-        log(f'saving df to "{path}" in sheet "{sheet}"', level='info', source='df.save()')
+        log(f'warning: saving df to "{path}" in sheet "{sheet}"', 'df.save()', verbosity)
         with pd.ExcelWriter(path, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name=sheet, index=index)
 
@@ -448,7 +444,7 @@ def save(
 
     if archive is True:
         if not os.path.isdir(f'{archive_folder}'):
-            log(f'did not find archive folder "{archive_folder}"', level='warning', source='df.save()')
+            log(f'warning: did not find archive folder "{archive_folder}"', 'df.save()', verbosity)
             return
 
         today = datetime.datetime.now().strftime(datefmt)
@@ -456,15 +452,16 @@ def save(
         path_copy = f'{archive_folder}/{name}_{today}.xlsx'
 
         if os.path.isfile(path_copy):
-            log(f'archive file "{path_copy}" already exists. data in sheet "{sheet}" will be overwritten', level='warning', source='df.save()')
+            log(f'warning: archive file "{path_copy}" already exists. data in sheet "{sheet}" will be overwritten',
+                'df.save()', verbosity)
             with pd.ExcelWriter(path_copy, mode='a', engine='openpyxl', if_sheet_exists=if_sheet_exists) as writer:
                 df.to_excel(writer, sheet_name=sheet, index=index)
         else:
-            log(f'archiving df to "{path_copy}" in sheet "{sheet}"', level='info', source='df.save()')
+            log(f'info: archiving df to "{path_copy}" in sheet "{sheet}"', 'df.save()', verbosity)
             with pd.ExcelWriter(path_copy, engine='openpyxl') as writer:
                 df.to_excel(writer, sheet_name=sheet, index=index)      
 
-def load(path='df', sheet='data1', index=0, before='now', return_date=False, **kwargs):
+def load(path='df', sheet='data1', index=0, before='now', return_date=False, verbosity=3, **kwargs):
     """
     loads .xlsx file from before a given date.
     assumes that the filenames end with a timestamp.
@@ -513,7 +510,8 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, **k
     if os.path.isdir(f'{folder}/archive'):
         folder = f'{folder}/archive'
     else:
-        log(f'no archive folder found. looking for most recent file in "{folder}" instead', level='info', source='df.load()')
+        log(f'info: no archive folder found. looking for most recent file in "{folder}" instead',
+            'df.load()', verbosity)
 
     timestamps = pd.Series([])
     for file in os.listdir(folder):
@@ -527,13 +525,14 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, **k
                 pass
 
     if len(timestamps) == 0:
-        log(f'no timestamped files starting with "{name}" found in "{folder}" before {cutoff}', level='warning', source='df.load()')
+        log(f'warning: no timestamped files starting with "{name}" found in "{folder}" before {cutoff}',
+            'df.load()', verbosity)
         return None
     else:
         timestamps = timestamps.sort_index()
         latest = timestamps.iloc[len(timestamps) - 1]
         path = f'{folder}/{name}{latest}.xlsx'
-        log(f'loading "{path}"', level='info', source='df.load()')
+        log(f'info: loading "{path}"', 'df.load()', verbosity)
         if return_date is True:
             df = pd.read_excel(path, sheet_name=sheet, index_col=index, **kwargs), latest
         else:
