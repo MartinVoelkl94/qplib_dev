@@ -75,7 +75,7 @@ class Symbols:
     OP_X_EVAL = Symbol('x?', 'select values by evaluating a python expression on each value', binary=True)
     OP_COL_EVAL = Symbol('col?', 'select rows by evaluating a python expression on a whole column', binary=True)
     
-    OP_LOAD = Symbol('§', 'load a saved selection', binary=True)
+    OP_LOAD = Symbol('$', 'load a saved selection', binary=True)
 
 
     #unary operators for filtering
@@ -123,7 +123,7 @@ class Symbols:
 
     #binary operators for modifying the whole dataframe
     OP_NEW_COL_STR = Symbol('=', 'add a new string column to the dataframe and select it instead of current selection', binary=True)
-    OP_NEW_COL_TRUE = Symbol('§', 'add a new boolean column and select it. all currently selected rows are set to True', binary=True)
+    OP_NEW_COL_TRUE = Symbol('$', 'add a new boolean column and select it. all currently selected rows are set to True', binary=True)
 
 class Expression:
     def __init__(self, text, function, line_num):
