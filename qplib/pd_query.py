@@ -17,14 +17,16 @@ from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension,
 
 
 
+
 class Symbol:
-    def __init__(self, symbol, description, unary=False, binary=False, function=None):
+    def __init__(self, symbol, description, unary=False, binary=False, function=None, options=None):
         #default symbol = None
         self.symbol = symbol
         self.description = description
         self.unary = unary
         self.binary = binary
         self.function = function
+        self.options = options
     def __repr__(self):
         return f"Symbol('{self.symbol}': '{self.description})'"
 
@@ -32,12 +34,15 @@ class Symbols:
     COMMENT = Symbol('#', 'comments out the rest of the line')
     ESCAPE = Symbol('`', 'escape the next character')
 
+
+
     #there are 4 different types of instructions
+    SETTINGS = Symbol('´s', 'settings for the query', function='settings')
     SELECT_COLS = Symbol('´c', 'default. select columns by a condition', function='select_cols')
     SELECT_ROWS = Symbol('´r', 'select rows by a condition', function='select_rows')
     MODIFY_VALS = Symbol('´m', 'modify the currently selected values', function='modify_vals')
     NEW_COL = Symbol('´n', 'add a new column', function='new_col')
-    TYPES = [SELECT_COLS, SELECT_ROWS, MODIFY_VALS, NEW_COL]
+    TYPES = [SETTINGS, SELECT_COLS, SELECT_ROWS, MODIFY_VALS, NEW_COL]
 
 
     #select conditions can be combined with the previous conditions
@@ -75,7 +80,7 @@ class Symbols:
     OP_X_EVAL = Symbol('x?', 'select values by evaluating a python expression on each value', binary=True)
     OP_COL_EVAL = Symbol('col?', 'select rows by evaluating a python expression on a whole column', binary=True)
     
-    OP_LOAD = Symbol('$', 'load a saved selection', binary=True)
+    OP_LOAD = Symbol('§', 'load a saved selection', binary=True)
 
 
     #unary operators for filtering
@@ -123,7 +128,7 @@ class Symbols:
 
     #binary operators for modifying the whole dataframe
     OP_NEW_COL_STR = Symbol('=', 'add a new string column to the dataframe and select it instead of current selection', binary=True)
-    OP_NEW_COL_TRUE = Symbol('$', 'add a new boolean column and select it. all currently selected rows are set to True', binary=True)
+    OP_NEW_COL_TRUE = Symbol('§', 'add a new boolean column and select it. all currently selected rows are set to True', binary=True)
 
 class Expression:
     def __init__(self, text, function, line_num):
@@ -157,7 +162,7 @@ class DataFrameQuery:
             diff_max_rows=20,  #maximum number of rows to display when using diff. None: show all
             **kwargs
             ):
-
+        
         #setup
 
         self.code = code
@@ -177,6 +182,7 @@ class DataFrameQuery:
         self.rows_filtered = pd.Index([True for row in self.df.index])
 
 
+
         #main
 
         self.parse(self.code)
@@ -186,7 +192,7 @@ class DataFrameQuery:
             expression.type, text_temp = self.match_symbol(expression.text, None, self.symbols.TYPES)
             expression.function = expression.type.function
             if expression.type is None:
-                log(f'warning: no instruction_type implemented for symbol "{expression.symbol}"', 'df.q()', self.verbosity)
+                log(f'warning: no defined behaviour for "{expression.symbol}"', 'df.q()', self.verbosity)
                 continue
     
             self.expression = expression
@@ -197,6 +203,7 @@ class DataFrameQuery:
 
 
         #results
+
         self.df_filtered = self.df.loc[self.rows_filtered, self.cols_filtered]
         self.df_filtered.qp = self.df.qp
         self.df_filtered.qp.code = self.code
@@ -270,6 +277,63 @@ class DataFrameQuery:
         if string.startswith(default.symbol):
             string = string[len(default.symbol):].strip()
         return default, string
+
+
+    def settings(self):
+
+        text = self.expression.text[2:].strip()
+
+        setting = None
+        for setting_temp in ['verbosity', 'diff', 'diff_max_cols', 'diff_max_rows']:
+            if text.startswith(setting_temp):
+                setting = setting_temp
+                text = text[len(setting_temp):].strip()
+                break
+        
+        if setting is None:
+            log(f'warning: no setting found in "{self.expression.text}"', 'df.q.settings()', self.verbosity)
+            return
+        
+        if text[0] != '=':
+            log(f'warning: settings can only be set with "=" not with "{text[0]}"', 'df.q.settings()', self.verbosity)
+            return
+        else:
+            value = text[1:].strip()
+
+
+        if setting == 'verbosity':
+            if value in ['0', '1', '2', '3', '4', '5']:
+                self.verbosity = int(value)
+            else:
+                log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
+                    'df.q.settings()', self.verbosity)
+        
+        elif setting == 'diff':
+            if value in ['none', 'None', 'NONE', '0']:
+                self.diff = None
+            elif value.lower() in ['mix', 'new', 'old', 'new+']:
+                self.diff = value.lower()
+            else:
+                log(f'warning: diff must be one of [None, "mix", "old", "new", "new+"]. "{value}" is not valid',
+                    'df.q.settings()', self.verbosity)
+                
+        elif setting == 'diff_max_cols':
+            if value in ['none', 'None', 'NONE', '0']:
+                self.diff_max_cols = None
+            try:
+                self.diff_max_cols = int(value)
+            except:
+                log(f'warning: diff_max_cols must be an integer or None. "{value}" is not valid',
+                    'df.q.settings()', self.verbosity)
+                
+        elif setting == 'diff_max_rows':
+            if value in ['none', 'None', 'NONE', '0']:
+                self.diff_max_rows = None
+            try:
+                self.diff_max_rows = int(value)
+            except:
+                log(f'warning: diff_max_rows must be an integer or None. "{value}" is not valid',
+                    'df.q.settings()', self.verbosity)
 
 
     def select_cols(self):
