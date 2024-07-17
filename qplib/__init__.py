@@ -1,6 +1,6 @@
 
 from .pd_query import DataFrameQuery
-from .pd_util import save, load, get_df, get_dfs
+from .pd_util import save, load, get_df, get_dfs, excel_diff
 from .pd_util import _show_differences as diff
 
 from .util import *
