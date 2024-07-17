@@ -201,12 +201,23 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
 
 
-def _show_differences(df_new, df_old, show='mix', verbosity=3,
+
+def _show_differences(
+    df_new, df_old, show='mix',
+    summary='print',  #print, return, None
     max_cols=200, max_rows=20,
-    newline='<br>'):
+    newline='<br>', prefix_new='', prefix_old='old: ',
+    verbosity=3,):
     '''
     shows differences between dataframes
     '''
+
+    if not df_new.index.is_unique:
+        log('error: index of new dataframe is not unique', 'qp.diff()', verbosity)
+    if not df_old.index.is_unique:
+        log('error: index of old dataframe is not unique', 'qp.diff()', verbosity)
+
+
 
     #prepare dataframes
     df_new = _format_df(df_new, fix_headers=False, add_metadata=True, verbosity=verbosity)
@@ -244,12 +255,12 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
             cols_new = ['meta']
             cols_add = []
             for col in df_diff.columns:
-                if not col.startswith('meta: ') and col != 'meta':
+                if not col.startswith(prefix_old) and col != 'meta':
                     cols_new.append(col)
-                    cols_new.append(f'meta: {col}')
+                    cols_new.append(prefix_old + col)
 
-                    if f'meta: {col}' not in df_diff.columns:
-                        cols_add.append(f'meta: {col}')
+                    if prefix_old + col not in df_diff.columns:
+                        cols_add.append(prefix_old + col)
 
             df_diff = pd.concat([df_diff, pd.DataFrame('', index=df_diff.index, columns=cols_add)], axis=1)
             df_diff_style = pd.concat([df_diff_style, pd.DataFrame('font-style: italic', index=df_diff.index, columns=cols_add)], axis=1)
@@ -297,7 +308,7 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
 
     #highlight values in shared columns
     #column 0 contains metadata and is skipped
-    cols_shared_no_metadata = [col for col in cols_shared if not col.startswith('meta: ') and col != 'meta']
+    cols_shared_no_metadata = [col for col in cols_shared if not col.startswith(prefix_old) and col != 'meta']
 
     df_new_isna = df_new.loc[rows_shared, cols_shared_no_metadata].isna()
     df_old_isna = df_old.loc[rows_shared, cols_shared_no_metadata].isna()
@@ -327,14 +338,10 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
 
 
     if show == 'new+':
-        cols_shared_metadata = [f'meta: {col}' for col in cols_shared_no_metadata]
-        df_all_modifications = (df_added | df_removed | df_changed)#.add_prefix('#', axis='columns')
-    
-        df_old_filtered_values = df_old.loc[rows_shared, cols_shared_no_metadata].where(df_all_modifications, '')
-        df_old_filtered_text = df_old_filtered_values.mask(df_all_modifications, f'{newline}old: ')
-        df_old_filtered = df_old_filtered_text + df_old_filtered_values.astype(str)
-
-        df_diff.loc[rows_shared, cols_shared_metadata] += df_old_filtered.add_prefix('meta', axis='columns').values
+        cols_shared_metadata = [prefix_old + col for col in cols_shared_no_metadata]
+        df_all_modifications = (df_added | df_removed | df_changed)
+        df_old_changed = df_old.loc[rows_shared, cols_shared_no_metadata].where(df_all_modifications, '')
+        df_diff.loc[rows_shared, cols_shared_metadata] = df_old_changed.values
 
 
 
@@ -344,15 +351,14 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
     if max_rows is not None and max_rows < len(df_diff.index):
         log(f'warning: showing {max_rows} out of {len(df_diff.index)} rows', 'qp.diff()', verbosity)
 
-    if verbosity >= 3:
-        changes_truncated = {key: val for key,val in changes_all.items() if val > 0}
-        display(changes_truncated)
+    
+    
 
     df_diff = df_diff.iloc[:max_rows, :max_cols]
     df_diff_style = df_diff_style.iloc[:max_rows, :max_cols]
 
     #replace "<" and ">" with html entities to prevent them from being interpreted as html tags
-    cols_no_metadata = [col for col in df_diff.columns if not col.startswith('meta: ') and col != 'meta']
+    cols_no_metadata = [col for col in df_diff.columns if not col.startswith(prefix_old) and col != 'meta']
     if pd.__version__ >= '2.1.0':
         df_diff.loc[:, cols_no_metadata] = df_diff.loc[:, cols_no_metadata].map(lambda x: _try_replace_gt_lt(x))
     else:
@@ -360,8 +366,15 @@ def _show_differences(df_new, df_old, show='mix', verbosity=3,
 
 
     result = df_diff.style.apply(lambda x: _apply_style(x, df_diff_style), axis=None)
-    return result
+    changes_truncated = {key: val for key,val in changes_all.items() if val > 0}
 
+    if summary == 'print':
+        display(changes_truncated)
+        return result
+    elif summary == 'return':
+        return result, changes_truncated
+    else:
+        return result
 
 
 def _try_replace_gt_lt(x):
@@ -374,6 +387,91 @@ def _try_replace_gt_lt(x):
     
 def _apply_style(x, df_style):
     return df_style
+
+
+def excel_diff(file_new='new', file_old='old', diff='new+',
+    ignore_index=True, to_excel=False,
+    max_cols=None, max_rows=None, verbosity=3):
+    '''
+    shows differences between two excel files.
+
+    specs and requs:
+    - only sheets with the same name are compared
+    - the first column of each sheet is assumed to be an index
+    - index must be unique
+    - index must correspond to the same "item" in both sheets
+
+    if ignore_index=True:
+    - uses sequential numbers as index instead of any given column
+    - uniqueness is guaranteed
+    - only works if the all sheets have the same "items" in the same rows
+    '''
+    summary = pd.DataFrame(columns=[
+        'sheet',
+        f'is in new file',
+        f'is in old file',
+        f'index (first col) is unique in new file',
+        f'index (first col) is unique in old file',
+        'cols added',
+        'cols removed',
+        'rows added',
+        'rows removed',
+        'values added',
+        'values removed',
+        'values changed',
+        ])
+    results = {}
+    
+
+    #get names of all sheets in the excel files
+    sheets_new = pd.ExcelFile(file_new).sheet_names
+    sheets_old = pd.ExcelFile(file_old).sheet_names
+    
+    #iterate over all sheets
+    for sheet in sheets_new:
+        if sheet in sheets_old:
+            if ignore_index:
+                df_new = pd.read_excel(file_new, sheet_name=sheet)
+                df_old = pd.read_excel(file_old, sheet_name=sheet)
+            else:
+                df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=0)
+                df_old = pd.read_excel(file_old, sheet_name=sheet, index_col=0)
+
+            result, changes = _show_differences(
+                df_new, df_old, show=diff, summary='return',
+                max_cols=max_cols, max_rows=max_rows, verbosity=verbosity
+                )
+            
+            results[sheet] = result
+        
+
+            idx = len(summary)
+            summary.loc[idx, 'sheet'] = sheet
+            summary.loc[idx, f'is in new file'] = True
+            summary.loc[idx, f'is in old file'] = True
+            summary.loc[idx, f'index (first col) is unique in new file'] = df_new.index.is_unique
+            summary.loc[idx, f'index (first col) is unique in old file'] = df_old.index.is_unique
+            for key, val in changes.items():
+                summary.loc[idx, key] = val
+            
+        else:
+            idx = len(summary)
+            summary.loc[idx, 'sheet'] = sheet
+            summary.loc[idx, f'is in new file'] = True
+            summary.loc[idx, f'is in old file'] = False
+            summary.loc[idx, f'index (first col) is unique in new file'] = df_new.index.is_unique
+
+    if to_excel:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%Hh%Mm%Ss")
+        file_out = f'diff_{timestamp}.xlsx'
+        with pd.ExcelWriter(file_out) as writer:
+            summary.to_excel(writer, sheet_name='summary')
+            for sheet, result in results.items():
+                result.to_excel(writer, sheet_name=sheet)
+        log(f'info: differences saved to "{file_out}"', 'qp.excel_diff()', verbosity)
+        
+    return summary, results
+
 
 
 
