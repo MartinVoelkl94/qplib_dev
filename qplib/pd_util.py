@@ -390,7 +390,7 @@ def _apply_style(x, df_style):
 
 
 def excel_diff(file_new='new', file_old='old', diff='new+',
-    ignore_index=True, to_excel=False,
+    ignore_index=True, to_excel=True,
     max_cols=None, max_rows=None, verbosity=3):
     '''
     shows differences between two excel files.

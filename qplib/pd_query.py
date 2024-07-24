@@ -18,6 +18,8 @@ from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension,
 
 
 
+
+
 class Symbol:
     def __init__(self, symbol, description, unary=False, binary=False, function=None, options=None):
         #default symbol = None
@@ -80,7 +82,7 @@ class Symbols:
     OP_X_EVAL = Symbol('x?', 'select values by evaluating a python expression on each value', binary=True)
     OP_COL_EVAL = Symbol('col?', 'select rows by evaluating a python expression on a whole column', binary=True)
     
-    OP_LOAD = Symbol('§', 'load a saved selection', binary=True)
+    OP_LOAD = Symbol('@', 'load a saved selection', binary=True)
 
 
     #unary operators for filtering
@@ -128,7 +130,7 @@ class Symbols:
 
     #binary operators for modifying the whole dataframe
     OP_NEW_COL_STR = Symbol('=', 'add a new string column to the dataframe and select it instead of current selection', binary=True)
-    OP_NEW_COL_TRUE = Symbol('§', 'add a new boolean column and select it. all currently selected rows are set to True', binary=True)
+    OP_NEW_COL_TRUE = Symbol('@', 'add a new boolean column and select it. all currently selected rows are set to True', binary=True)
 
 class Expression:
     def __init__(self, text, function, line_num):
@@ -242,10 +244,13 @@ class DataFrameQuery:
             OR = self.symbols.CONNECTOR_OR.symbol
 
             escape = False
+            chars_in_expression = 0
             expression_type = self.symbols.SELECT_COLS.symbol  #default
+
             for i, char in enumerate(line):
                 if escape:
                     self.expressions[-1].text += char
+                    chars_in_expression += 1
                     escape = False
                     continue
                 elif char == self.symbols.ESCAPE.symbol:
@@ -255,12 +260,25 @@ class DataFrameQuery:
                 if char == '´':
                     expression_type = char + line[i+1]
                     self.expressions.append(Expression(char, None, line_num))
+                    chars_in_expression = 1
                 elif char in [AND, OR]:
-                    self.expressions.append(Expression(f'{expression_type} {char}', None, line_num))
+                    if chars_in_expression >= 3:
+                        self.expressions.append(Expression(f'{expression_type} {char}', None, line_num))
+                        chars_in_expression = 3
+                    elif i == 0:
+                        self.expressions.append(Expression(f'{expression_type} {char}', None, line_num))
+                        chars_in_expression = 3
+                    else:
+                        self.expressions[-1].text += char
+                        chars_in_expression += 1
                 elif i == 0:
                     self.expressions.append(Expression(f'{expression_type} {char}', None, line_num))
+                    chars_in_expression = 3
+                elif char == ' ':
+                    self.expressions[-1].text += char
                 else:
                     self.expressions[-1].text += char
+                    chars_in_expression += 1
 
     def match_symbol(self, string, default, symbols):
         string = string.strip()
@@ -955,6 +973,8 @@ def _interactive_mode(**kwargs):
     display(result)
     print('input code: ', df.qp._input)
     return result 
+
+
 
 
 
