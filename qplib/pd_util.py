@@ -128,8 +128,7 @@ class dfFormatExtension:
 
 def _check_df(df, verbosity=3):
     """
-    df.q() uses '&&', '//' and '´' for expression syntax.
-    these should not be used in colnames.
+    df.q() uses '&', '/' and '´' for expression syntax.
     """
     problems_found = False
 
@@ -142,8 +141,8 @@ def _check_df(df, verbosity=3):
         problems_found = True
 
     problems = {
-        '"&&"': [],
-        '"//"': [],
+        '"&"': [],
+        '"/"': [],
         '"´"': [],
         'leading whitespace': [],
         'trailing whitespace': [],
@@ -152,10 +151,10 @@ def _check_df(df, verbosity=3):
 
     for col in df.columns:
         if isinstance(col, str):
-            if '&&' in col:
-                problems['"&&"'].append(col)
-            if '//' in col:
-                problems['"//"'].append(col)
+            if '&' in col:
+                problems['"&"'].append(col)
+            if '/' in col:
+                problems['"/"'].append(col)
             if '´' in col:
                 problems['"´"'].append(col)
 
@@ -167,7 +166,7 @@ def _check_df(df, verbosity=3):
 
     for problem, cols in problems.items():
         if len(cols) > 0:
-            log(f'warning: the following column headers contain {problem}, use df = df.format(): {cols}',
+            log(f'warning: the following column headers contain {problem}, use a tick (`) to escape such characters: {cols}',
                 'qp.pd_util._check_df', verbosity)
             problems_found = True
 
@@ -179,14 +178,10 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
     df = copy.deepcopy(df)
 
     if fix_headers is True:
-        log('info: striping column headers of leading and trailing whitespace, replacing "//" with "/ /", "&&" with "& &" and "´" with "`"',
+        log('info: striping column headers of leading and trailing whitespace',
             'qp.df.format()', verbosity)
-        df.columns = df.columns\
-            .str.replace('&&', '& &')\
-            .str.replace('//', '/ /')\
-            .str.replace('´', '`')\
-            .str.strip()
-        
+        df.columns = df.columns.str.strip()
+             
 
     if 'meta' in df.columns:
         log('debug: ensuring column "meta" is string', 'qp.df.format()', verbosity)
