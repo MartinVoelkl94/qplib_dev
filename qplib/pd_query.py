@@ -15,11 +15,6 @@ from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension,
 
 
 
-
-
-
-
-
 class Symbol:
     def __init__(self, symbol, description, unary=False, binary=False, function=None, options=None):
         #default symbol = None
@@ -102,6 +97,7 @@ class Symbols:
     OP_IS_YN = Symbol('is yn', 'is yes or no value', unary=True)
     OP_IS_YES = Symbol('is yes', 'is yes value', unary=True)
     OP_IS_NO = Symbol('is no', 'is no value', unary=True)
+    OP_IS_UNIQUE = Symbol('is unique', 'is unique value', unary=True)
 
 
 
@@ -111,7 +107,7 @@ class Symbols:
 
     OP_SET_X_EVAL = Symbol('x=', 'change values by evaluating a python expression for each currently selected value', binary=True)
     OP_SET_COL_EVAL = Symbol('col=', 'change values by evaluating a python expression for each currently selected column', binary=True)
-    OP_SET_HEADER_EVAL = Symbol('header=', 'change values by evaluating a python expression for each currently selected headers', binary=True)
+    OP_SET_HEADER_EVAL = Symbol('header=', 'change headers (col names) by evaluating a python expression for each currently selected header', binary=True)
 
     #unary operators for modifying values
     OP_TO_STR = Symbol('to str', 'convert currently selected values to string', unary=True)
@@ -140,6 +136,7 @@ class Expression:
         self.frepr = f'Expression({self.text})'
     def __repr__(self):
         return f'Instruction({self.__dict__})'
+
 
 
 @pd.api.extensions.register_dataframe_accessor('q')
@@ -501,6 +498,7 @@ class DataFrameQuery:
                 self.symbols.OP_IS_YN,
                 self.symbols.OP_IS_YES,
                 self.symbols.OP_IS_NO,
+                self.symbols.OP_IS_UNIQUE,
                 ],
             )
 
@@ -637,9 +635,11 @@ class DataFrameQuery:
             filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', yes=1)) == 1
         elif operator == ops.OP_IS_NO:
             filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', no=0)) == 0
+        elif operator == ops.OP_IS_UNIQUE:
+            filtered = series.duplicated(keep='first') == False
 
         else:
-            log(f'error: operator "{operator}" is not implemented', '_filter()', verbosity)
+            log(f'error: operator "{operator}" is not implemented', '_filter()', self.verbosity)
             filtered = None
 
 
@@ -667,7 +667,10 @@ class DataFrameQuery:
         connector, text = self.match_symbol(
             self.expression.text[2:],
             default=self.symbols.CONNECTOR_RESET,
-            symbols=[]
+            symbols=[
+                self.symbols.CONNECTOR_AND,
+                self.symbols.CONNECTOR_OR
+            ]
             )
 
         operator, text = self.match_symbol(
