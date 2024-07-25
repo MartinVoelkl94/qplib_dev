@@ -511,7 +511,7 @@ def save(
     """
     if diff_before is not None:
         df_old, date_old = load(path, sheet, before=diff_before, return_date=True)
-        df = _show_differences(df, df_old, show=diff_show, verbose=False, newline='\n', note=f'changes compared to {date_old}')
+        df = _show_differences(df, df_old, show=diff_show, verbose=False, newline='\n')
         
 
 
@@ -524,7 +524,7 @@ def save(
         with pd.ExcelWriter(path, mode='a', engine='openpyxl', if_sheet_exists=if_sheet_exists) as writer:
             df.to_excel(writer, sheet_name=sheet, index=index)
     else:
-        log(f'warning: saving df to "{path}" in sheet "{sheet}"', 'df.save()', verbosity)
+        log(f'info: saving df to "{path}" in sheet "{sheet}"', 'df.save()', verbosity)
         with pd.ExcelWriter(path, engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name=sheet, index=index)
 
