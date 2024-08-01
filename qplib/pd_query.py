@@ -14,7 +14,6 @@ from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension,
 
 
 
-
 class Symbol:
     def __init__(self, symbol, name, description, unary=None, binary=None, **kwargs):
         self.symbol = symbol
@@ -66,7 +65,7 @@ class ChangeSettings:
         #default values
         self.type = TYPES.CHANGE_SETTINGS
         self.connector = CONNECTORS.RESET
-        self.setting = None
+        self.operator = OPERATORS.SET_VERBOSITY
         self.value = ''
 
         #possible values (omitting those without a symbol)
@@ -86,18 +85,17 @@ class ChangeSettings:
             'df.q()', self.verbosity)
         
     def apply(self, query_obj):
-        ops = query_obj.symbols
         operator = self.operator
         value = self.value
 
-        if operator == ops.SET_VERBOSITY:
+        if operator == OPERATORS.SET_VERBOSITY:
             if value in ['0', '1', '2', '3', '4', '5']:
                 query_obj.verbosity = int(value)
             else:
                 log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
                     'df.q()', query_obj.verbosity)
         
-        elif operator == ops.SET_DIFF:
+        elif operator == OPERATORS.SET_DIFF:
             if value in ['none', 'None', 'NONE', '0']:
                 query_obj.diff = None
             elif value.lower() in ['mix', 'new', 'old', 'new+']:
@@ -106,7 +104,6 @@ class ChangeSettings:
                 log(f'warning: diff must be one of [None, "mix", "old", "new", "new+"]. "{value}" is not valid',
                     'df.q()', query_obj.verbosity)
     
-
 
 class SelectCols:
     def __init__(self, text=None, linenum=None, verbosity=3):
@@ -435,8 +432,6 @@ class NewCol:
 
 
 
-
-
 COMMENT = Symbol('#', 'COMMENT', 'comments out the rest of the line')
 ESCAPE = Symbol('`', 'ESCAPE', 'escape the next character')
 
@@ -478,7 +473,7 @@ OPERATORS = Symbols('OPERATORS',
     Symbol('<', 'SMALLER', 'smaller', binary=True),
 
     Symbol('==', 'STRICT_EQUAL', 'strict equal', binary=True),
-    Symbol('=', 'EQUAL', 'default. equal', binary=True),
+    Symbol('=', 'EQUAL', 'equal', binary=True),
 
     Symbol('??', 'STRICT_CONTAINS', 'contains a string. case sensitive', binary=True),
     Symbol('?', 'CONTAINS', 'contains a string. not case sensitive', binary=True),
@@ -724,6 +719,7 @@ def _update_index(values, values_new, connector):
 @pd.api.extensions.register_dataframe_accessor('q')
 class DataFrameQuery:
     """
+    wip
     """
 
     def __init__(self, df: pd.DataFrame):
@@ -792,6 +788,217 @@ class DataFrameQuery:
                 verbosity=self.verbosity)  
             return  result  
    
+
+
+@pd.api.extensions.register_dataframe_accessor('qi')
+class DataFrameQueryInteractiveMode:
+    """
+    Wrapper for df.q() for interactive use in Jupyter notebooks.
+    """
+    def __init__(self, df: pd.DataFrame):
+        self.df = df
+
+    def __call__(self):
+        kwargs = {'df': fixed(self.df)}
+
+        #code input
+        ui_code = widgets.Textarea(
+            value='',
+            placeholder='Enter query code here',
+            layout=Layout(height='95%')
+            )
+
+
+        #query builder
+
+        instruction = TYPES.SELECT_COLS.instruction()
+
+        i_type = widgets.Dropdown(
+            options=[(s.description, s.symbol) for s in TYPES],
+            value=instruction.type.symbol,
+            )
+        
+        i_scope = widgets.Dropdown(
+            disabled=True,
+            options=[''],
+            value='',
+            )
+
+        i_negate = widgets.ToggleButtons(
+            options=[('dont negate condition', ''), ('negate condition', '!')],
+            value='',
+            )
+
+        i_operator = widgets.Dropdown(
+            options=[(s.description, s.symbol) for s in instruction.operators],
+            value=instruction.operator.symbol,
+            )
+        
+        i_value = widgets.Text(
+            value='',
+            )
+        
+
+        i_text = widgets.Text(
+            value=f'\n{i_type.value} {i_scope.value} {i_negate.value}{i_operator.value} {i_value.value}',
+            disabled=True,
+            )
+        
+
+        def update_options(*args):
+            instruction = TYPES[i_type.value].instruction()
+
+            if hasattr(instruction, 'scopes'):
+                i_scope.disabled = False
+                i_scope.options = [(s.description, s.symbol) for s in instruction.scopes]
+            else:
+                i_scope.disabled = True
+                i_scope.options = ['']
+
+            if hasattr(instruction, 'negations'):
+                i_negate.disabled = False
+                i_negate.options = [('dont negate condition', ''), ('negate condition', '!')]
+            else:
+                i_negate.disabled = True
+                i_negate.options = ['', '']
+
+            i_operator.options = [(s.description, s.symbol) for s in instruction.operators]
+            i_operator.value = instruction.operator.symbol
+
+        def update_text(*args):
+            i_text.value = f'{i_type.value} {i_scope.value} {i_negate.value}{i_operator.value} {i_value.value}'
+
+        i_type.observe(update_options, 'value')
+        i_type.observe(update_text, 'value')
+        i_scope.observe(update_text, 'value')
+        i_negate.observe(update_text, 'value')
+        i_operator.observe(update_text, 'value')
+        i_value.observe(update_text, 'value')
+
+        
+        ui_add_instruction = widgets.Button(
+            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            tooltip='adds the selected instruction to the query code',
+            icon='check' # (FontAwesome names without the `fa-` prefix)
+            )
+
+        def add_instruction(ui_code, i_text):
+            if i_text.value.startswith('´c'):
+                ui_code.value += f'\n{i_text.value}'
+            else:
+                ui_code.value += f'   {i_text.value}'
+
+        ui_add_instruction.on_click(lambda b: add_instruction(ui_code, i_text))
+
+        kwargs['code'] = ui_code
+
+
+        ui_diff = widgets.ToggleButtons(
+            options=[None, 'mix', 'old', 'new', 'new+'],
+            description='show differences mode:',
+            tooltips=[
+                'dont show differences, just show the new (filtered) dataframe.',
+                'show new (filtered) dataframe plus all the removed (filtered) values from the old dataframe. values affected by the filters are marked green (newly added), yellow (modified), red (deleted)',
+                'show old (unfiltered) dataframe. values affected by the filters are marked green (newly added), yellow (modified), red (deleted)',
+                'show new (filtered) dataframe. values affected by the filters are marked green (newly added), yellow (modified), red (deleted)',
+                'show new (filtered) dataframe but also adds metadata columns with the prefix "#". If a value changed, the metadata column contains the old value. values affected by the filters are marked green (newly added), yellow (modified), red (deleted)',
+                ],
+            )
+        kwargs['diff'] = ui_diff
+
+        ui_verbosity = widgets.ToggleButtons(
+            options=[0, 1, 2, 3, 4, 5],
+            value=3,
+            description='verbosity level:',
+            tooltips=[
+                'no logging',
+                'only errors',
+                'errors and warnings',
+                'errors, warnings and info',
+                'errors, warnings, info and debug',
+                'errors, warnings, info, debug and trace',
+                ],
+            )
+        
+        kwargs['verbosity'] = ui_verbosity
+
+        ui_inplace = widgets.ToggleButtons(
+            options=[True, False],
+            value=False,
+            description='make modifications inplace:',
+            tooltips=[
+                'make modifications inplace, e.g. change the original dataframe.',
+                'return a new dataframe with the modifications. lower performance.',
+                ],
+            )
+        kwargs['inplace'] = ui_inplace
+
+
+        ui_settings = VBox([
+            ui_diff,
+            ui_verbosity,
+            ui_inplace,
+            ])
+        
+        
+        #some general info and statistics about the df
+        ui_details = widgets.HTML(
+            value=f"""
+            <b>shape:</b> {self.df.shape}<br>
+            <b>memory usage:</b> {self.df.memory_usage().sum()} bytes<br>
+            <b>unique values:</b> {self.df.nunique().sum()}<br>
+            <b>missing values:</b> {self.df.isna().sum().sum()}<br>
+            <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(df.columns, df.dtypes))])}<br>
+            """
+            )
+        
+
+        ui_info = widgets.Tab(
+            children=[
+                ui_settings,
+                ui_details,
+                widgets.HTML(value=DataFrameQuery.__doc__),
+                ],
+            titles=['settings', 'details', 'readme'],
+            layout=Layout(width='30%', height='95%')
+            )
+        
+
+        ui_input = VBox([
+            widgets.HTML(value='<b>query builder:</b>'),
+            i_text,
+            i_type,
+            i_scope,
+            i_negate,
+            i_operator,
+            i_value,
+            ui_add_instruction,
+            ])
+        
+        # ui_input = HBox([ui_code, ui_instruction_builder], layout=Layout(width='50%', height='100%'))
+        ui = HBox([ui_code, ui_input, ui_info], layout=Layout(width='100%', height='300px'))
+
+        display(ui)
+        out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
+        display(out)
+
+
+def _interactive_mode(**kwargs):
+
+    df = kwargs.pop('df')
+
+    result = df.q(
+        code=kwargs['code'],
+        inplace=kwargs['inplace'],
+        diff=kwargs['diff'],
+        verbosity=kwargs['verbosity'],
+        # max_cols=kwargs['max_cols'],
+        # max_rows=kwargs['max_rows'],
+        )
+    
+    display(result)
+    return result 
+
 
 
 
