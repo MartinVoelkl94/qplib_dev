@@ -158,7 +158,12 @@ class SelectCols:
             'df.q()', self.verbosity)
 
     def apply(self, query_obj):
-        cols = query_obj.df.columns.to_series()
+        if query_obj.df is None:
+            df = query_obj.df_og
+        else:
+            df = query_obj.df
+
+        cols = df.columns.to_series()
 
         cols_filtered_new = filter_series(query_obj, cols, instruction=self)
 
@@ -225,13 +230,17 @@ class SelectRows:
             'df.q()', self.verbosity)
 
     def apply(self, query_obj):
+        if query_obj.df is None:
+            df = query_obj.df_og
+        else:
+            df = query_obj.df
 
         #select rows using parsed expression
         scope = self.scope
         connector = self.connector
         verbosity = query_obj.verbosity
 
-        rows = query_obj.df.index.to_series()
+        rows = df.index.to_series()
         cols_filtered = query_obj.cols_filtered
 
         if cols_filtered.any() == False:
@@ -244,8 +253,8 @@ class SelectRows:
 
         else:
             rows_filtered_temp = None
-            for col in query_obj.df.columns[cols_filtered]:
-                rows_filtered_new = filter_series(query_obj, query_obj.df[col], instruction=self)
+            for col in df.columns[cols_filtered]:
+                rows_filtered_new = filter_series(query_obj, df[col], instruction=self)
                 rows_filtered_temp = _update_index(rows_filtered_temp, rows_filtered_new, scope)
             query_obj.rows_filtered = _update_index(query_obj.rows_filtered, rows_filtered_temp, connector)
 
@@ -291,6 +300,10 @@ class ModifyVals:
             'df.q()', self.verbosity)
         
     def apply(self, query_obj):
+        if query_obj.df is None:
+            query_obj.df = query_obj.df_og.copy()  #default is inplace=False
+            query_obj.df.qp = query_obj.df.qp
+        
         rows = query_obj.rows_filtered
         cols = query_obj.cols_filtered
 
@@ -411,7 +424,11 @@ class NewCol:
         log(f'debug: parsed "{self.text}" as instruction: {self}',
             'df.q()', self.verbosity)
         
-    def apply(self, query_obj): 
+    def apply(self, query_obj):
+        if query_obj.df is None:
+            query_obj.df = query_obj.df_og.copy()  #default is inplace=False
+            query_obj.df.qp = query_obj.df.qp
+        
         if self.operator == OPERATORS.STR_COL:
             if self.value in query_obj.df.columns:
                 log(f'warning: column "{self.value}" already exists in dataframe. selecting existing col',
@@ -749,13 +766,13 @@ class DataFrameQuery:
         self.diff_max_rows = diff_max_rows
 
         if inplace is False:
-            self.df = self.df_og.copy()
+            self.df = None
         else:
-            self.df = self.df_og  
-        self.df.qp = self.df_og.qp 
+            self.df = self.df_og 
+            self.df.qp = self.df_og.qp 
 
-        self.cols_filtered = pd.Index([True for col in self.df.columns])
-        self.rows_filtered = pd.Index([True for row in self.df.index])
+        self.cols_filtered = pd.Index([True for col in self.df_og.columns])
+        self.rows_filtered = pd.Index([True for row in self.df_og.index])
 
 
 
@@ -769,9 +786,13 @@ class DataFrameQuery:
 
    
         #results
+        if self.df is None:
+            df = self.df_og
+        else:
+            df = self.df
 
-        self.df_filtered = self.df.loc[self.rows_filtered, self.cols_filtered]
-        self.df_filtered.qp = self.df.qp
+        self.df_filtered = df.loc[self.rows_filtered, self.cols_filtered]
+        self.df_filtered.qp = df.qp
         self.df_filtered.qp.code = self.code
     
         if self.diff is None:
@@ -779,11 +800,11 @@ class DataFrameQuery:
         else:
             #show difference before and after filtering
 
-            if 'meta' in self.df.columns and 'meta' not in self.df_filtered.columns:
-                self.df_filtered.insert(0, 'meta', self.df.loc[self.rows_filtered, 'meta'])
+            if 'meta' in df.columns and 'meta' not in self.df_filtered.columns:
+                self.df_filtered.insert(0, 'meta', df.loc[self.rows_filtered, 'meta'])
 
             result = _show_differences(
-                self.df_filtered, self.df, show=self.diff,
+                self.df_filtered, df, show=self.diff,
                 max_cols=self.diff_max_cols, max_rows=self.diff_max_rows,
                 verbosity=self.verbosity)  
             return  result  
@@ -948,7 +969,7 @@ class DataFrameQueryInteractiveMode:
             <b>memory usage:</b> {self.df.memory_usage().sum()} bytes<br>
             <b>unique values:</b> {self.df.nunique().sum()}<br>
             <b>missing values:</b> {self.df.isna().sum().sum()}<br>
-            <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(df.columns, df.dtypes))])}<br>
+            <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
             """
             )
         
