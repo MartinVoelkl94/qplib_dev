@@ -1,8 +1,6 @@
 
 import numpy as np
 import pandas as pd
-import copy
-import re
 import qplib as qp
 
 from IPython.display import display
@@ -202,7 +200,7 @@ class SelectRows:
         
             #unary
             OPERATORS.IS_ANY,
-            OPERATORS.IS_UNIQUE,
+            OPERATORS.IS_UNIQUE, OPERATORS.IS_FIRST, OPERATORS.IS_LAST,
             OPERATORS.IS_NA, OPERATORS.IS_NK,
             OPERATORS.IS_STR, OPERATORS.IS_INT, OPERATORS.IS_FLOAT, OPERATORS.IS_NUM, OPERATORS.IS_BOOL,
             OPERATORS.IS_DATE, OPERATORS.IS_DATETIME,
@@ -516,7 +514,9 @@ OPERATORS = Symbols('OPERATORS',
     Symbol('is yn', 'IS_YN', 'is yes or no value', unary=True),
     Symbol('is yes', 'IS_YES', 'is yes value', unary=True),
     Symbol('is no', 'IS_NO', 'is no value', unary=True),
-    Symbol('is unique', 'IS_UNIQUE', 'is unique value', unary=True),
+    Symbol('is unique', 'IS_UNIQUE', 'is a unique value', unary=True),
+    Symbol('is first', 'IS_FIRST', 'is the first value (of multiple values)', unary=True),
+    Symbol('is last', 'IS_LAST', 'is the last value (of multiple values)', unary=True),
 
 
     #for modifying values
@@ -707,8 +707,13 @@ def filter_series(query_obj, series, instruction):
         filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', yes=1)) == 1
     elif operator == OPERATORS.IS_NO:
         filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', no=0)) == 0
+        
     elif operator == OPERATORS.IS_UNIQUE:
+        filtered = series.duplicated(keep=False) == False
+    elif operator == OPERATORS.IS_FIRST:
         filtered = series.duplicated(keep='first') == False
+    elif operator == OPERATORS.IS_LAST:
+        filtered = series.duplicated(keep='last') == False
 
     else:
         log(f'error: operator "{operator}" is not implemented', '_filter()', verbosity)
@@ -1019,6 +1024,7 @@ def _interactive_mode(**kwargs):
     
     display(result)
     return result 
+
 
 
 
