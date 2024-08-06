@@ -198,7 +198,7 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
 
 def _show_differences(
-    df_new, df_old, show='mix',
+    df_new, df_old, mode='mix',
     summary='print',  #print, return, None
     max_cols=200, max_rows=20,
     newline='<br>', prefix_new='', prefix_old='old: ',
@@ -241,12 +241,12 @@ def _show_differences(
 
 
     #create dfs showing the highlighted changes dependant on "show" settings
-    if show in ['new', 'new+']:
+    if mode in ['new', 'new+']:
         df_diff = copy.deepcopy(df_new)
         df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
 
         #add metadata columns
-        if show == 'new+':
+        if mode == 'new+':
             cols_new = ['meta']
             cols_add = []
             for col in df_diff.columns:
@@ -271,7 +271,7 @@ def _show_differences(
 
 
 
-    elif show == 'old':
+    elif mode == 'old':
         df_diff = copy.deepcopy(df_old)
         df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
         
@@ -280,7 +280,7 @@ def _show_differences(
 
         df_diff.loc[rows_removed, 'meta'] += 'removed row'
 
-    elif show == 'mix':
+    elif mode == 'mix':
         inds_old = df_old.index.difference(df_new.index)
         cols_old = df_old.columns.difference(df_new.columns)
 
@@ -298,7 +298,7 @@ def _show_differences(
         df_diff.loc[rows_removed, 'meta'] += 'removed row'
 
     else:
-        log(f'error: unknown show mode: {show}', 'qp.diff()', verbosity)
+        log(f'error: unknown mode: {mode}', 'qp.diff()', verbosity)
 
 
     #highlight values in shared columns
@@ -332,7 +332,7 @@ def _show_differences(
     df_diff.loc[rows_shared, 'meta'] += df_changed_sum.apply(lambda x: f'{newline}vals changed: {x}' if x > 0 else '')
 
 
-    if show == 'new+':
+    if mode == 'new+':
         cols_shared_metadata = [prefix_old + col for col in cols_shared_no_metadata]
         df_all_modifications = (df_added | df_removed | df_changed)
         df_old_changed = df_old.loc[rows_shared, cols_shared_no_metadata].where(df_all_modifications, '')
@@ -384,23 +384,24 @@ def _apply_style(x, df_style):
     return df_style
 
 
-def excel_diff(file_new='new', file_old='old', diff='new+',
-    ignore_index=True, to_excel=True,
+def excel_diff(file_new='new', file_old='old', file_diff='diff',
+    index_col=0, mode='new+',
     max_cols=None, max_rows=None, verbosity=3):
     '''
     shows differences between two excel files.
 
     specs and requs:
     - only sheets with the same name are compared
-    - the first column of each sheet is assumed to be an index
+    - needs a unique column to use as index, or sequential order of records
     - index must be unique
     - index must correspond to the same "item" in both sheets
 
-    if ignore_index=True:
+    if index_col=None:
     - uses sequential numbers as index instead of any given column
     - uniqueness is guaranteed
     - only works if the all sheets have the same "items" in the same rows
     '''
+
     summary = pd.DataFrame(columns=[
         'sheet',
         f'is in new file',
@@ -411,9 +412,9 @@ def excel_diff(file_new='new', file_old='old', diff='new+',
         'cols removed',
         'rows added',
         'rows removed',
-        'values added',
-        'values removed',
-        'values changed',
+        'vals added',
+        'vals removed',
+        'vals changed',
         ])
     results = {}
     
@@ -425,15 +426,16 @@ def excel_diff(file_new='new', file_old='old', diff='new+',
     #iterate over all sheets
     for sheet in sheets_new:
         if sheet in sheets_old:
-            if ignore_index:
+            if index_col:
+                df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=index_col)
+                df_old = pd.read_excel(file_old, sheet_name=sheet, index_col=index_col)
+            else:
                 df_new = pd.read_excel(file_new, sheet_name=sheet)
                 df_old = pd.read_excel(file_old, sheet_name=sheet)
-            else:
-                df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=0)
-                df_old = pd.read_excel(file_old, sheet_name=sheet, index_col=0)
+                display(df_new.index, df_old.index)
 
             result, changes = _show_differences(
-                df_new, df_old, show=diff, summary='return',
+                df_new, df_old, mode=mode, summary='return',
                 max_cols=max_cols, max_rows=max_rows, verbosity=verbosity
                 )
             
@@ -456,16 +458,25 @@ def excel_diff(file_new='new', file_old='old', diff='new+',
             summary.loc[idx, f'is in old file'] = False
             summary.loc[idx, f'index (first col) is unique in new file'] = df_new.index.is_unique
 
-    if to_excel:
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%Hh%Mm%Ss")
-        file_out = f'diff_{timestamp}.xlsx'
-        with pd.ExcelWriter(file_out) as writer:
-            summary.to_excel(writer, sheet_name='summary')
+    if file_diff:
+        if not file_diff.endswith('.xlsx'):
+            file_diff += '.xlsx'
+        
+        with pd.ExcelWriter(file_diff) as writer:
+            summary.to_excel(writer, sheet_name='summary', index=False)
+            if index_col:
+                index = True
+            else:
+                index = False
+
             for sheet, result in results.items():
-                result.to_excel(writer, sheet_name=sheet)
-        log(f'info: differences saved to "{file_out}"', 'qp.excel_diff()', verbosity)
+                result.data['meta'] = result.data['meta'].str.replace('<br>', '\n')
+                result.to_excel(writer, sheet_name=sheet, index=index)
+
+        log(f'info: differences saved to "{file_diff}"', 'qp.excel_diff()', verbosity)
         
     return summary, results
+
 
 
 
