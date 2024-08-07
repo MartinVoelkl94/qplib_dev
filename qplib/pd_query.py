@@ -809,7 +809,7 @@ class DataFrameQuery:
                 self.df_filtered.insert(0, 'meta', df.loc[self.rows_filtered, 'meta'])
 
             result = _show_differences(
-                self.df_filtered, df, show=self.diff,
+                self.df_filtered, df, mode=self.diff,
                 max_cols=self.diff_max_cols, max_rows=self.diff_max_rows,
                 verbosity=self.verbosity)  
             return  result  
