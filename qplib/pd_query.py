@@ -12,7 +12,6 @@ from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension,
 
 
 
-
 class Symbol:
     def __init__(self, symbol, name, description, unary=None, binary=None, **kwargs):
         self.symbol = symbol
@@ -75,7 +74,7 @@ class ChangeSettings:
     def __repr__(self):
         return f'ChangeSettings:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
-    def parse(self):
+    def parse(self, verbosity=None):
         self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
         self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
         self.value = text.strip()
@@ -90,6 +89,8 @@ class ChangeSettings:
         if operator == OPERATORS.SET_VERBOSITY:
             if value in ['0', '1', '2', '3', '4', '5']:
                 query_obj.verbosity = int(value)
+                for instruction in query_obj.instructions:
+                    instruction.verbosity = query_obj.verbosity
             else:
                 log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
                     'df.q()', query_obj.verbosity)
@@ -1024,7 +1025,6 @@ def _interactive_mode(**kwargs):
     
     display(result)
     return result 
-
 
 
 
