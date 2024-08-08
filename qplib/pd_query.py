@@ -12,6 +12,7 @@ from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension,
 
 
 
+
 class Symbol:
     def __init__(self, symbol, name, description, unary=None, binary=None, **kwargs):
         self.symbol = symbol
@@ -68,11 +69,11 @@ class ChangeSettings:
 
         #possible values (omitting those without a symbol)
         self.connectors = [CONNECTORS.AND, CONNECTORS.OR]
-        self.operators = [OPERATORS.SET_VERBOSITY, OPERATORS.SET_DIFF]
+        self.operators = [OPERATORS.SET_VERBOSITY, OPERATORS.SET_DIFF, OPERATORS.SET_INPLACE]
         self.verbosity = verbosity
 
     def __repr__(self):
-        return f'ChangeSettings:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
+        return f'CHANGE_SETTINGS:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self, verbosity=None):
         self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
@@ -96,12 +97,25 @@ class ChangeSettings:
                     'df.q()', query_obj.verbosity)
         
         elif operator == OPERATORS.SET_DIFF:
-            if value in ['none', 'None', 'NONE', '0']:
+            if value.lower() in ['none', '0']:
                 query_obj.diff = None
             elif value.lower() in ['mix', 'new', 'old', 'new+']:
                 query_obj.diff = value.lower()
             else:
                 log(f'warning: diff must be one of [None, "mix", "old", "new", "new+"]. "{value}" is not valid',
+                    'df.q()', query_obj.verbosity)
+                
+        elif operator == OPERATORS.SET_INPLACE:
+            if value.lower() in ['true', '1', 'yes']:
+                query_obj.inplace = True
+                query_obj.df = query_obj.df_og 
+                query_obj.df.qp = query_obj.df_og.qp
+
+            elif value.lower() in ['false', '0', 'no']:
+                query_obj.inplace = False
+                query_obj.df = None
+            else:
+                log(f'warning: inplace must be a boolean. "{value}" is not valid',
                     'df.q()', query_obj.verbosity)
     
 
@@ -140,7 +154,7 @@ class SelectCols:
         self.verbosity = verbosity
              
     def __repr__(self):
-        return f'SelectCols:\n\tconnector: {self.connector}\n\tnegation: {self.negation}\n\toperator: {self.operator}\n\tvalue: {self.value}'
+        return f'SELECT_COLS:\n\tconnector: {self.connector}\n\tnegation: {self.negation}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         #parse the expression
@@ -211,7 +225,7 @@ class SelectRows:
         self.verbosity = verbosity
              
     def __repr__(self):
-        return f'SelectRows:\n\tconnector: {self.connector}\n\tscope: {self.scope}\n\tnegation: {self.negation}\n\toperator: {self.operator}\n\tvalue: {self.value}'
+        return f'SELECT_ROWS:\n\tconnector: {self.connector}\n\tscope: {self.scope}\n\tnegation: {self.negation}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         #parse the expression
@@ -277,14 +291,14 @@ class ModifyVals:
         self.connectors = [CONNECTORS.AND, CONNECTORS.OR]
         self.operators = [
             OPERATORS.SET_VAL, OPERATORS.ADD_VAL,
-            OPERATORS.SET_EVAL, OPERATORS.SET_COL_EVAL, OPERATORS.SET_HEADER_EVAL,
+            OPERATORS.SET_EVAL, OPERATORS.SET_COL_EVAL,
             OPERATORS.TO_STR, OPERATORS.TO_INT, OPERATORS.TO_FLOAT, OPERATORS.TO_NUM, OPERATORS.TO_BOOL,
             OPERATORS.TO_DATE, OPERATORS.TO_DATETIME, OPERATORS.TO_NA, OPERATORS.TO_NK, OPERATORS.TO_YN,
             ]
         self.verbosity = verbosity
 
     def __repr__(self):
-        return f'ModifyVals:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
+        return f'MODIFY_VALS:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
@@ -310,19 +324,19 @@ class ModifyVals:
         operator = self.operator
         value = self.value
 
-        if pd.__version__ >= '2.1.0':
+        #data modification  
+        if operator == OPERATORS.SET_VAL:
+            query_obj.df.loc[rows, cols] = value
+        elif operator == OPERATORS.ADD_VAL:
+            query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].astype(str) + value
+        elif operator == OPERATORS.SET_COL_EVAL:
+            query_obj.df.loc[:, cols] = query_obj.df.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}), axis=0)
+
+
+        elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
             #data modification
-            if operator == OPERATORS.SET_VAL:
-                query_obj.df.loc[rows, cols] = value
-            elif operator == OPERATORS.ADD_VAL:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].astype(str) + value
-            
-            elif operator == OPERATORS.SET_EVAL:
+            if operator == OPERATORS.SET_EVAL:
                 query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
-            elif operator == OPERATORS.SET_COL_EVAL:
-                query_obj.df.loc[:, cols] = query_obj.df.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}), axis=0)
-            elif operator == OPERATORS.SET_HEADER_EVAL:
-                query_obj.df.columns = query_obj.df.columns.map(lambda x: eval(value, {'header': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
 
 
             #type conversion
@@ -351,18 +365,8 @@ class ModifyVals:
 
         else:
             #data modification
-            if operator == OPERATORS.SET_VAL:
-                query_obj.df.loc[rows, cols] = value
-            elif operator == OPERATORS.ADD_VAL:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].astype(str) + value
-            
-            elif operator == OPERATORS.SET_EVAL:
+            if operator == OPERATORS.SET_EVAL:
                 query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
-            elif operator == OPERATORS.SET_COL_EVAL:
-                query_obj.df.loc[:, cols] = query_obj.df.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}), axis=0)
-            elif operator == OPERATORS.SET_HEADER_EVAL:
-                query_obj.df.columns = query_obj.df.columns.applymap(lambda x: eval(value, {'header': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
-
 
             #type conversion
             elif operator == OPERATORS.TO_STR:
@@ -389,6 +393,68 @@ class ModifyVals:
                 query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_yn)
 
 
+class ModifyHeaders:
+    def __init__(self, text=None, linenum=None, verbosity=3):
+        self.text = text
+        self.linenum = linenum
+
+        #default values
+        self.type = TYPES.MODIFY_HEADERS
+        self.connector = CONNECTORS.RESET
+        self.operator = OPERATORS.SET_VAL
+        self.value = ''
+
+        #possible values (omitting those without a symbol)
+        self.connectors = [CONNECTORS.AND, CONNECTORS.OR]
+        self.operators = [
+            OPERATORS.SET_VAL, OPERATORS.ADD_VAL,
+            OPERATORS.SET_EVAL,
+            ]
+        self.verbosity = verbosity
+
+    def __repr__(self):
+        return f'MODIFY_HEADERS:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
+    
+    def parse(self):
+        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.value = text.strip()
+
+        if self.operator.unary and len(self.value)>0:
+            log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
+                '_parse_expression', self.verbosity)
+            self.value = ''
+
+        log(f'debug: parsed "{self.text}" as instruction: {self}',
+            'df.q()', self.verbosity)
+        
+    def apply(self, query_obj):
+        if query_obj.df is None:
+            query_obj.df = query_obj.df_og.copy()  #default is inplace=False
+            query_obj.df.qp = query_obj.df.qp
+        
+        cols = query_obj.cols_filtered
+
+        operator = self.operator
+        value = self.value
+
+
+        if operator == OPERATORS.SET_VAL:
+            query_obj.df.rename(columns={col: value for col in query_obj.df.columns[cols]}, inplace=True)
+            query_obj.cols_filtered.index = query_obj.df.columns
+        
+        if pd.__version__ >= '2.1.0':
+            if operator == OPERATORS.SET_EVAL:
+                new_headers = query_obj.df.columns.map(lambda x: eval(value, {'header': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
+                query_obj.df.columns = new_headers
+                query_obj.cols_filtered.index = new_headers
+        else:
+            if operator == OPERATORS.SET_EVAL:
+                new_headers = query_obj.df.columns.applymap(lambda x: eval(value, {'header': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
+                query_obj.df.columns = new_headers
+                query_obj.cols_filtered.index = new_headers
+
+
 class NewCol:
     def __init__(self, text=None, linenum=None, verbosity=3):
         self.text = text
@@ -404,12 +470,13 @@ class NewCol:
         self.connectors = [CONNECTORS.AND, CONNECTORS.OR]
         self.operators = [
             OPERATORS.STR_COL,
+            OPERATORS.EVAL_COL,
             OPERATORS.SAVE_SELECTION,
             ]
         self.verbosity = verbosity
     
     def __repr__(self):
-        return f'NewCol:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
+        return f'NEW_COL:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
@@ -430,22 +497,45 @@ class NewCol:
             query_obj.df.qp = query_obj.df.qp
         
         if self.operator == OPERATORS.STR_COL:
-            if self.value in query_obj.df.columns:
-                log(f'warning: column "{self.value}" already exists in dataframe. selecting existing col',
-                    'df.q.new_col', query_obj.verbosity)
-                query_obj.cols_filtered = pd.Index([True if col == self.value else False for col in query_obj.df.columns])
-            else:
-                query_obj.df[self.value] = ''
-                query_obj.cols_filtered = pd.Index([True if col == self.value else False for col in query_obj.df.columns])
-        if self.operator == OPERATORS.SAVE_SELECTION:
+            for i in range(1, 1001):
+                if i == 1000:
+                    log(f'warning: could not add new column. too many columns named "new<x>"',
+                        'df.q.new_col', query_obj.verbosity)
+                    break
+
+                header = 'new' + str(i)
+                if header not in query_obj.df.columns:
+                    query_obj.df[header] = self.value
+                    query_obj.cols_filtered = pd.Index([True if col == header else False for col in query_obj.df.columns])
+                    query_obj.cols_filtered.index = query_obj.df.columns
+                    break
+        
+        elif self.operator == OPERATORS.EVAL_COL:
+            for i in range(1, 1001):
+                if i == 1000:
+                    log(f'warning: could not add new column. too many columns named "new<x>"',
+                        'df.q.new_col', query_obj.verbosity)
+                    break
+
+                header = 'new' + str(i)
+                if header not in query_obj.df.columns:
+                    query_obj.df[header] = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
+                    query_obj.cols_filtered = pd.Index([True if col == header else False for col in query_obj.df.columns])
+                    query_obj.cols_filtered.index = query_obj.df.columns
+                    break
+        
+
+        elif self.operator == OPERATORS.SAVE_SELECTION:
             if self.value in query_obj.df.columns:
                 log(f'warning: column "{self.value}" already exists in dataframe. selecting existing col and resetting values',
                     'df.q.new_col', query_obj.verbosity)
                 query_obj.df[self.value] = query_obj.rows_filtered
                 query_obj.cols_filtered = pd.Index([True if col == self.value else False for col in query_obj.df.columns])
+                query_obj.cols_filtered.index = query_obj.df.columns
             else:
                 query_obj.df[self.value] = query_obj.rows_filtered
                 query_obj.cols_filtered = pd.Index([True if col == self.value else False for col in query_obj.df.columns])
+                query_obj.cols_filtered.index = query_obj.df.columns
 
 
 
@@ -454,10 +544,11 @@ ESCAPE = Symbol('`', 'ESCAPE', 'escape the next character')
 
 TYPES = Symbols('TYPES',
     Symbol('´s', 'CHANGE_SETTINGS', 'change query settings', instruction=ChangeSettings),
-    Symbol('´c', 'SELECT_COLS', 'select columns by a condition', instruction=SelectCols),
-    Symbol('´r', 'SELECT_ROWS', 'select rows by a condition', instruction=SelectRows),
-    Symbol('´m', 'MODIFY_VALS', 'modify values by a condition', instruction=ModifyVals),
-    Symbol('´n', 'NEW_COL', 'add new columns to the dataframe', instruction=NewCol),
+    Symbol('´c', 'SELECT_COLS', 'select columns fulfilling a condition', instruction=SelectCols),
+    Symbol('´r', 'SELECT_ROWS', 'select rows fulfilling a condition', instruction=SelectRows),
+    Symbol('´v', 'MODIFY_VALS', 'modify the selected values', instruction=ModifyVals),
+    Symbol('´h', 'MODIFY_HEADERS', 'modify headers of the selected columns', instruction=ModifyHeaders),
+    Symbol('´n', 'NEW_COL', 'add new column', instruction=NewCol),
     )
 
 CONNECTORS = Symbols('CONNECTORS',
@@ -481,6 +572,7 @@ OPERATORS = Symbols('OPERATORS',
     #for changing settings
     Symbol('verbosity=', 'SET_VERBOSITY', 'change the verbosity level'),
     Symbol('diff=', 'SET_DIFF', 'change the diff setting'),
+    Symbol('inplace=', 'SET_INPLACE', 'change the inplace setting'),
 
 
     #for filtering
@@ -489,19 +581,19 @@ OPERATORS = Symbols('OPERATORS',
     Symbol('>', 'BIGGER', 'bigger', binary=True),
     Symbol('<', 'SMALLER', 'smaller', binary=True),
 
-    Symbol('==', 'STRICT_EQUAL', 'strict equal', binary=True),
-    Symbol('=', 'EQUAL', 'equal', binary=True),
+    Symbol('==', 'STRICT_EQUAL', 'equal to (case sensitive)', binary=True),
+    Symbol('=', 'EQUAL', 'equal to', binary=True),
 
-    Symbol('??', 'STRICT_CONTAINS', 'contains a string. case sensitive', binary=True),
-    Symbol('?', 'CONTAINS', 'contains a string. not case sensitive', binary=True),
+    Symbol('??', 'STRICT_CONTAINS', 'contains a string (case sensitive)', binary=True),
+    Symbol('?', 'CONTAINS', 'contains a string (not case sensitive)', binary=True),
 
-    Symbol('r=', 'MATCHES_REGEX', 'regex match', binary=True),
-    Symbol('r?', 'CONTAINS_REGEX', 'regex search', binary=True),
+    Symbol('r=', 'MATCHES_REGEX', 'matches a regex', binary=True),
+    Symbol('r?', 'CONTAINS_REGEX', 'contains a regex', binary=True),
 
     Symbol('~', 'EVAL', 'select values by evaluating a python expression on each value', binary=True),
     Symbol('col~', 'COL_EVAL', 'select rows by evaluating a python expression on a whole column', binary=True),
 
-    Symbol('@', 'LOAD_SELECTION', 'load a saved selection', binary=True),
+    Symbol('@', 'LOAD_SELECTION', 'load a saved selection from a boolean column', binary=True),
 
     Symbol('is any', 'IS_ANY', 'is any value', unary=True),
     Symbol('is str', 'IS_STR', 'is string', unary=True),
@@ -521,29 +613,29 @@ OPERATORS = Symbols('OPERATORS',
     Symbol('is last', 'IS_LAST', 'is the last value (of multiple values)', unary=True),
 
 
-    #for modifying values
-    Symbol('=', 'SET_VAL', 'change currently selected values'),
-    Symbol('+=', 'ADD_VAL', 'add str to currently selected values (they are coerced to string)'),
+    #for modifying values and headers
+    Symbol('=', 'SET_VAL', 'convert to string'),
+    Symbol('+=', 'ADD_VAL', 'append to string (coerce to string if needed)'),
 
-    Symbol('~', 'SET_EVAL', 'change values by evaluating a python expression for each currently selected value'),
-    Symbol('col~', 'SET_COL_EVAL', 'change values by evaluating a python expression for each currently selected column'),
-    Symbol('header~', 'SET_HEADER_EVAL', 'change headers (col names) by evaluating a python expression for each currently selected header'),
+    Symbol('~', 'SET_EVAL', 'convert by evaluating a python expression for each selected value/header'),
+    Symbol('col~', 'SET_COL_EVAL', 'convert by evaluating a python expression for each selected column'),
 
-    Symbol('to str', 'TO_STR', 'convert currently selected values to string', unary=True),
-    Symbol('to int', 'TO_INT', 'convert currently selected values to integer', unary=True),
-    Symbol('to float', 'TO_FLOAT', 'convert currently selected values to float', unary=True),
-    Symbol('to num', 'TO_NUM', 'convert currently selected values to number', unary=True),
-    Symbol('to bool', 'TO_BOOL', 'convert currently selected values to boolean', unary=True),
-    Symbol('to datetime', 'TO_DATETIME', 'convert currently selected values to datetime', unary=True),
-    Symbol('to date', 'TO_DATE', 'convert currently selected values to date', unary=True),
-    Symbol('to na', 'TO_NA', 'convert currently selected values to missing value', unary=True),
-    Symbol('to nk', 'TO_NK', 'convert currently selected values to not known value', unary=True),
-    Symbol('to yn', 'TO_YN', 'convert currently selected values to yes or no value', unary=True),
+    Symbol('to str', 'TO_STR', 'convert to string', unary=True),
+    Symbol('to int', 'TO_INT', 'convert to integer', unary=True),
+    Symbol('to float', 'TO_FLOAT', 'convert to float', unary=True),
+    Symbol('to num', 'TO_NUM', 'convert to number', unary=True),
+    Symbol('to bool', 'TO_BOOL', 'convert to boolean', unary=True),
+    Symbol('to datetime', 'TO_DATETIME', 'convert to datetime', unary=True),
+    Symbol('to date', 'TO_DATE', 'convert to date', unary=True),
+    Symbol('to na', 'TO_NA', 'convert to missing value', unary=True),
+    Symbol('to nk', 'TO_NK', 'convert to not known value', unary=True),
+    Symbol('to yn', 'TO_YN', 'convert to yes or no value', unary=True),
 
 
     #for adding new columns
-    Symbol('=', 'STR_COL', 'add a new string column to the dataframe and select it instead of current selection'),
-    Symbol('@', 'SAVE_SELECTION', 'add a new boolean column and select it. all currently selected rows are set to True, the rest to False'),
+    Symbol('=', 'STR_COL', 'add new column, fill it with the given string and select it'),
+    Symbol('~', 'EVAL_COL', 'add new column, fill it by evaluating a python expression and select it'),
+    Symbol('@', 'SAVE_SELECTION', 'add a new boolean column with the given name and select it. all currently selected rows are set to True, the rest to False'),
     )
 
 
@@ -755,7 +847,7 @@ class DataFrameQuery:
     
     def __call__(self,
             code='',  #code in string form for filtering and modifying data
-            inplace=True,  #make modifications inplace or just return a new dataframe.
+            inplace=False,  #make modifications inplace or just return a new dataframe.
             verbosity=3,  #verbosity level for logging. 0: no logging, 1: errors, 2: warnings, 3: info, 4: debug
             diff=None,  #[None, 'mix', 'old', 'new', 'new+']
             diff_max_cols=200,  #maximum number of columns to display when using diff. None: show all
