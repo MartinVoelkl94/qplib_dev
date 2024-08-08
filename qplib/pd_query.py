@@ -12,6 +12,7 @@ from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension,
 
 
 
+
 class Symbol:
     def __init__(self, symbol, name, description, unary=None, binary=None, **kwargs):
         self.symbol = symbol
@@ -23,10 +24,10 @@ class Symbol:
             setattr(self, key, value)
 
     def __repr__(self):
-        return f'{self.name}(symbol: "{self.symbol}" description: "{self.description})"'
+        return f'{self.name} (symbol: "{self.symbol}" description: "{self.description})"'
     
     def __str__(self):
-        return f'{self.name}(symbol: "{self.symbol}" description: "{self.description})"'
+        return f'{self.name} (symbol: "{self.symbol}" description: "{self.description})"'
 
 class Symbols:
     def __init__(self, name, *symbols):
@@ -72,7 +73,7 @@ class ChangeSettings:
         self.verbosity = verbosity
 
     def __repr__(self):
-        return f'ChangeSettings:\n' + '\n'.join([f'{key}: {val}' for key,val in self.__dict__.items()])
+        return f'ChangeSettings:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
@@ -138,7 +139,7 @@ class SelectCols:
         self.verbosity = verbosity
              
     def __repr__(self):
-        return f'SelectCols:\n' + '\n'.join([f'{key}: {val}' for key,val in self.__dict__.items()])
+        return f'SelectCols:\n\tconnector: {self.connector}\n\tnegation: {self.negation}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         #parse the expression
@@ -209,7 +210,7 @@ class SelectRows:
         self.verbosity = verbosity
              
     def __repr__(self):
-        return f'SelectRows:\n' + '\n'.join([f'{key}: {val}' for key,val in self.__dict__.items()])
+        return f'SelectRows:\n\tconnector: {self.connector}\n\tscope: {self.scope}\n\tnegation: {self.negation}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         #parse the expression
@@ -282,7 +283,7 @@ class ModifyVals:
         self.verbosity = verbosity
 
     def __repr__(self):
-        return f'ModifyVals:\n' + '\n'.join([f'{key}: {val}' for key,val in self.__dict__.items()])
+        return f'ModifyVals:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
@@ -407,7 +408,7 @@ class NewCol:
         self.verbosity = verbosity
     
     def __repr__(self):
-        return f'NewCol:\n' + '\n'.join([f'{key}: {val}' for key,val in self.__dict__.items()])
+        return f'NewCol:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
         self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
@@ -546,7 +547,7 @@ OPERATORS = Symbols('OPERATORS',
 
 
 
-def tokenize(code):
+def tokenize(code, verbosity=3):
     lines = []
     instructions = []
 
@@ -576,20 +577,20 @@ def tokenize(code):
 
             if char == '´':
                 instruction_type = char + line[i+1]
-                instructions.append(TYPES[instruction_type].instruction(char, line_num))
+                instructions.append(TYPES[instruction_type].instruction(char, line_num, verbosity))
                 chars_in_instruction = 1
             elif char in [CONNECTORS.AND.symbol, CONNECTORS.OR.symbol]:
                 if chars_in_instruction >= 3:
-                    instructions.append(TYPES[instruction_type].instruction(f'{instruction_type} {char}', line_num))
+                    instructions.append(TYPES[instruction_type].instruction(f'{instruction_type} {char}', line_num, verbosity))
                     chars_in_instruction = 3
                 elif i == 0:
-                    instructions.append(TYPES[instruction_type].instruction(f'{instruction_type} {char}', line_num))
+                    instructions.append(TYPES[instruction_type].instruction(f'{instruction_type} {char}', line_num, verbosity))
                     chars_in_instruction = 3
                 else:
                     instructions[-1].text += char
                     chars_in_instruction += 1
             elif i == 0:
-                instructions.append(TYPES[instruction_type].instruction(f'{instruction_type} {char}', line_num))
+                instructions.append(TYPES[instruction_type].instruction(f'{instruction_type} {char}', line_num, verbosity))
                 chars_in_instruction = 3
             elif char == ' ':
                 instructions[-1].text += char
@@ -758,7 +759,6 @@ class DataFrameQuery:
             diff=None,  #[None, 'mix', 'old', 'new', 'new+']
             diff_max_cols=200,  #maximum number of columns to display when using diff. None: show all
             diff_max_rows=20,  #maximum number of rows to display when using diff. None: show all
-            **kwargs
             ):
         
         #setup
@@ -783,7 +783,7 @@ class DataFrameQuery:
 
         #instructions
 
-        self.lines, self.instructions = tokenize(self.code)
+        self.lines, self.instructions = tokenize(self.code, self.verbosity)
 
         for instruction in self.instructions:
             instruction.parse()
@@ -1024,7 +1024,6 @@ def _interactive_mode(**kwargs):
     
     display(result)
     return result 
-
 
 
 
