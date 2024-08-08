@@ -97,10 +97,17 @@ def log(text=None, context='', verbosity=None, clear=False):
     logs.loc[idx, 'time'] = time
 
     if level_int <= verbosity:
-        display(logs.tail(1).style.hide(axis=1).apply(
+        last = logs.tail(1)
+        last.loc[:, 'text'] = last.loc[:, 'text'].str.replace('\n', '<br>')
+        last.loc[:, 'text'] = last.loc[:, 'text'].str.replace('\t', '&emsp;')
+        last.loc[:, 'context'] = last.loc[:, 'context'].str.replace('\n', '<br>')
+        last.loc[:, 'context'] = last.loc[:, 'context'].str.replace('\t', '&emsp;')
+
+        display(last.style.hide(axis=1).apply(
                 lambda x: [f'background-color: {color}' for i in x], axis=1
-                )
+                ).set_properties(**{'text-align': 'left'})
             )
+
 
 
 
