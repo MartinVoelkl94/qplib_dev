@@ -505,7 +505,8 @@ class NewCol:
 
                 header = 'new' + str(i)
                 if header not in query_obj.df.columns:
-                    query_obj.df[header] = self.value
+                    query_obj.df[header] = ''
+                    query_obj.df.loc[query_obj.rows_filtered, header] = self.value
                     query_obj.cols_filtered = pd.Index([True if col == header else False for col in query_obj.df.columns])
                     query_obj.cols_filtered.index = query_obj.df.columns
                     break
@@ -519,7 +520,12 @@ class NewCol:
 
                 header = 'new' + str(i)
                 if header not in query_obj.df.columns:
-                    query_obj.df[header] = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
+                    value = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
+                    if isinstance(value, pd.Series):
+                        query_obj.df[header] = value
+                    else:
+                        query_obj.df[header] = pd.NA
+                        query_obj.df.loc[query_obj.rows_filtered, header] = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
                     query_obj.cols_filtered = pd.Index([True if col == header else False for col in query_obj.df.columns])
                     query_obj.cols_filtered.index = query_obj.df.columns
                     break
@@ -1117,6 +1123,7 @@ def _interactive_mode(**kwargs):
     
     display(result)
     return result 
+
 
 
 
