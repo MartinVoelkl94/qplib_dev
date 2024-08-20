@@ -426,13 +426,12 @@ def excel_diff(file_new='new', file_old='old', file_diff='diff',
     #iterate over all sheets
     for sheet in sheets_new:
         if sheet in sheets_old:
-            if index_col:
-                df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=index_col)
-                df_old = pd.read_excel(file_old, sheet_name=sheet, index_col=index_col)
-            else:
+            if index_col is None:
                 df_new = pd.read_excel(file_new, sheet_name=sheet)
                 df_old = pd.read_excel(file_old, sheet_name=sheet)
-                display(df_new.index, df_old.index)
+            else:
+                df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=index_col)
+                df_old = pd.read_excel(file_old, sheet_name=sheet, index_col=index_col)
 
             result, changes = _show_differences(
                 df_new, df_old, mode=mode, summary='return',
@@ -476,7 +475,6 @@ def excel_diff(file_new='new', file_old='old', file_diff='diff',
         log(f'info: differences saved to "{file_diff}"', 'qp.excel_diff()', verbosity)
         
     return summary, results
-
 
 
 
