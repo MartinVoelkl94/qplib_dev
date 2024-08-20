@@ -620,11 +620,11 @@ OPERATORS = Symbols('OPERATORS',
 
 
     #for modifying values and headers
-    Symbol('=', 'SET_VAL', 'convert to string'),
-    Symbol('+=', 'ADD_VAL', 'append to string (coerce to string if needed)'),
+    Symbol('=', 'SET_VAL', 'replace value with the given string'),
+    Symbol('+=', 'ADD_VAL', 'append a string to the value (coerce to string if needed)'),
 
-    Symbol('~', 'SET_EVAL', 'convert by evaluating a python expression for each selected value/header'),
-    Symbol('col~', 'SET_COL_EVAL', 'convert by evaluating a python expression for each selected column'),
+    Symbol('~', 'SET_EVAL', 'replace value by evaluating a python expression for each selected value/header'),
+    Symbol('col~', 'SET_COL_EVAL', 'replace value by evaluating a python expression for each selected column'),
 
     Symbol('to str', 'TO_STR', 'convert to string', unary=True),
     Symbol('to int', 'TO_INT', 'convert to integer', unary=True),
