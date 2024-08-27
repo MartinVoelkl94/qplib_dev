@@ -4,7 +4,7 @@ import re
 
 #these are mostly wrappers type conversions with extra features for dealing with errors
 
-def qp_int(x, errors='coerce', na=np.nan):
+def _int(x, errors='coerce', na=np.nan):
     try:
         return int(float(x))  #float first to handle strings like '1.0'
     except:
@@ -12,8 +12,8 @@ def qp_int(x, errors='coerce', na=np.nan):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to integer.
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
+                    errors='ignore': returns the original value
                     errors='coerce': returns np.nan
                     errors=<any other value>: returns <any other value>
                     """)
@@ -24,7 +24,7 @@ def qp_int(x, errors='coerce', na=np.nan):
             case _:
                 return errors
 
-def qp_float(x, errors='coerce', na=np.nan):
+def _float(x, errors='coerce', na=np.nan):
     try:
         return float(x)
     except:
@@ -32,8 +32,8 @@ def qp_float(x, errors='coerce', na=np.nan):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to float.
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
+                    errors='ignore': returns the original value
                     errors='coerce': returns np.nan
                     errors=<any other value>: returns <any other value>
                     """)
@@ -44,7 +44,7 @@ def qp_float(x, errors='coerce', na=np.nan):
             case _:
                 return errors
             
-def qp_num(x, errors='coerce', na=np.nan):
+def _num(x, errors='coerce', na=np.nan):
     try:
         return pd.to_numeric(x)
     except:
@@ -52,8 +52,8 @@ def qp_num(x, errors='coerce', na=np.nan):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to numeric.
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
+                    errors='ignore': returns the original value
                     errors='coerce': returns np.nan
                     errors=<any other value>: returns <any other value>
                     """)
@@ -64,7 +64,7 @@ def qp_num(x, errors='coerce', na=np.nan):
             case _:
                 return errors
             
-def qp_bool(x, errors='coerce', na=None):
+def _bool(x, errors='coerce', na=None):
     if str(x).lower() in ['y', 'yes', 'true', '1', '1.0', 'positive', 'pos']:
         return True
     elif str(x).lower() in ['n', 'no', 'false', '0', '0.0', 'negative', 'neg']:
@@ -74,9 +74,9 @@ def qp_bool(x, errors='coerce', na=None):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to boolean.
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
-                    errors='coerce': returns NaN
+                    errors='ignore': returns the original value
+                    errors='coerce': returns None
                     errors=<any other value>: returns <any other value>
                     """)
             case 'ignore':
@@ -87,7 +87,7 @@ def qp_bool(x, errors='coerce', na=None):
                 return errors
 
 
-def qp_date(x, errors='coerce', na=pd.NaT):
+def _date(x, errors='coerce', na=pd.NaT):
     if isinstance(x, str):
         x = x.replace('_', '-')
     try:
@@ -100,9 +100,9 @@ def qp_date(x, errors='coerce', na=pd.NaT):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to date.
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
-                    errors='coerce': returns NaT
+                    errors='ignore': returns the original value
+                    errors='coerce': returns pd.NaT
                     errors=<any other value>: returns <any other value>
                     """)
             case 'ignore':
@@ -112,7 +112,7 @@ def qp_date(x, errors='coerce', na=pd.NaT):
             case _:
                 return errors
        
-def qp_datetime(x, errors='coerce', na=pd.NaT):
+def _datetime(x, errors='coerce', na=pd.NaT):
     if isinstance(x, str):
         x = x.replace('_', '-')
     try:
@@ -125,9 +125,9 @@ def qp_datetime(x, errors='coerce', na=pd.NaT):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to datetime.
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
-                    errors='coerce': returns NaT
+                    errors='ignore': returns the original value
+                    errors='coerce': returns pd.NaT
                     errors=<any other value>: returns <any other value>
                     """)
             case 'ignore':
@@ -138,7 +138,7 @@ def qp_datetime(x, errors='coerce', na=pd.NaT):
                 return errors
 
 
-def qp_na(x, errors='ignore', na=None):
+def _na(x, errors='ignore', na=None):
     possible_nas = [
         'not available', 'na', 'n/a', 'n.a', 'n.a.', 'na.', 'n.a',
         'not a number', 'nan',
@@ -154,9 +154,9 @@ def qp_na(x, errors='ignore', na=None):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to "{na}".
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
-                    errors='coerce': returns NaN
+                    errors='ignore': returns the original value
+                    errors='coerce': returns None
                     errors=<any other value>: returns <any other value>
                     """)
             case 'ignore':
@@ -166,7 +166,7 @@ def qp_na(x, errors='ignore', na=None):
             case _:
                 return errors
 
-def qp_nk(x, errors='ignore', nk='unknown'):
+def _nk(x, errors='ignore', nk='unknown', na=None):
     possible_nks = [
         'unk', 'unknown', 'not known', 'not known.',
         'nk', 'n.k.', 'n.k', 'n/k',
@@ -180,19 +180,19 @@ def qp_nk(x, errors='ignore', nk='unknown'):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to "{nk}".
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
-                    errors='coerce': returns NaN
+                    errors='ignore': returns the original value
+                    errors='coerce': returns None
                     errors=<any other value>: returns <any other value>
                     """)
             case 'ignore':
                 return x
             case 'coerce':
-                return None
+                return na
             case _:
                 return errors
 
-def qp_yn(x, errors='coerce', yes='yes', no='no', na=None):
+def _yn(x, errors='coerce', yes='yes', no='no', na=None):
     if str(x).lower() in ['y', 'yes', 'true', '1', '1.0', 'positive', 'pos']:
         return yes
     elif str(x).lower() in ['n', 'no', 'false', '0', '0.0', 'negative', 'neg']:
@@ -202,8 +202,8 @@ def qp_yn(x, errors='coerce', yes='yes', no='no', na=None):
             case 'raise':
                 raise ValueError(f"""could not convert "{x}" to "{yes}" or "{no}".
                     Error handling:
-                    errors='ignore': returns the original value
                     errors='raise': raises a ValueError
+                    errors='ignore': returns the original value
                     errors='coerce': returns NaN
                     errors=<any other value>: returns <any other value>
                     """)
@@ -213,6 +213,7 @@ def qp_yn(x, errors='coerce', yes='yes', no='no', na=None):
                 return na
             case _:
                 return errors
+
 
 
 

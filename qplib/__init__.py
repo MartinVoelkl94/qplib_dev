@@ -5,8 +5,8 @@ from .pd_util import _show_differences as diff
 
 from .util import *
 
-from .types import qp_int as int, qp_float as float, qp_num as num, qp_bool as bool
-from .types import qp_date as date, qp_datetime as datetime
-from .types import qp_na as na, qp_nk as nk, qp_yn as yn
+from .types import _int as int, _float as float, _num as num, _bool as bool
+from .types import _date as date, _datetime as datetime
+from .types import _na as na, _nk as nk, _yn as yn
 from .types import qpDict as dict
 

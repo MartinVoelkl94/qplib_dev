@@ -7,9 +7,9 @@ import sys
 import shutil
 import datetime
 from IPython.display import display
-from .types import qp_num
-from .types import qp_na
-from .types import qp_nk
+from .types import _num
+from .types import _na
+from .types import _nk
 
 
 GREEN = '#6dae51'
@@ -281,20 +281,20 @@ def _ls_object(py_object, recursive, result, layers):
             result.loc[ind,'size'] = f'{len(df)} rows, {len(df.columns)} cols'
         else:
             result.loc[ind, 'contents'] = f'{len(df)} rows, {len(df.columns)} cols'
-            result.loc[ind, 'na'] = df.applymap(lambda x: qp_na(x, errors=0, na=1)).sum().sum()
-            result.loc[ind, 'nk'] = df.applymap(lambda x: qp_nk(x, errors=0, nk=1)).sum().sum()
+            result.loc[ind, 'na'] = df.applymap(lambda x: _na(x, errors=0, na=1)).sum().sum()
+            result.loc[ind, 'nk'] = df.applymap(lambda x: _nk(x, errors=0, nk=1)).sum().sum()
 
             ind1 = ind
             rows = len(df.index)
             for col in df.columns:
                 ind1 += 1
                 result.loc[ind1, 'contents'] = col
-                result.loc[ind1, 'na'] = df[col].apply(lambda x: qp_na(x, errors=0, na=1)).sum()
-                result.loc[ind1, 'nk'] = df[col].apply(lambda x: qp_nk(x, errors=0, nk=1)).sum()
-                result.loc[ind1, 'min'] = df[col].apply(lambda x: qp_num(x, errors=None)).min()
-                result.loc[ind1, 'max'] = df[col].apply(lambda x: qp_num(x, errors=None)).max()
-                result.loc[ind1, 'median'] = df[col].apply(lambda x: qp_num(x, errors=None)).median()
-                result.loc[ind1, 'mean'] = df[col].apply(lambda x: qp_num(x, errors=None)).mean()
+                result.loc[ind1, 'na'] = df[col].apply(lambda x: _na(x, errors=0, na=1)).sum()
+                result.loc[ind1, 'nk'] = df[col].apply(lambda x: _nk(x, errors=0, nk=1)).sum()
+                result.loc[ind1, 'min'] = df[col].apply(lambda x: _num(x, errors=None)).min()
+                result.loc[ind1, 'max'] = df[col].apply(lambda x: _num(x, errors=None)).max()
+                result.loc[ind1, 'median'] = df[col].apply(lambda x: _num(x, errors=None)).median()
+                result.loc[ind1, 'mean'] = df[col].apply(lambda x: _num(x, errors=None)).mean()
 
     return result.fillna('').replace(0, '')
 

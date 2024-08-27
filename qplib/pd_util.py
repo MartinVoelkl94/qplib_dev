@@ -9,7 +9,7 @@ from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
 
 from .util import log, GREEN, ORANGE, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
-from .types import qp_date, qp_na, qpDict
+from .types import _date, _na, qpDict
 
 
 
@@ -583,7 +583,7 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, ver
     if os.path.isfile(path):
         df = pd.read_excel(path, sheet_name=sheet, index_col=index, **kwargs)
         if 'meta' in df.columns:
-            df.loc[:, 'meta'] = df.loc[:, 'meta'].apply(lambda x: qp_na(x, errors='ignore', na=''))
+            df.loc[:, 'meta'] = df.loc[:, 'meta'].apply(lambda x: _na(x, errors='ignore', na=''))
         return df
         
     today = datetime.date.today()
@@ -602,7 +602,7 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, ver
         case 'this year':
             cutoff = pd.to_datetime(f'{today.year}0101').date()
         case _:
-            cutoff = qp_date(before)
+            cutoff = _date(before)
 
     name = os.path.basename(path)
     folder = os.path.dirname(path)
@@ -620,7 +620,7 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, ver
         if file.startswith(name) and file.endswith('.xlsx'):
             try:
                 timestamp_str = file.split(name)[-1].replace('.xlsx', '')
-                timestamp = qp_date(timestamp_str)
+                timestamp = _date(timestamp_str)
                 if timestamp < cutoff and file == f'{name}{timestamp_str}.xlsx':
                     timestamps[timestamp] = timestamp_str
             except:
@@ -641,7 +641,7 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, ver
             df = pd.read_excel(path, sheet_name=sheet, index_col=index, **kwargs)
         
         if 'meta' in df.columns:
-            df.loc[:, 'meta'] = df.loc[:, 'meta'].apply(lambda x: qp_na(x, errors='ignore', na=''))
+            df.loc[:, 'meta'] = df.loc[:, 'meta'].apply(lambda x: _na(x, errors='ignore', na=''))
 
         return df
 

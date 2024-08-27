@@ -7,7 +7,7 @@ from IPython.display import display
 from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 
 from .util import log
-from .types import qp_int, qp_float, qp_num, qp_bool, qp_datetime, qp_date, qp_na, qp_nk, qp_yn, qpDict
+from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, qpDict
 from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension, seriesQpExtension, dfQpExtension
 
 
@@ -343,25 +343,25 @@ class ModifyVals:
             elif operator == OPERATORS.TO_STR:
                 query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(str)
             elif operator == OPERATORS.TO_INT:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_int)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_int)
             elif operator == OPERATORS.TO_FLOAT:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_float)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_float)
             elif operator == OPERATORS.TO_NUM:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_num)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_num)
             elif operator == OPERATORS.TO_BOOL:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_bool)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_bool)
             
             elif operator == OPERATORS.TO_DATETIME:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_datetime)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_datetime)
             elif operator == OPERATORS.TO_DATE:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_date)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_date)
 
             elif operator == OPERATORS.TO_NA:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_na)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_na)
             elif operator == OPERATORS.TO_NK:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_nk)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_nk)
             elif operator == OPERATORS.TO_YN:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(qp_yn)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(_yn)
 
         else:
             #data modification
@@ -372,25 +372,25 @@ class ModifyVals:
             elif operator == OPERATORS.TO_STR:
                 query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(str)
             elif operator == OPERATORS.TO_INT:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_int)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_int)
             elif operator == OPERATORS.TO_FLOAT:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_float)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_float)
             elif operator == OPERATORS.TO_NUM:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_num)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_num)
             elif operator == OPERATORS.TO_BOOL:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_bool)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_bool)
             
             elif operator == OPERATORS.TO_DATETIME:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_datetime)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_datetime)
             elif operator == OPERATORS.TO_DATE:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_date)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_date)
 
             elif operator == OPERATORS.TO_NA:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_na)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_na)
             elif operator == OPERATORS.TO_NK:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_nk)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_nk)
             elif operator == OPERATORS.TO_YN:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(qp_yn)
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(_yn)
 
 
 class ModifyHeaders:
@@ -786,27 +786,27 @@ def filter_series(query_obj, series, instruction):
     elif operator == OPERATORS.IS_FLOAT:
         filtered = series.apply(lambda x: isinstance(x, float))
     elif operator == OPERATORS.IS_NUM:
-        filtered = series.apply(lambda x: qp_num(x, errors='ERROR')) != 'ERROR'
+        filtered = series.apply(lambda x: _num(x, errors='ERROR')) != 'ERROR'
     elif operator == OPERATORS.IS_BOOL:
         filtered = series.apply(lambda x: isinstance(x, bool))
 
     elif operator == OPERATORS.IS_DATETIME:
-        filtered = series.apply(lambda x: qp_datetime(x, errors='ERROR')) != 'ERROR'
+        filtered = series.apply(lambda x: _datetime(x, errors='ERROR')) != 'ERROR'
     elif operator == OPERATORS.IS_DATE:
-        filtered = series.apply(lambda x: qp_date(x, errors='ERROR')) != 'ERROR'
+        filtered = series.apply(lambda x: _date(x, errors='ERROR')) != 'ERROR'
 
     elif operator == OPERATORS.IS_ANY:
         filtered = series.apply(lambda x: True)
     elif operator == OPERATORS.IS_NA:
-        filtered = series.apply(lambda x: qp_na(x, errors='ERROR')) != 'ERROR'
+        filtered = series.apply(lambda x: _na(x, errors='ERROR')) != 'ERROR'
     elif operator == OPERATORS.IS_NK:
-        filtered = series.apply(lambda x: qp_nk(x, errors='ERROR')) != 'ERROR'
+        filtered = series.apply(lambda x: _nk(x, errors='ERROR')) != 'ERROR'
     elif operator == OPERATORS.IS_YN:
-        filtered = series.apply(lambda x: qp_yn(x, errors='ERROR')) != 'ERROR'
+        filtered = series.apply(lambda x: _yn(x, errors='ERROR')) != 'ERROR'
     elif operator == OPERATORS.IS_YES:
-        filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', yes=1)) == 1
+        filtered = series.apply(lambda x: _yn(x, errors='ERROR', yes=1)) == 1
     elif operator == OPERATORS.IS_NO:
-        filtered = series.apply(lambda x: qp_yn(x, errors='ERROR', no=0)) == 0
+        filtered = series.apply(lambda x: _yn(x, errors='ERROR', no=0)) == 0
         
     elif operator == OPERATORS.IS_UNIQUE:
         filtered = series.duplicated(keep=False) == False
