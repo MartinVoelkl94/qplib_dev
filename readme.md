@@ -2,9 +2,9 @@
 
 A query language for pandas data exploration/analysis/modification.
 
-It is implemented as an [accessor extension](https://pandas.pydata.org/docs/development/extending.html), meaning it can be called from a dataframe without any further preparation.  
+It is implemented as an [accessor extension](https://pandas.pydata.org/docs/development/extending.html), meaning it can be called from a dataframe without any further preparation by calling df.q() with a valid text string.  
 
-An interactive wrapper can be called with df.qi() to help with the query creation and for exploring the various operators.
+An interactive wrapper can be called with df.qi() to help with query creation and for exploring the syntax.
 <br>
 <br>
 
@@ -13,7 +13,7 @@ An interactive wrapper can be called with df.qi() to help with the query creatio
 
 ## logging with qp.log()
 
-A small logger to be used in notebooks. Makes it easier to keep track of outputs in large notebooks by providing color coded output and. Does not log to file, but instead to a dataframe in globals() which can then be viewed at the end of the notebook.
+A small logger to be used in notebooks. Makes it easier to keep track of outputs in large notebooks by providing color coded output. Does not log to file, but instead to a dataframe which can then be viewed at the end of the notebook.
 <br>
 <br>
 
@@ -38,15 +38,18 @@ available wrappers:
 
 
 ## type conversion 
-Mostly wrappers for pandas functions but with some additional functionality. 
+Mostly wrappers for pandas functions but with some additional functionality and generally more lenient handling of edge cases. 
 
 available functions:  
-- qp.na()  
-- qp.nk()  
-- qp.num()  
-- qp.yn()  
+- qp.int()
+- qp.float()
+- qp.num()
+- qp.bool()
 - qp.date()  
 - qp.datetime()
+- qp.na()  
+- qp.nk()  
+- qp.yn()  
 <br>
 <br>
 
