@@ -6,7 +6,7 @@ import re
 
 def _int(x, errors='coerce', na=np.nan):
     try:
-        return int(float(x))  #float first to handle strings like '1.0'
+        return round(float(x))  #float first to handle strings like '1.0'
     except:
         match errors:
             case 'raise':
@@ -140,14 +140,13 @@ def _datetime(x, errors='coerce', na=pd.NaT):
 
 def _na(x, errors='ignore', na=None):
     possible_nas = [
-        'not available', 'na', 'n/a', 'n.a', 'n.a.', 'na.', 'n.a',
-        'not a number', 'nan',
-        'null', 'nil',
-        'none',
         '',
+        'na', 'n/a', 'n.a', 'n.a.', 'na.', 'n.a', 'nan', 'n.a.n', 'n.a.n.',
+        'not available', 'not applicable', 'not a number', 'missing', 'missing.',
+        'null', 'nil', 'none', 'void', 'blank', 'empty',
         ]
     
-    if pd.isna(x) or str(x).lower() in possible_nas:
+    if pd.isna(x) or str(x).lower().strip() in possible_nas:
         return na
     else:
         match errors:
@@ -238,6 +237,5 @@ class qpDict(dict):
     
     def invert(self):
         return qpDict({val:key for key,val in self.items()})
-
 
 
