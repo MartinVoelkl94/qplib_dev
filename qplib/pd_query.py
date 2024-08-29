@@ -8,7 +8,7 @@ from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 
 from .util import log
 from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, qpDict
-from .pd_util import _check_df, _show_differences, _format_df, indexQpExtension, seriesQpExtension, dfQpExtension
+from .pd_util import _check_df, _diff, _format_df, indexQpExtension, seriesQpExtension, dfQpExtension
 
 
 
@@ -907,7 +907,7 @@ class DataFrameQuery:
             if 'meta' in df.columns and 'meta' not in self.df_filtered.columns:
                 self.df_filtered.insert(0, 'meta', df.loc[self.rows_filtered, 'meta'])
 
-            result = _show_differences(
+            result = _diff(
                 self.df_filtered, df, mode=self.diff,
                 max_cols=self.diff_max_cols, max_rows=self.diff_max_rows,
                 verbosity=self.verbosity)  

@@ -197,7 +197,7 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
 
 
-def _show_differences(
+def _diff(
     df_new, df_old, mode='mix',
     summary='print',  #print, return, None
     max_cols=200, max_rows=20,
@@ -433,7 +433,7 @@ def excel_diff(file_new='new', file_old='old', file_diff='diff',
                 df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=index_col)
                 df_old = pd.read_excel(file_old, sheet_name=sheet, index_col=index_col)
 
-            result, changes = _show_differences(
+            result, changes = _diff(
                 df_new, df_old, mode=mode, summary='return',
                 max_cols=max_cols, max_rows=max_rows, verbosity=verbosity
                 )
@@ -520,7 +520,7 @@ def save(
     """
     if diff_before is not None:
         df_old, date_old = load(path, sheet, before=diff_before, return_date=True)
-        df = _show_differences(df, df_old, show=diff_show, verbose=False, newline='\n')
+        df = _diff(df, df_old, show=diff_show, verbose=False, newline='\n')
         
 
 
