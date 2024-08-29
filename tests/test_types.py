@@ -48,7 +48,7 @@ def test_error_custom():
 
 
 
-@pytest.mark.parametrize("input, expected_int", [
+@pytest.mark.parametrize("input, expected", [
     ('1', 1),
     ('1.0', 1),
     ('1.1', 1),
@@ -89,11 +89,12 @@ def test_error_custom():
     ('1_000', 1000),
     ])
 
-def test_int(input, expected_int):
-    assert qp.int(input) == expected_int
+def test_int(input, expected):
+    result = qp.int(input)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
-@pytest.mark.parametrize("input, expected_float", [
+@pytest.mark.parametrize("input, expected", [
     ('1', 1.0),
     ('1.0', 1.0),
     ('1.1', 1.1),
@@ -122,11 +123,12 @@ def test_int(input, expected_int):
     ('1_000', 1000.0),
     ])
 
-def test_float(input, expected_float):
-    assert qp.float(input) == expected_float
+def test_float(input, expected):
+    result = qp.float(input)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
-@pytest.mark.parametrize("input, expected_num", [
+@pytest.mark.parametrize("input, expected", [
     ('1', 1),
     ('1.0', 1.0),
     ('1.1', 1.1),
@@ -154,13 +156,14 @@ def test_float(input, expected_float):
     ('1e0', 1),
     ])
 
-def test_num(input, expected_num):
-    assert qp.num(input) == expected_num
+def test_num(input, expected):
+    result = qp.num(input)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
 
 
-@pytest.mark.parametrize("input, expected_bool", [
+@pytest.mark.parametrize("input, expected", [
     ('y', True),
     ('yes', True),
     ('true', True),
@@ -199,13 +202,14 @@ def test_num(input, expected_num):
     (1.0, True),
     ])
 
-def test_bool(input, expected_bool):
-    assert qp.bool(input) == expected_bool
+def test_bool(input, expected):
+    result = qp.bool(input)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
 
 
-@pytest.mark.parametrize("input, expected_date", [
+@pytest.mark.parametrize("input, expected", [
     ('2020-01-01', (2020, 1, 1)),
     ('2020-01-01 00:00:00', (2020, 1, 1)),
 
@@ -245,11 +249,13 @@ def test_bool(input, expected_bool):
     ('2020 01 02', (2020, 1, 2)),
     ])
 
-def test_date(input, expected_date):
-    assert qp.date(input) == datetime.date(*expected_date)
+def test_date(input, expected):
+    result = qp.date(input)
+    expected = datetime.date(*expected)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
-@pytest.mark.parametrize("input, expected_datetime", [
+@pytest.mark.parametrize("input, expected", [
     ('2020-01-01', (2020, 1, 1)),
     ('2020-01-01 00:00:00', (2020, 1, 1)),
     ('2020-01-01 00:00:01', (2020, 1, 1, 0, 0, 1)),
@@ -292,12 +298,14 @@ def test_date(input, expected_date):
     ('2020 01 02', (2020, 1, 2)),
     ])
 
-def test_datetime(input, expected_datetime):
-    assert qp.datetime(input) == datetime.datetime(*expected_datetime)
+def test_datetime(input, expected):
+    result = qp.datetime(input)
+    expected = datetime.datetime(*expected)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
 
-@pytest.mark.parametrize("input, expected_na", [
+@pytest.mark.parametrize("input, expected", [
     (None, None),
     (np.nan, None),
     (pd.NaT, None),
@@ -349,11 +357,12 @@ def test_datetime(input, expected_datetime):
     ('BLANK', None),
     ])
 
-def test_na(input, expected_na):
-    assert qp.na(input) == expected_na
+def test_na(input, expected):
+    result = qp.na(input)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
-@pytest.mark.parametrize("input, expected_nk", [
+@pytest.mark.parametrize("input, expected", [
     ('unk', 'unknown'),
     ('unknown', 'unknown'),
     ('not known', 'unknown'),
@@ -368,11 +377,12 @@ def test_na(input, expected_na):
     ('not specified.', 'unknown'),
     ])
 
-def test_nk(input, expected_nk):
-    assert qp.nk(input) == expected_nk
+def test_nk(input, expected):
+    result = qp.nk(input)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
-@pytest.mark.parametrize("input, expected_yn", [
+@pytest.mark.parametrize("input, expected", [
     ('y', 'yes'),
     ('yes', 'yes'),
     ('true', 'yes'),
@@ -411,8 +421,9 @@ def test_nk(input, expected_nk):
     (1.0, 'yes'),
     ])
 
-def test_yn(input, expected_yn):
-    assert qp.yn(input) == expected_yn
+def test_yn(input, expected):
+    result = qp.yn(input)
+    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
 
 
 
