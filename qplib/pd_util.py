@@ -199,13 +199,37 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
 def _diff(
     df_new, df_old, mode='mix',
-    summary='print',  #print, return, None
+    returns='df',
     max_cols=200, max_rows=20,
-    newline='<br>', prefix_new='', prefix_old='old: ',
+    newline='<br>', prefix_old='old: ',
     verbosity=3,):
     '''
     shows differences between dataframes
+
+    mode:
+    'new': returns new dataframe with highlighted value additions, removals and changes
+    'new+': also shows old values in columns next to new values
+    'old': returns old dataframe with highlighted value additions, removals and changes
+    'mix': returns mixture of new and old dataframe with highlighted value additions, removals and changes
+
+    returns:
+    'df': df with highlighted differences
+    'dict': dict with summary of additions, removals and changes
+    'str': str with unmatched indices and headers (fastest option)
+    'str+': str with unmatched indices and headers and differences
+    'all': returns df, dict, str
+    'all+': returns df, dict, str+
     '''
+
+    if returns == 'str':
+        return diff_str(df_new, df_old)
+    elif returns == 'str+':
+        return diff_str(df_new, df_old, fast=False)
+    elif returns == 'all':
+        changes_str = diff_str(df_new, df_old)
+    elif returns == 'all+':
+        changes_str = diff_str(df_new, df_old, fast=False)
+
 
     if not df_new.index.is_unique:
         log('error: index of new dataframe is not unique', 'qp.diff()', verbosity)
@@ -363,14 +387,17 @@ def _diff(
     result = df_diff.style.apply(lambda x: _apply_style(x, df_diff_style), axis=None)
     changes_truncated = {key: val for key,val in changes_all.items() if val > 0}
 
-    if summary == 'print':
-        display(changes_truncated)
+    if returns == 'df':
         return result
-    elif summary == 'return':
-        return result, changes_truncated
+    elif returns == 'dict':
+        return changes_truncated
+    elif returns == 'all':
+        return result, changes_truncated, changes_str
+    elif returns == 'all+':
+        return result, changes_truncated, changes_str
     else:
-        return result
-
+        log(f'error: invalid value passed for arg "returns": {returns}', verbosity)
+    
 
 def _try_replace_gt_lt(x):
     if isinstance(x, str):
@@ -384,7 +411,7 @@ def _apply_style(x, df_style):
     return df_style
 
 
-def excel_diff(file_new='new', file_old='old', file_diff='diff',
+def diff_excel(file_new='new', file_old='old', file_diff='diff',
     index_col=0, mode='new+',
     max_cols=None, max_rows=None, verbosity=3):
     '''
@@ -476,6 +503,37 @@ def excel_diff(file_new='new', file_old='old', file_diff='diff',
         
     return summary, results
 
+
+def diff_str(df1, df2, fast=True):
+    if df1.equals(df2):
+        return 'both dataframes are identical'
+    
+
+    #different indices and headers
+  
+    result = 'only in df1:\n'
+    result += f'indices: {df1.index.difference(df2.index).values}\n'
+    result += f'headers: {df1.columns.difference(df2.columns).values}\n'
+
+    result += 'only in df2:\n'
+    result += f'indices: {df2.index.difference(df1.index).values}\n'
+    result += f'headers: {df2.columns.difference(df1.columns).values}\n'
+
+    if fast is True:
+        return result
+    
+    #different values
+
+    idx_shared = df1.index.intersection(df2.index)
+    cols_shared = df1.columns.intersection(df2.columns)
+    df1_shared = df1.loc[idx_shared, cols_shared]
+    df2_shared = df2.loc[idx_shared, cols_shared]
+    diffs = df1_shared != df2_shared
+
+    result += f'\ndifferent values in df1:\n{df1_shared[diffs].fillna("")}\n'
+    result += f'\ndifferent values in df2:\n{df2_shared[diffs].fillna("")}\n'
+
+    return result
 
 
 
