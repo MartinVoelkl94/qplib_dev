@@ -25,7 +25,7 @@ def test_mode_new():
     result_expected.loc['z', 'b'] = 3.0
     result_expected.loc['z', 'a'] = np.nan
 
-    assert result.equals(result_expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nexpected:\n{result_expected}\nresult:\n{result}'
+    assert result.equals(result_expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_expected}\nRESULT:\n{result}'
 
 
 def test_mode_newplus():
@@ -57,7 +57,7 @@ def test_mode_newplus():
     result_expected.loc['z', 'a'] = np.nan
     result_expected.loc['z', 'old: a'] = 3.0
 
-    assert result.equals(result_expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nexpected:\n{result_expected}\nresult:\n{result}'
+    assert result.equals(result_expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_expected}\nRESULT\n{result}'
 
 
 def test_mode_old():
@@ -80,7 +80,7 @@ def test_mode_old():
     result_expected.loc['z', 'b'] = None
     result_expected.loc['z', 'c'] = 3.0
 
-    assert result.equals(result_expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nexpected:\n{result_expected}\nresult:\n{result}'
+    assert result.equals(result_expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_expected}\nRESULT:\n{result}'
 
 
 def test_mode_mix():
@@ -112,7 +112,7 @@ def test_mode_mix():
     result_expected.loc['x', 'a'] = 1.0
     result_expected.loc['x', 'c'] = 1.0
 
-    assert result.equals(result_expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nexpected:\n{result_expected}\nresult:\n{result}'
+    assert result.equals(result_expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_expected}\nRESULT:\n{result}'
 
 
 def test_returns_df():
@@ -135,7 +135,7 @@ def test_returns_df():
     result_expected.loc['z', 'b'] = 3.0
     result_expected.loc['z', 'a'] = np.nan
 
-    assert result.equals(result_expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nexpected:\n{result_expected}\nresult:\n{result}'
+    assert result.equals(result_expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_expected}\nRESULT:\n{result}'
 
 
 def test_returns_dict():
@@ -149,19 +149,19 @@ def test_returns_dict():
         'vals removed': 1,
         'vals changed': 1,
         }
-    assert result == expected, f'\nRESULT:\n{result}\nEXPECTED:\n{expected}'
+    assert result == expected, f'\nRESUL\n{result}\nEXPECTED:\n{expected}'
 
 
 def test_returns_str():
     result = qp.diff(df_new, df_old, returns='str')
     expected = "only in df1:\nindices: ['x2']\nheaders: ['d']\nonly in df2:\nindices: ['x']\nheaders: ['c']\n"
-    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT:\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
+    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESUL\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
 
 
 def test_returns_str_plus():
     result = qp.diff(df_new, df_old, returns='str+')
     expected = "only in df1:\nindices: ['x2']\nheaders: ['d']\nonly in df2:\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df1:\n    b    a\ny       0.0\nz  3.0     \n\ndifferent values in df2:\nb    a\ny    2.0\nz    3.0\n"
-    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT:\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
+    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESUL\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
 
 
 def test_returns_all():
@@ -206,9 +206,9 @@ def test_returns_all():
     
     expected_str = "only in df1:\nindices: ['x2']\nheaders: ['d']\nonly in df2:\nindices: ['x']\nheaders: ['c']\n"
 
-    assert result_df.equals(expected_df), f'failed test for returns="all".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_df}\nRESULT:\n{result_df}'
-    assert result_dict == expected_dict, f'failed test for returns="all".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_dict}\nRESULT:\n{result_dict}'
-    assert result_str.replace(' ','') == expected_str.replace(' ',''), f'failed test for returns="all".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_str}\nRESULT:\n{result_str}'
+    assert result_df.equals(expected_df), f'failed test for returns="all".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_df}\nRESULT\n{result_df}'
+    assert result_dict == expected_dict, f'failed test for returns="all".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_dict}\nRESUL\n{result_dict}'
+    assert result_str.replace(' ','') == expected_str.replace(' ',''), f'failed test for returns="all".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_str}\nRESU\n{result_str}'
     
 
 def test_returns_all_plus():
@@ -253,21 +253,21 @@ def test_returns_all_plus():
     
     expected_str = "only in df1:\nindices: ['x2']\nheaders: ['d']\nonly in df2:\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df1:\n    b    a\ny       0.0\nz  3.0     \n\ndifferent values in df2:\nb    a\ny    2.0\nz    3.0\n"
     
-    assert result_df.equals(expected_df), f'failed test for returns="all+": "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_df}\nRESULT:\n{result_df}'
-    assert result_dict == expected_dict, f'failed test for returns="all+": "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_dict}\nRESULT:\n{result_dict}'
-    assert result_str.replace(' ','') == expected_str.replace(' ',''), f'failed test for returns="all+": "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_str}\nRESULT:\n{result_str}'
+    assert result_df.equals(expected_df), f'failed test for returns="all+": "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_df}\nRESULT\n{result_df}'
+    assert result_dict == expected_dict, f'failed test for returns="all+": "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_dict}\nRESUL\n{result_dict}'
+    assert result_str.replace(' ','') == expected_str.replace(' ',''), f'failed test for returns="all+": "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_str}\nRESU\n{result_str}'
     
 
 
 def test_diff_str():
     result = qp.diff_str(df_new, df_old)
     expected = "only in df1:\nindices: ['x2']\nheaders: ['d']\nonly in df2:\nindices: ['x']\nheaders: ['c']\n"
-    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT:\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
+    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESUL\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
 
 
 def test_diff_str_slow():
     result = qp.diff_str(df_new, df_old, fast=False)
     expected = "only in df1:\nindices: ['x2']\nheaders: ['d']\nonly in df2:\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df1:\n    b    a\ny       0.0\nz  3.0     \n\ndifferent values in df2:\nb    a\ny    2.0\nz    3.0\n"
-    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT:\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
+    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESUL\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
 
 

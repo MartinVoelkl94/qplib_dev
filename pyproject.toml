@@ -29,11 +29,18 @@ dependencies = [
 ]
 requires-python = ">=3.10"
 
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+
 [project.urls]
 Repository = "https://github.com/MartinVoelkl94/qplib"
 
 [tool.setuptools.packages.find]
 include = ["qplib*"]
-exclude = ["data*", "test*", "archive*"]
+exclude = ["data*", "tests*", "archive*"]
 
 

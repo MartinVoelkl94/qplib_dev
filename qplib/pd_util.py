@@ -264,7 +264,7 @@ def _diff(
 
 
 
-    #create dfs showing the highlighted changes dependant on "show" settings
+    #create dfs showing the highlighted changes dependant on mode argument
     if mode in ['new', 'new+']:
         df_diff = copy.deepcopy(df_new)
         df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
@@ -426,7 +426,7 @@ def diff_excel(file_new='new', file_old='old', file_diff='diff',
     if index_col=None:
     - uses sequential numbers as index instead of any given column
     - uniqueness is guaranteed
-    - only works if the all sheets have the same "items" in the same rows
+    - only works if all sheets have the same "items" in the same rows
     '''
 
     summary = pd.DataFrame(columns=[

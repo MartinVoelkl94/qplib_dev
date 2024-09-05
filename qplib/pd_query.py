@@ -1,4 +1,5 @@
 
+import re
 import numpy as np
 import pandas as pd
 import qplib as qp
@@ -330,13 +331,13 @@ class ModifyVals:
         elif operator == OPERATORS.ADD_VAL:
             query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].astype(str) + value
         elif operator == OPERATORS.SET_COL_EVAL:
-            query_obj.df.loc[:, cols] = query_obj.df.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}), axis=0)
+            query_obj.df.loc[:, cols] = query_obj.df.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
 
 
         elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
             #data modification
             if operator == OPERATORS.SET_EVAL:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
 
 
             #type conversion
@@ -366,7 +367,7 @@ class ModifyVals:
         else:
             #data modification
             if operator == OPERATORS.SET_EVAL:
-                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
+                query_obj.df.loc[rows, cols] = query_obj.df.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
 
             #type conversion
             elif operator == OPERATORS.TO_STR:

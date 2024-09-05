@@ -91,7 +91,7 @@ def test_error_custom():
 
 def test_int(input, expected):
     result = qp.int(input)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -125,7 +125,7 @@ def test_int(input, expected):
 
 def test_float(input, expected):
     result = qp.float(input)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -158,7 +158,7 @@ def test_float(input, expected):
 
 def test_num(input, expected):
     result = qp.num(input)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 
@@ -204,7 +204,7 @@ def test_num(input, expected):
 
 def test_bool(input, expected):
     result = qp.bool(input)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 
@@ -252,7 +252,7 @@ def test_bool(input, expected):
 def test_date(input, expected):
     result = qp.date(input)
     expected = datetime.date(*expected)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -301,7 +301,7 @@ def test_date(input, expected):
 def test_datetime(input, expected):
     result = qp.datetime(input)
     expected = datetime.datetime(*expected)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 
@@ -359,7 +359,7 @@ def test_datetime(input, expected):
 
 def test_na(input, expected):
     result = qp.na(input)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -379,7 +379,7 @@ def test_na(input, expected):
 
 def test_nk(input, expected):
     result = qp.nk(input)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -423,7 +423,7 @@ def test_nk(input, expected):
 
 def test_yn(input, expected):
     result = qp.yn(input)
-    assert result == expected, f'\ninput: {input}\nresult: {result}\nexpected: {expected}'
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 
