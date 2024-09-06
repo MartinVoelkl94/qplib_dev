@@ -217,18 +217,18 @@ def _diff(
     'dict': dict with summary of additions, removals and changes
     'str': str with unmatched indices and headers (fastest option)
     'str+': str with unmatched indices and headers and differences
+    'print': like 'str', but prints the result instead of returning it
+    'print+': like 'str+', but prints the result instead of returning it
     'all': returns df, dict, str
     'all+': returns df, dict, str+
     '''
 
-    if returns == 'str':
-        return diff_str(df_new, df_old)
-    elif returns == 'str+':
-        return diff_str(df_new, df_old, fast=False)
-    elif returns == 'all':
-        changes_str = diff_str(df_new, df_old)
-    elif returns == 'all+':
-        changes_str = diff_str(df_new, df_old, fast=False)
+    if returns in ('str', 'str+', 'print', 'print+'):
+        return diff_str(df_new, df_old, returns)
+    elif returns=='all':
+        changes_str = diff_str(df_new, df_old, 'str')
+    elif returns=='all+':
+        changes_str = diff_str(df_new, df_old, 'str+')
 
 
     if not df_new.index.is_unique:
@@ -504,9 +504,23 @@ def diff_excel(file_new='new', file_old='old', file_diff='diff',
     return summary, results
 
 
-def diff_str(df1, df2, fast=True):
+def diff_str(df1, df2, returns='str', verbosity=3):
+    """"
+    compares 2 dfs and produces a string containing the results
+
+    returns:
+    'str': str with unmatched indices and headers
+    'str+': str with unmatched indices and headers and differences
+    'print': like 'str', but prints the result instead of returning it
+    'print+': like 'str+', but prints the result instead of returning it
+    """
+
     if df1.equals(df2):
-        return 'both dataframes are identical'
+        if returns in ('print', 'print+'):
+            print('both dataframes are identical')
+            return
+        else:
+            return 'both dataframes are identical'
     
 
     #different indices and headers
@@ -519,8 +533,11 @@ def diff_str(df1, df2, fast=True):
     result += f'indices: {df2.index.difference(df1.index).values}\n'
     result += f'headers: {df2.columns.difference(df1.columns).values}\n'
 
-    if fast is True:
+    if returns=='str':
         return result
+    if returns=='print':
+        print(result)
+        return
     
     #different values
 
@@ -533,7 +550,11 @@ def diff_str(df1, df2, fast=True):
     result += f'\ndifferent values in df1:\n{df1_shared[diffs].fillna("")}\n'
     result += f'\ndifferent values in df2:\n{df2_shared[diffs].fillna("")}\n'
 
-    return result
+    if returns=='str+':
+        return result
+    if returns=='print+':
+        print(result)
+        return
 
 
 
