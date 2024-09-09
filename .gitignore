@@ -11,4 +11,4 @@
 #not needed
 **/*.bkp
 **temp**
-
+**venv**
