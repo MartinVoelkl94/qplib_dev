@@ -40,6 +40,8 @@ Requires-Dist: jinja2
 Requires-Dist: openpyxl
 Requires-Dist: jedi>=0.16
 Requires-Dist: tomli
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
 
 # qplib
 

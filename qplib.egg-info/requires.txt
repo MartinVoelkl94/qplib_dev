@@ -6,3 +6,6 @@ jinja2
 openpyxl
 jedi>=0.16
 tomli
+
+[dev]
+pytest

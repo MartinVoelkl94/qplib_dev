@@ -33,6 +33,7 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 dev = [
     "pytest",
+    "ipykernel",
 ]
 
 
