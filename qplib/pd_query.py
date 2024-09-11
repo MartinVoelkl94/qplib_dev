@@ -408,7 +408,8 @@ class ModifyHeaders:
         #possible values (omitting those without a symbol)
         self.connectors = [CONNECTORS.AND, CONNECTORS.OR]
         self.operators = [
-            OPERATORS.SET_VAL, OPERATORS.ADD_VAL,
+            OPERATORS.SET_VAL,
+            OPERATORS.ADD_VAL,
             OPERATORS.SET_EVAL,
             ]
         self.verbosity = verbosity
@@ -442,6 +443,10 @@ class ModifyHeaders:
 
         if operator == OPERATORS.SET_VAL:
             query_obj.df.rename(columns={col: value for col in query_obj.df.columns[cols]}, inplace=True)
+            query_obj.cols_filtered.index = query_obj.df.columns
+
+        if operator == OPERATORS.ADD_VAL:
+            query_obj.df.rename(columns={col: col + value for col in query_obj.df.columns[cols]}, inplace=True)
             query_obj.cols_filtered.index = query_obj.df.columns
 
         if operator == OPERATORS.SET_EVAL:

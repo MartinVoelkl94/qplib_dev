@@ -153,7 +153,7 @@ df = get_df()
     ])
 
 def test_col_selection(instructions, expected_cols):
-    result = df.q(instructions, verbosity=0)
+    result = df.q(instructions)
     expected = df.loc[:, expected_cols]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -361,10 +361,57 @@ df = get_df()
     ),
     ])
 def test_row_selection(instructions, expected_df):
-    result = df.q(instructions, verbosity=0)
+    result = df.q(instructions)
     assert result.equals(expected_df), qp.diff(result, expected_df, returns='str+')
     
 
+
+def test_idx():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('´r idx > 5')
+    expected = df2.iloc[6:, :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_idx1():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('´r idx = 3')
+    expected = df2.iloc[[3], :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_idx2():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('´r idx < 5')
+    expected = df2.iloc[:5, :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_idx3():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('´r idx >5 & idx <8')
+    expected = df2.iloc[6:8, :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_idx4():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('´r idx ~ len(str(x)) > 1')
+    expected = df2.iloc[[10], :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_idx5():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('´r idx ?1')
+    expected = df2.iloc[[1, 10], :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
 
 
@@ -538,7 +585,7 @@ def test_metadata_set():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = ['', '', '>0']
-    df.q('a ´r >0  ´m = >0', inplace=True, verbosity=0)
+    df.q('a ´r >0  ´m = >0', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -546,7 +593,7 @@ def test_metadata_set1():
     df = get_df_simple()
     df1 = get_df_simple()
     df1['meta'] = ['', '', '>0']
-    df.q('a ´r >0  ´m = >0', inplace=True, verbosity=0)
+    df.q('a ´r >0  ´m = >0', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -554,7 +601,7 @@ def test_metadata_add():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = ['', '', '>0']
-    df.q('a ´r >0  ´m += >0', inplace=True, verbosity=0)
+    df.q('a ´r >0  ´m += >0', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -562,7 +609,7 @@ def test_metadata_add1():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a   ´r >0   ´m +=>0', inplace=True, verbosity=0)
+    df.q('=a   ´r >0   ´m +=>0', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -570,7 +617,7 @@ def test_metadata_add2():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a´r >0     ´m+= >0', inplace=True, verbosity=0)
+    df.q('=a´r >0     ´m+= >0', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -578,7 +625,7 @@ def test_metadata_eval():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a   ´r >0   ´m ~ x + ">0"', inplace=True, verbosity=0)
+    df.q('=a   ´r >0   ´m ~ x + ">0"', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -586,7 +633,7 @@ def test_metadata_col_eval():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a   ´r >0   ´m col~ col + ">0"', inplace=True, verbosity=0)
+    df.q('=a   ´r >0   ´m col~ col + ">0"', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -594,7 +641,7 @@ def test_metadata_tag():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '@a;']
-    df.q('=a´r >0     ´m@', inplace=True, verbosity=0)
+    df.q('=a´r >0     ´m@', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -602,7 +649,7 @@ def test_metadata_tag1():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '@a;@b;']
-    df.q('=a´r >0  ´c /b     ´m@', inplace=True, verbosity=0)
+    df.q('=a´r >0  ´c /b     ´m@', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -610,7 +657,7 @@ def test_metadata_tag1():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', 'value >0 in:@a;value >0 in:@b;']
-    df.q('=a´r >0  ´c /b     ´m@value >0 in:', inplace=True, verbosity=0)
+    df.q('=a´r >0  ´c /b     ´m@value >0 in:', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -619,27 +666,27 @@ def test_metadata_continous():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a  ´r >0   ´m +=>0', inplace=True, verbosity=0)
+    df.q('=a  ´r >0   ´m +=>0', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>0>0']
-    df.q('=a   ´r >0  ´m+=>0', inplace=True, verbosity=0)
+    df.q('=a   ´r >0  ´m+=>0', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '0', '>0>0']
-    df.q('=a   ´r ==0    ´m += 0', inplace=True, verbosity=0)
+    df.q('=a   ´r ==0    ´m += 0', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>0>0']
-    df.q('a   ´r ==0    ´m ~ x.replace("0", "")', inplace=True, verbosity=0)
+    df.q('a   ´r ==0    ´m ~ x.replace("0", "")', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>>']
-    df.q('=a   ´r >0    ´m~x.replace("0", "")', inplace=True, verbosity=0)
+    df.q('=a   ´r >0    ´m~x.replace("0", "")', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '']
-    df.q('=a     ´m=', inplace=True, verbosity=0)
+    df.q('=a     ´m=', inplace=True)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -750,7 +797,7 @@ def test_eval3():
 def test_to_int():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('age ´v to int', verbosity=0)
+    result = df1.q('age ´v to int')
     df2['age'] = [-25, 30, np.nan, np.nan, 40, np.nan, np.nan, np.nan, np.nan, np.nan, 35]
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']]
@@ -760,7 +807,7 @@ def test_to_int():
 def test_to_float():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('=age  ´v to float', verbosity=0)
+    result = df1.q('=age  ´v to float')
     df2['age'] = [-25.0, 30.0, np.nan, np.nan, 40.0, np.nan, np.nan, np.nan, np.nan, np.nan, 35.0]
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']]
@@ -770,7 +817,7 @@ def test_to_float():
 def test_to_num():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('=age   ´v to num', verbosity=0)
+    result = df1.q('=age   ´v to num')
     df2['age'] = [-25, 30, np.nan, np.nan, 40, np.nan, np.nan, np.nan, np.nan, np.nan, 35]
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']]
@@ -780,7 +827,7 @@ def test_to_num():
 def test_to_str():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('=age   ´v to str', verbosity=0)
+    result = df1.q('=age   ´v to str')
     df2['age'] = ['-25', '30', 'nan', 'None', '40.0', 'forty-five', 'nan', 'unk', '', 'unknown', '35']
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']]
@@ -790,7 +837,7 @@ def test_to_str():
 def test_to_date():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('date of birth   ´v to date', verbosity=0)
+    result = df1.q('date of birth   ´v to date')
     df2['date of birth'] = [
         pd.to_datetime('1995-01-02', dayfirst=False).date(),
         pd.to_datetime('1990/09/14', dayfirst=False).date(),
@@ -812,7 +859,7 @@ def test_to_date():
 def test_to_na():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('=age   ´v to na', verbosity=0)
+    result = df1.q('=age   ´v to na')
     df2['age'] = [-25, '30', None, None, '40.0', 'forty-five', None, 'unk', None, 'unknown', 35]
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']]
@@ -822,7 +869,7 @@ def test_to_na():
 def test_to_nk():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('=age   ´v to nk', verbosity=0)
+    result = df1.q('=age   ´v to nk')
     df2['age'] = [-25, '30', np.nan, None, '40.0', 'forty-five', 'nan', 'unknown', '', 'unknown', 35]
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']]
@@ -832,7 +879,7 @@ def test_to_nk():
 def test_to_yn():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('=diabetes   ´v to yn', verbosity=0)
+    result = df1.q('=diabetes   ´v to yn')
     df2['diabetes'] = ['no', 'yes', None, 'no', 'yes', 'yes', 'no', None, None, 'no', 'yes']
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['diabetes']]
@@ -845,7 +892,7 @@ def test_add_col():
     df1 = get_df()
     df2 = get_df()
     df2['new1'] = ''
-    result = df1.q('´n', verbosity=0)
+    result = df1.q('´n')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -854,7 +901,7 @@ def test_add_col1():
     df1 = get_df()
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n a', verbosity=0)
+    result = df1.q('´n a')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -863,7 +910,7 @@ def test_add_col2():
     df1 = get_df()
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´na', verbosity=0)
+    result = df1.q('´na')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -872,7 +919,7 @@ def test_add_col3():
     df1 = get_df()
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n =a', verbosity=0)
+    result = df1.q('´n =a')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -881,7 +928,7 @@ def test_add_col4():
     df1 = get_df()
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n= a', verbosity=0)
+    result = df1.q('´n= a')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -890,7 +937,7 @@ def test_add_col5():
     df1 = get_df()
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n = a', verbosity=0)
+    result = df1.q('´n = a')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -899,7 +946,7 @@ def test_add_col6():
     df1 = get_df()
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n ~ "a"', verbosity=0)
+    result = df1.q('´n ~ "a"')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -908,7 +955,7 @@ def test_add_col7():
     df1 = get_df()
     df2 = get_df()
     df2['new1'] = df2['ID']
-    result = df1.q('´n ~ df["ID"]', verbosity=0)
+    result = df1.q('´n ~ df["ID"]')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -917,7 +964,7 @@ def test_add_col7():
 def test_add_col_inplace_true():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('´n ´c is any', inplace=True, verbosity=0)
+    result = df1.q('´n ´c is any', inplace=True)
     df2['new1'] = ''
     assert result.equals(df2), qp.diff(result, df2, returns='str+')
     assert df1.equals(df2), qp.diff(df1, df2, returns='str+')
@@ -927,7 +974,7 @@ def test_add_col_inplace_false():
     df1 = get_df()
     df2 = get_df()
     df3 = get_df()
-    result = df1.q('´n ´c is any', inplace=False, verbosity=0)
+    result = df1.q('´n ´c is any', inplace=False)
     df2['new1'] = ''
     assert result.equals(df2), qp.diff(result, df2, returns='str+')
     assert df1.equals(df3), qp.diff(df1, df3, returns='str+')
@@ -937,12 +984,59 @@ def test_add_col_inplace_default():
     df1 = get_df()
     df2 = get_df()
     df3 = get_df()
-    result = df1.q('´n ´c is any', verbosity=0)
+    result = df1.q('´n ´c is any')
     df2['new1'] = ''
     assert result.equals(df2), qp.diff(result, df2, returns='str+')
     assert df1.equals(df3), qp.diff(df1, df3, returns='str+')
 
 
+
+def test_header_replace():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('id ´h id')
+    expected = df2.rename(columns={'ID': 'id'}).loc[:, ['id']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_header_replace1():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('id ´h id  ´c name ´h n  ´c date of birth ´h dob ´c is any')
+    expected = df2.rename(columns={'ID': 'id', 'name': 'n', 'date of birth': 'dob'})
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_header_append():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('id ´h += abc')
+    expected = df2.rename(columns={'ID': 'IDabc'}).loc[:, ['IDabc']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_header_append1():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('id / name / date of birth  ´h += abc ´c is any')
+    expected = df2.rename(columns={'ID': 'IDabc', 'name': 'nameabc', 'date of birth': 'date of birthabc'})
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_header_eval():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('id ´h ~ x.lower() + str(len(x))  ´c is any')
+    expected = df2.rename(columns={'ID': 'id2'})
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
+
+
+def test_header_eval1():
+    df1 = get_df()
+    df2 = get_df()
+    result = df1.q('id / weight / diabetes   ´h ~ x.lower() + str(len(x))  ´c is any')
+    expected = df2.rename(columns={'ID': 'id2', 'weight': 'weight6', 'diabetes': 'diabetes8'})
+    assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
 
 
