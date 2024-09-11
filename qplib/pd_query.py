@@ -504,7 +504,7 @@ class NewCol:
                 if header not in query_obj.df.columns:
                     query_obj.df[header] = ''
                     query_obj.df.loc[query_obj.rows_filtered, header] = self.value
-                    query_obj.cols_filtered = pd.concat([query_obj.cols_filtered, pd.Series([False])])
+                    query_obj.cols_filtered = pd.Series([True if col == header else False for col in query_obj.df.columns])
                     query_obj.cols_filtered.index = query_obj.df.columns
                     break
         
@@ -523,7 +523,7 @@ class NewCol:
                     else:
                         query_obj.df[header] = pd.NA
                         query_obj.df.loc[query_obj.rows_filtered, header] = value
-                    query_obj.cols_filtered = pd.concat([query_obj.cols_filtered, pd.Series([False])])
+                    query_obj.cols_filtered = pd.Series([True if col == header else False for col in query_obj.df.columns])
                     query_obj.cols_filtered.index = query_obj.df.columns
                     break
         
