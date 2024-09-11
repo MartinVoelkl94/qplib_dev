@@ -186,7 +186,7 @@ class SelectCols:
             log(f'warning: no columns fulfill the condition in "{self.text}"',
                 'df.q()', self.verbosity)
 
-        query_obj.cols_filtered = _update_index(query_obj.cols_filtered, cols_filtered_new, self.connector)
+        query_obj.cols_filtered = _update_selection(query_obj.cols_filtered, cols_filtered_new, self.connector)
 
 
 class SelectRows:
@@ -264,14 +264,14 @@ class SelectRows:
                 
         if scope == SCOPE.INDEX:
             rows_filtered_new = filter_series(query_obj, rows, instruction=self)
-            query_obj.rows_filtered = _update_index(query_obj.rows_filtered, rows_filtered_new, connector)
+            query_obj.rows_filtered = _update_selection(query_obj.rows_filtered, rows_filtered_new, connector)
 
         else:
             rows_filtered_temp = None
             for col in df.columns[cols_filtered]:
                 rows_filtered_new = filter_series(query_obj, df[col], instruction=self)
-                rows_filtered_temp = _update_index(rows_filtered_temp, rows_filtered_new, scope)
-            query_obj.rows_filtered = _update_index(query_obj.rows_filtered, rows_filtered_temp, connector)
+                rows_filtered_temp = _update_selection(rows_filtered_temp, rows_filtered_new, scope)
+            query_obj.rows_filtered = _update_selection(query_obj.rows_filtered, rows_filtered_temp, connector)
 
             if rows_filtered_temp.any() == False:
                 log(f'warning: no rows fulfill the condition in "{self.text}"', 'df.q', verbosity)
@@ -443,17 +443,13 @@ class ModifyHeaders:
         if operator == OPERATORS.SET_VAL:
             query_obj.df.rename(columns={col: value for col in query_obj.df.columns[cols]}, inplace=True)
             query_obj.cols_filtered.index = query_obj.df.columns
+
+        if operator == OPERATORS.SET_EVAL:
+            query_obj.df.rename(columns={
+                col: eval(value, {'x': col, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
+                for col in query_obj.df.columns[cols]}, inplace=True)
+            query_obj.cols_filtered.index = query_obj.df.columns
         
-        if pd.__version__ >= '2.1.0':
-            if operator == OPERATORS.SET_EVAL:
-                new_headers = query_obj.df.columns.map(lambda x: eval(value, {'header': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
-                query_obj.df.columns = new_headers
-                query_obj.cols_filtered.index = new_headers
-        else:
-            if operator == OPERATORS.SET_EVAL:
-                new_headers = query_obj.df.columns.applymap(lambda x: eval(value, {'header': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp}))
-                query_obj.df.columns = new_headers
-                query_obj.cols_filtered.index = new_headers
 
 
 class NewCol:
@@ -508,7 +504,7 @@ class NewCol:
                 if header not in query_obj.df.columns:
                     query_obj.df[header] = ''
                     query_obj.df.loc[query_obj.rows_filtered, header] = self.value
-                    query_obj.cols_filtered = pd.Index([True if col == header else False for col in query_obj.df.columns])
+                    query_obj.cols_filtered = pd.concat([query_obj.cols_filtered, pd.Series([False])])
                     query_obj.cols_filtered.index = query_obj.df.columns
                     break
         
@@ -520,32 +516,25 @@ class NewCol:
                     break
 
                 header = 'new' + str(i)
-                if header in query_obj.df.columns:
-                    log(f'warning: column "{header}" already exists in dataframe. selecting existing col and resetting values',
-                        'df.q.new_col', query_obj.verbosity)
-                
-                value = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
-                if isinstance(value, pd.Series):
-                    query_obj.df[header] = value
-                else:
-                    query_obj.df[header] = pd.NA
-                    query_obj.df.loc[query_obj.rows_filtered, header] = value
-                query_obj.cols_filtered = pd.Index([True if col == header else False for col in query_obj.df.columns])
-                query_obj.cols_filtered.index = query_obj.df.columns
-                break
+                if header not in query_obj.df.columns: 
+                    value = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
+                    if isinstance(value, pd.Series):
+                        query_obj.df[header] = value
+                    else:
+                        query_obj.df[header] = pd.NA
+                        query_obj.df.loc[query_obj.rows_filtered, header] = value
+                    query_obj.cols_filtered = pd.concat([query_obj.cols_filtered, pd.Series([False])])
+                    query_obj.cols_filtered.index = query_obj.df.columns
+                    break
         
 
         elif self.operator == OPERATORS.SAVE_SELECTION:
             if self.value in query_obj.df.columns:
                 log(f'warning: column "{self.value}" already exists in dataframe. selecting existing col and resetting values',
                     'df.q.new_col', query_obj.verbosity)
-                query_obj.df[self.value] = query_obj.rows_filtered
-                query_obj.cols_filtered = pd.Index([True if col == self.value else False for col in query_obj.df.columns])
-                query_obj.cols_filtered.index = query_obj.df.columns
-            else:
-                query_obj.df[self.value] = query_obj.rows_filtered
-                query_obj.cols_filtered = pd.Index([True if col == self.value else False for col in query_obj.df.columns])
-                query_obj.cols_filtered.index = query_obj.df.columns
+            query_obj.df[self.value] = query_obj.rows_filtered
+            query_obj.cols_filtered = pd.Series([True if col == self.value else False for col in query_obj.df.columns])
+            query_obj.cols_filtered.index = query_obj.df.columns
 
 
 class Miscellaneous:
@@ -930,7 +919,7 @@ def filter_series(query_obj, series, instruction):
     return filtered
 
 
-def _update_index(values, values_new, connector):
+def _update_selection(values, values_new, connector):
     if values is None:
         values = values_new
     elif connector == CONNECTORS.RESET:
@@ -979,8 +968,10 @@ class DataFrameQuery:
             self.df = self.df_og 
             self.df.qp = self.df_og.qp 
 
-        self.cols_filtered = pd.Index([True for col in self.df_og.columns])
-        self.rows_filtered = pd.Index([True for row in self.df_og.index])
+        self.cols_filtered = pd.Series([True for col in self.df_og.columns])
+        self.rows_filtered = pd.Series([True for row in self.df_og.index])
+        self.cols_filtered.index = self.df_og.columns
+        self.rows_filtered.index = self.df_og.index
 
 
 
