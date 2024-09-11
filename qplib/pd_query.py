@@ -486,11 +486,11 @@ class NewCol:
 
         if self.operator.unary and len(self.value)>0:
             log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                '_parse_expression', self.verbosity)
+                'qp.pd_query.NewCol.parse()', self.verbosity)
             self.value = ''
 
         log(f'debug: parsed "{self.text}" as instruction: {self}',
-            'df.q()', self.verbosity)
+            'qp.pd_query.NewCol.parse()', self.verbosity)
         
     def apply(self, query_obj):
         if query_obj.df is None:
@@ -520,16 +520,19 @@ class NewCol:
                     break
 
                 header = 'new' + str(i)
-                if header not in query_obj.df.columns:
-                    value = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
-                    if isinstance(value, pd.Series):
-                        query_obj.df[header] = value
-                    else:
-                        query_obj.df[header] = pd.NA
-                        query_obj.df.loc[query_obj.rows_filtered, header] = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
-                    query_obj.cols_filtered = pd.Index([True if col == header else False for col in query_obj.df.columns])
-                    query_obj.cols_filtered.index = query_obj.df.columns
-                    break
+                if header in query_obj.df.columns:
+                    log(f'warning: column "{header}" already exists in dataframe. selecting existing col and resetting values',
+                        'df.q.new_col', query_obj.verbosity)
+                
+                value = eval(self.value, {'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp})
+                if isinstance(value, pd.Series):
+                    query_obj.df[header] = value
+                else:
+                    query_obj.df[header] = pd.NA
+                    query_obj.df.loc[query_obj.rows_filtered, header] = value
+                query_obj.cols_filtered = pd.Index([True if col == header else False for col in query_obj.df.columns])
+                query_obj.cols_filtered.index = query_obj.df.columns
+                break
         
 
         elif self.operator == OPERATORS.SAVE_SELECTION:
@@ -545,9 +548,100 @@ class NewCol:
                 query_obj.cols_filtered.index = query_obj.df.columns
 
 
+class Miscellaneous:
+    def __init__(self, text=None, linenum=None, verbosity=3):
+        self.text = text
+        self.linenum = linenum
+
+        #default values
+        self.type = TYPES.MISCELLANEOUS
+        self.connector = CONNECTORS.RESET
+        self.operator = OPERATORS.SET_METADATA
+        self.value = ''
+
+        #possible values (omitting those without a symbol)
+        self.connectors = [CONNECTORS.AND, CONNECTORS.OR]
+        self.operators = [
+            OPERATORS.SET_METADATA,
+            OPERATORS.ADD_METADATA,
+            OPERATORS.TAG_METADATA,
+            OPERATORS.SET_METADATA_EVAL,
+            OPERATORS.SET_METADATA_COL_EVAL,
+            ]
+        self.verbosity = verbosity
+    
+    def __repr__(self):
+        return f'NEW_COL:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
+    
+    def parse(self):
+        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.value = text.strip()
+
+        if self.operator.unary and len(self.value)>0:
+            log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
+                '_parse_expression', self.verbosity)
+            self.value = ''
+
+        log(f'debug: parsed "{self.text}" as instruction: {self}',
+            'df.q()', self.verbosity)
+        
+    def apply(self, query_obj):
+        if query_obj.df is None:
+            query_obj.df = query_obj.df_og.copy()  #default is inplace=False
+            query_obj.df.qp = query_obj.df.qp
+        
+        rows = query_obj.rows_filtered
+        cols = query_obj.cols_filtered
+
+        operators_metadata = [
+            OPERATORS.SET_METADATA,
+            OPERATORS.ADD_METADATA,
+            OPERATORS.TAG_METADATA,
+            OPERATORS.SET_METADATA_EVAL,
+            OPERATORS.SET_METADATA_COL_EVAL,
+            ]
+        if self.operator in operators_metadata and 'meta' not in query_obj.df.columns:
+            log(f'info: no metadata column found in dataframe. creating new column named "meta',
+                'qp.pd_query.Miscellaneous.apply()', query_obj.verbosity)
+            query_obj.df['meta'] = ''
+            query_obj.cols_filtered = pd.concat([query_obj.cols_filtered, pd.Series([False])])
+            query_obj.cols_filtered.index = query_obj.df.columns
+            cols = query_obj.cols_filtered
+
+
+        #modify metadata
+        if self.operator == OPERATORS.SET_METADATA:
+            query_obj.df.loc[rows, 'meta'] = self.value
+
+        elif self.operator == OPERATORS.ADD_METADATA:
+            query_obj.df.loc[rows, 'meta'] += self.value
+
+        elif self.operator == OPERATORS.TAG_METADATA:
+            tag = ''
+            for col in query_obj.df.columns[cols]:
+                tag += f'{self.value}@{col};'
+            query_obj.df.loc[rows, 'meta'] += tag
+
+        elif self.operator == OPERATORS.SET_METADATA_EVAL:
+            if pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
+                query_obj.df.loc[rows, 'meta'] = query_obj.df.loc[rows, 'meta'].map(lambda x: eval(self.value, {'x': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            else:
+                query_obj.df.loc[rows, 'meta'] = query_obj.df.loc[rows, 'meta'].applymap(lambda x: eval(self.value, {'x': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            
+        elif self.operator == OPERATORS.SET_METADATA_COL_EVAL:
+            query_obj.df.loc[rows, 'meta'] = query_obj.df.loc[rows, 'meta'].apply(lambda x: eval(self.value, {'col': x, 'df': query_obj.df, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+
+        
+
+
+
+
+
 
 COMMENT = Symbol('#', 'COMMENT', 'comments out the rest of the line')
 ESCAPE = Symbol('`', 'ESCAPE', 'escape the next character')
+
 
 TYPES = Symbols('TYPES',
     Symbol('´s', 'CHANGE_SETTINGS', 'change query settings', instruction=ChangeSettings),
@@ -556,6 +650,7 @@ TYPES = Symbols('TYPES',
     Symbol('´v', 'MODIFY_VALS', 'modify the selected values', instruction=ModifyVals),
     Symbol('´h', 'MODIFY_HEADERS', 'modify headers of the selected columns', instruction=ModifyHeaders),
     Symbol('´n', 'NEW_COL', 'add new column', instruction=NewCol),
+    Symbol('´m', 'MISCELLANEOUS', 'miscellaneous instructions', instruction=Miscellaneous),
     )
 
 CONNECTORS = Symbols('CONNECTORS',
@@ -640,9 +735,17 @@ OPERATORS = Symbols('OPERATORS',
 
 
     #for adding new columns
-    Symbol('=', 'STR_COL', 'add new column, fill it with the given string and select it'),
-    Symbol('~', 'EVAL_COL', 'add new column, fill it by evaluating a python expression and select it'),
-    Symbol('@', 'SAVE_SELECTION', 'add a new boolean column with the given name and select it. all currently selected rows are set to True, the rest to False'),
+    Symbol('=', 'STR_COL', 'add new column, fill it with the given string and select it', binary=True),
+    Symbol('~', 'EVAL_COL', 'add new column, fill it by evaluating a python expression and select it', binary=True),
+    Symbol('@', 'SAVE_SELECTION', 'add a new boolean column with the given name and select it. all currently selected rows are set to True, the rest to False', binary=True),
+    
+    
+    #for modifying metadata (part of miscellaneous instructions)
+    Symbol('=', 'SET_METADATA', 'set contents of the columnn named "meta" to the given string', binary=True),
+    Symbol('+=', 'ADD_METADATA', 'append the given string to the contents of the column named "meta"', binary=True),
+    Symbol('@', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "<value>@<selected col>;" to the column named "meta"', binary=True),
+    Symbol('~', 'SET_METADATA_EVAL', 'set contents of the column named "meta" by evaluating a python expression for each selected value in the metadata', binary=True),
+    Symbol('col~', 'SET_METADATA_COL_EVAL', 'set contents of the column named "meta" by evaluating a python expression on the whole metadata column', binary=True),
     )
 
 
@@ -956,7 +1059,7 @@ class DataFrameQueryInteractiveMode:
             )
 
         i_operator = widgets.Dropdown(
-            options=[(s.description, s.symbol) for s in instruction.operators],
+            options=[(f'{s.symbol}: {s.description}', s.symbol) for s in instruction.operators],
             value=instruction.operator.symbol,
             )
         
@@ -976,7 +1079,7 @@ class DataFrameQueryInteractiveMode:
 
             if hasattr(instruction, 'scopes'):
                 i_scope.disabled = False
-                i_scope.options = [(s.description, s.symbol) for s in instruction.scopes]
+                i_scope.options = [(f'{s.symbol}: {s.description}', s.symbol) for s in instruction.scopes]
             else:
                 i_scope.disabled = True
                 i_scope.options = ['']
@@ -988,7 +1091,7 @@ class DataFrameQueryInteractiveMode:
                 i_negate.disabled = True
                 i_negate.options = ['', '']
 
-            i_operator.options = [(s.description, s.symbol) for s in instruction.operators]
+            i_operator.options = [(f'{s.symbol}: {s.description}', s.symbol) for s in instruction.operators]
             i_operator.value = instruction.operator.symbol
 
         def update_text(*args):

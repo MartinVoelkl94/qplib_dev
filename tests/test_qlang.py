@@ -534,35 +534,83 @@ def test_inplace_continous():
 
 
 
-def test_metadata():
+def test_metadata_set():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
-    df.q('a ´r >0  ´c meta   ´v += >0', inplace=True, verbosity=0)
     df1['meta'] = ['', '', '>0']
+    df.q('a ´r >0  ´m = >0', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
-def test_metadata1():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df.q('=a   ´r >0   ´c meta   ´v ~ x + ">0"', inplace=True, verbosity=0)
-    df1['meta'] = [ '', '', '>0']
+def test_metadata_set1():
+    df = get_df_simple()
+    df1 = get_df_simple()
+    df1['meta'] = ['', '', '>0']
+    df.q('a ´r >0  ´m = >0', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
-def test_metadata2():
+def test_metadata_add():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
-    df.q('=a   ´r >0   ´c  meta ´v +=>0', inplace=True, verbosity=0)
-    df1['meta'] = [ '', '', '>0']
+    df1['meta'] = ['', '', '>0']
+    df.q('a ´r >0  ´m += >0', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
-def test_metadata3():
+def test_metadata_add1():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
-    df.q('=a´r >0     ´c meta   ´v += >0', inplace=True, verbosity=0)
     df1['meta'] = [ '', '', '>0']
+    df.q('=a   ´r >0   ´m +=>0', inplace=True, verbosity=0)
+    assert df.equals(df1), qp.diff(df, df1, returns='str+')
+
+
+def test_metadata_add2():
+    df = get_df_simple_tagged()
+    df1 = get_df_simple_tagged()
+    df1['meta'] = [ '', '', '>0']
+    df.q('=a´r >0     ´m+= >0', inplace=True, verbosity=0)
+    assert df.equals(df1), qp.diff(df, df1, returns='str+')
+
+
+def test_metadata_eval():
+    df = get_df_simple_tagged()
+    df1 = get_df_simple_tagged()
+    df1['meta'] = [ '', '', '>0']
+    df.q('=a   ´r >0   ´m ~ x + ">0"', inplace=True, verbosity=0)
+    assert df.equals(df1), qp.diff(df, df1, returns='str+')
+
+
+def test_metadata_col_eval():
+    df = get_df_simple_tagged()
+    df1 = get_df_simple_tagged()
+    df1['meta'] = [ '', '', '>0']
+    df.q('=a   ´r >0   ´m col~ col + ">0"', inplace=True, verbosity=0)
+    assert df.equals(df1), qp.diff(df, df1, returns='str+')
+
+
+def test_metadata_tag():
+    df = get_df_simple_tagged()
+    df1 = get_df_simple_tagged()
+    df1['meta'] = [ '', '', '@a;']
+    df.q('=a´r >0     ´m@', inplace=True, verbosity=0)
+    assert df.equals(df1), qp.diff(df, df1, returns='str+')
+
+
+def test_metadata_tag1():
+    df = get_df_simple_tagged()
+    df1 = get_df_simple_tagged()
+    df1['meta'] = [ '', '', '@a;@b;']
+    df.q('=a´r >0  ´c /b     ´m@', inplace=True, verbosity=0)
+    assert df.equals(df1), qp.diff(df, df1, returns='str+')
+
+
+def test_metadata_tag1():
+    df = get_df_simple_tagged()
+    df1 = get_df_simple_tagged()
+    df1['meta'] = [ '', '', 'value >0 in:@a;value >0 in:@b;']
+    df.q('=a´r >0  ´c /b     ´m@value >0 in:', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -570,31 +618,29 @@ def test_metadata_continous():
 
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
-
-    df.q('=a  ´r >0   ´c meta   ´v += >0', inplace=True, verbosity=0)
     df1['meta'] = [ '', '', '>0']
+    df.q('=a  ´r >0   ´m +=>0', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
-    df.q('=a   ´r >0  ´c meta   ´v += >0', inplace=True, verbosity=0)
     df1['meta'] = [ '', '', '>0>0']
+    df.q('=a   ´r >0  ´m+=>0', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
-    df.q('=a   ´r ==0    ´c meta   ´v += 0', inplace=True, verbosity=0)
     df1['meta'] = [ '', '0', '>0>0']
+    df.q('=a   ´r ==0    ´m += 0', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
-    df.q('a   ´r ==0    ´c meta  ´v ~ x.replace("0", "")', inplace=True, verbosity=0)
     df1['meta'] = [ '', '', '>0>0']
+    df.q('a   ´r ==0    ´m ~ x.replace("0", "")', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
-    df.q('=a   ´r >0    ´c meta  ´v ~ x.replace("0", "")', inplace=True, verbosity=0)
     df1['meta'] = [ '', '', '>>']
+    df.q('=a   ´r >0    ´m~x.replace("0", "")', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
-    df.q('=a     ´c meta   ´v =', inplace=True, verbosity=0)
     df1['meta'] = [ '', '', '']
+    df.q('=a     ´m=', inplace=True, verbosity=0)
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
-
 
 
 
