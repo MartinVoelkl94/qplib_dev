@@ -15,6 +15,9 @@ from .pd_util import _check_df, _diff, _format_df, indexQpExtension, seriesQpExt
 
 
 class Symbol:
+    """
+    A Symbol used in the query languages syntax.
+    """
     def __init__(self, symbol, name, description, unary=None, binary=None, **kwargs):
         self.symbol = symbol
         self.name = name
@@ -31,6 +34,9 @@ class Symbol:
         return f'{self.name} (symbol: "{self.symbol}" description: "{self.description})"'
 
 class Symbols:
+    """
+    Multiple Symbols of the same category are collected in a Symbols object.
+    """
     def __init__(self, name, *symbols):
         self.name = name
         self.by_name = {symbol.name: symbol for symbol in symbols}
@@ -44,7 +50,7 @@ class Symbols:
         elif key in self.by_name:
             return self.by_name[key]
         else:
-            log(f'error: symbol "{key}" not found in "{self.name}"', 'Symbols.__getitem__', 3)
+            log(f'error: symbol "{key}" not found in "{self.name}"', 'qp.qlang.Symbols.__getitem__', 3)
             return None
 
     def __iter__(self):
@@ -58,6 +64,10 @@ class Symbols:
 
 
 class ChangeSettings:
+    """
+    An instruction to change the settings for the query.
+    """
+
     def __init__(self, text=None, linenum=None, verbosity=3):
         self.text = text
         self.linenum = linenum
@@ -77,12 +87,12 @@ class ChangeSettings:
         return f'CHANGE_SETTINGS:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self, verbosity=None):
-        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
-        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.connector, text = _extract_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.operator, text = _extract_symbol(text, self.operator, self.operators, self.verbosity)
         self.value = text.strip()
 
         log(f'debug: parsed "{self.text}" as instruction: {self}',
-            'df.q()', self.verbosity)
+            'qp.qlang.ChangeSettings.parse', self.verbosity)
         
     def apply(self, query_obj):
         operator = self.operator
@@ -95,7 +105,7 @@ class ChangeSettings:
                     instruction.verbosity = query_obj.verbosity
             else:
                 log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
-                    'df.q()', query_obj.verbosity)
+                    'qp.qlang.ChangeSettings.apply', query_obj.verbosity)
         
         elif operator == OPERATORS.SET_DIFF:
             if value.lower() in ['none', '0']:
@@ -104,7 +114,7 @@ class ChangeSettings:
                 query_obj.diff = value.lower()
             else:
                 log(f'warning: diff must be one of [None, "mix", "old", "new", "new+"]. "{value}" is not valid',
-                    'df.q()', query_obj.verbosity)
+                    'qp.qlang.ChangeSettings.apply', query_obj.verbosity)
                 
         elif operator == OPERATORS.SET_INPLACE:
             if value.lower() in ['true', '1', 'yes']:
@@ -117,10 +127,14 @@ class ChangeSettings:
                 query_obj.df = None
             else:
                 log(f'warning: inplace must be a boolean. "{value}" is not valid',
-                    'df.q()', query_obj.verbosity)
+                    'qp.qlang.ChangeSettings.apply', query_obj.verbosity)
     
 
 class SelectCols:
+    """
+    An Instruction to select columns fulfilling a condition.
+    """
+
     def __init__(self, text=None, linenum=None, verbosity=3):
         self.text = text
         self.linenum = linenum
@@ -159,18 +173,18 @@ class SelectCols:
     
     def parse(self):
         #parse the expression
-        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
-        self.negation, text = match_symbol(text, self.negation, self.negations, self.verbosity)
-        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.connector, text = _extract_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.negation, text = _extract_symbol(text, self.negation, self.negations, self.verbosity)
+        self.operator, text = _extract_symbol(text, self.operator, self.operators, self.verbosity)
         self.value = text.strip()
 
         if self.operator.unary and len(self.value)>0:
             log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                '_parse_expression', self.verbosity)
+                'qp.qlang.SelectCols.parse', self.verbosity)
             self.value = ''
 
         log(f'debug: parsed "{self.text}" as instruction: {self}',
-            'df.q()', self.verbosity)
+            'qp.qlang.SelectCols.parse', self.verbosity)
 
     def apply(self, query_obj):
         if query_obj.df is None:
@@ -180,16 +194,20 @@ class SelectCols:
 
         cols = df.columns.to_series()
 
-        cols_filtered_new = filter_series(query_obj, cols, instruction=self)
+        cols_filtered_new = _filter_series(query_obj, cols, instruction=self)
 
         if cols_filtered_new.any() == False:
             log(f'warning: no columns fulfill the condition in "{self.text}"',
-                'df.q()', self.verbosity)
+                'qp.qlang.SelectCols.apply', self.verbosity)
 
         query_obj.cols_filtered = _update_selection(query_obj.cols_filtered, cols_filtered_new, self.connector)
 
 
 class SelectRows:
+    """
+    An Instruction to select rows fulfilling a condition.
+    """
+
     def __init__(self, text=None, linenum=None, verbosity=3):
         self.text = text
         self.linenum = linenum
@@ -230,19 +248,19 @@ class SelectRows:
     
     def parse(self):
         #parse the expression
-        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
-        self.scope, text = match_symbol(text, self.scope, self.scopes, self.verbosity)
-        self.negation, text = match_symbol(text, self.negation, self.negations, self.verbosity)
-        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.connector, text = _extract_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.scope, text = _extract_symbol(text, self.scope, self.scopes, self.verbosity)
+        self.negation, text = _extract_symbol(text, self.negation, self.negations, self.verbosity)
+        self.operator, text = _extract_symbol(text, self.operator, self.operators, self.verbosity)
         self.value = text.strip()
 
         if self.operator.unary and len(self.value)>0:
             log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                '_parse_expression', self.verbosity)
+                'qp.qlang.SelectRows.parse', self.verbosity)
             self.value = ''
 
         log(f'debug: parsed "{self.text}" as instruction: {self}',
-            'df.q()', self.verbosity)
+            'qp.qlang.SelectRows.parse', self.verbosity)
 
     def apply(self, query_obj):
         if query_obj.df is None:
@@ -259,25 +277,29 @@ class SelectRows:
         cols_filtered = query_obj.cols_filtered
 
         if cols_filtered.any() == False:
-            log(f'warning: row filter cannot be applied when no columns where selected', 'df.q', verbosity)
+            log(f'warning: row filter cannot be applied when no columns where selected', 'qp.qlang.SelectRows.apply', verbosity)
             return
                 
         if scope == SCOPE.INDEX:
-            rows_filtered_new = filter_series(query_obj, rows, instruction=self)
+            rows_filtered_new = _filter_series(query_obj, rows, instruction=self)
             query_obj.rows_filtered = _update_selection(query_obj.rows_filtered, rows_filtered_new, connector)
 
         else:
             rows_filtered_temp = None
             for col in df.columns[cols_filtered]:
-                rows_filtered_new = filter_series(query_obj, df[col], instruction=self)
+                rows_filtered_new = _filter_series(query_obj, df[col], instruction=self)
                 rows_filtered_temp = _update_selection(rows_filtered_temp, rows_filtered_new, scope)
             query_obj.rows_filtered = _update_selection(query_obj.rows_filtered, rows_filtered_temp, connector)
 
             if rows_filtered_temp.any() == False:
-                log(f'warning: no rows fulfill the condition in "{self.text}"', 'df.q', verbosity)
+                log(f'warning: no rows fulfill the condition in "{self.text}"', 'qp.qlang.SelectRows.apply', verbosity)
 
 
 class ModifyVals:
+    """
+    An Instruction to modify the selected values.
+    """
+
     def __init__(self, text=None, linenum=None, verbosity=3):
         self.text = text
         self.linenum = linenum
@@ -302,17 +324,17 @@ class ModifyVals:
         return f'MODIFY_VALS:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
-        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
-        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.connector, text = _extract_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.operator, text = _extract_symbol(text, self.operator, self.operators, self.verbosity)
         self.value = text.strip()
 
         if self.operator.unary and len(self.value)>0:
             log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                '_parse_expression', self.verbosity)
+                'qp.qlang.ModifyVals.parse', self.verbosity)
             self.value = ''
 
         log(f'debug: parsed "{self.text}" as instruction: {self}',
-            'df.q()', self.verbosity)
+            'qp.qlang.ModifyVals.parse', self.verbosity)
         
     def apply(self, query_obj):
         if query_obj.df is None:
@@ -395,6 +417,10 @@ class ModifyVals:
 
 
 class ModifyHeaders:
+    """
+    An Instruction to modify the headers of the selected column(s).
+    """
+
     def __init__(self, text=None, linenum=None, verbosity=3):
         self.text = text
         self.linenum = linenum
@@ -418,17 +444,17 @@ class ModifyHeaders:
         return f'MODIFY_HEADERS:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
-        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
-        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.connector, text = _extract_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.operator, text = _extract_symbol(text, self.operator, self.operators, self.verbosity)
         self.value = text.strip()
 
         if self.operator.unary and len(self.value)>0:
             log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                '_parse_expression', self.verbosity)
+                'qp.qlang.ModifyHeaders.parse', self.verbosity)
             self.value = ''
 
         log(f'debug: parsed "{self.text}" as instruction: {self}',
-            'df.q()', self.verbosity)
+            'qp.qlang.ModifyHeaders.parse', self.verbosity)
         
     def apply(self, query_obj):
         if query_obj.df is None:
@@ -458,6 +484,10 @@ class ModifyHeaders:
 
 
 class NewCol:
+    """
+    An Instruction to add a new column.
+    """
+
     def __init__(self, text=None, linenum=None, verbosity=3):
         self.text = text
         self.linenum = linenum
@@ -481,17 +511,17 @@ class NewCol:
         return f'NEW_COL:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
-        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
-        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.connector, text = _extract_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.operator, text = _extract_symbol(text, self.operator, self.operators, self.verbosity)
         self.value = text.strip()
 
         if self.operator.unary and len(self.value)>0:
             log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                'qp.pd_query.NewCol.parse()', self.verbosity)
+                'qp.qlang.NewCol.parse', self.verbosity)
             self.value = ''
 
         log(f'debug: parsed "{self.text}" as instruction: {self}',
-            'qp.pd_query.NewCol.parse()', self.verbosity)
+            'qp.qlang.NewCol.parse', self.verbosity)
         
     def apply(self, query_obj):
         if query_obj.df is None:
@@ -502,7 +532,7 @@ class NewCol:
             for i in range(1, 1001):
                 if i == 1000:
                     log(f'warning: could not add new column. too many columns named "new<x>"',
-                        'df.q.new_col', query_obj.verbosity)
+                        'qp.qlang.NewCol.apply', query_obj.verbosity)
                     break
 
                 header = 'new' + str(i)
@@ -517,7 +547,7 @@ class NewCol:
             for i in range(1, 1001):
                 if i == 1000:
                     log(f'warning: could not add new column. too many columns named "new<x>"',
-                        'df.q.new_col', query_obj.verbosity)
+                        'qp.qlang.NewCol.apply', query_obj.verbosity)
                     break
 
                 header = 'new' + str(i)
@@ -536,13 +566,17 @@ class NewCol:
         elif self.operator == OPERATORS.SAVE_SELECTION:
             if self.value in query_obj.df.columns:
                 log(f'warning: column "{self.value}" already exists in dataframe. selecting existing col and resetting values',
-                    'df.q.new_col', query_obj.verbosity)
+                    'qp.qlang.NewCol.apply', query_obj.verbosity)
             query_obj.df[self.value] = query_obj.rows_filtered
             query_obj.cols_filtered = pd.Series([True if col == self.value else False for col in query_obj.df.columns])
             query_obj.cols_filtered.index = query_obj.df.columns
 
 
 class Miscellaneous:
+    """
+    An Instruction for miscellaneous tasks, for example, modifying metadata.
+    """
+
     def __init__(self, text=None, linenum=None, verbosity=3):
         self.text = text
         self.linenum = linenum
@@ -568,17 +602,17 @@ class Miscellaneous:
         return f'NEW_COL:\n\tconnector: {self.connector}\n\toperator: {self.operator}\n\tvalue: {self.value}'
     
     def parse(self):
-        self.connector, text = match_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
-        self.operator, text = match_symbol(text, self.operator, self.operators, self.verbosity)
+        self.connector, text = _extract_symbol(self.text[2:], self.connector, self.connectors, self.verbosity)
+        self.operator, text = _extract_symbol(text, self.operator, self.operators, self.verbosity)
         self.value = text.strip()
 
         if self.operator.unary and len(self.value)>0:
             log(f'warning: unary operator "{self.operator}" cannot use a value. value "{self.value}" will be ignored',
-                '_parse_expression', self.verbosity)
+                'qp.qlang.Miscellaneous.parse', self.verbosity)
             self.value = ''
 
         log(f'debug: parsed "{self.text}" as instruction: {self}',
-            'df.q()', self.verbosity)
+            'qp.qlang.Miscellaneous.parse', self.verbosity)
         
     def apply(self, query_obj):
         if query_obj.df is None:
@@ -597,7 +631,7 @@ class Miscellaneous:
             ]
         if self.operator in operators_metadata and 'meta' not in query_obj.df.columns:
             log(f'info: no metadata column found in dataframe. creating new column named "meta',
-                'qp.pd_query.Miscellaneous.apply()', query_obj.verbosity)
+                'qp.qlang.Miscellaneous.apply', query_obj.verbosity)
             query_obj.df['meta'] = ''
             query_obj.cols_filtered = pd.concat([query_obj.cols_filtered, pd.Series([False])])
             query_obj.cols_filtered.index = query_obj.df.columns
@@ -744,7 +778,11 @@ OPERATORS = Symbols('OPERATORS',
 
 
 
-def tokenize(code, verbosity=3):
+def _tokenize(code, verbosity=3):
+    """
+    Turns the plain text input string into a list of instructions for the query parser.
+    """
+
     lines = []
     instructions = []
 
@@ -798,15 +836,19 @@ def tokenize(code, verbosity=3):
     return lines, instructions
 
 
-def match_symbol(string, default, symbols, verbosity):
+def _extract_symbol(string, default, symbols, verbosity):
+    """
+    Looks for expected syntax symbols at the beginning of an instruction string.
+    """
+
     string = string.strip()
 
     for symbol in symbols:
         if string.startswith(symbol.symbol):
-            log(f'trace: found symbol "{symbol}" in string "{string}"', 'match_symbol', verbosity)
+            log(f'trace: found symbol "{symbol}" in string "{string}"', 'qp.qlang._extract_symbol', verbosity)
             return symbol, string[len(symbol.symbol):].strip()
     
-    log(f'trace: no symbol found in string "{string}". using default "{default}"', 'match_symbol', verbosity)
+    log(f'trace: no symbol found in string "{string}". using default "{default}"', 'qp.qlang._extract_symbol', verbosity)
     
     if default is None:
         return None, string
@@ -815,7 +857,11 @@ def match_symbol(string, default, symbols, verbosity):
     return default, string
 
 
-def filter_series(query_obj, series, instruction):
+def _filter_series(query_obj, series, instruction):
+    """
+    Filters a pandas series according to the given instruction.
+    """
+
     negation = instruction.negation
     operator = instruction.operator
     value = instruction.value
@@ -873,7 +919,7 @@ def filter_series(query_obj, series, instruction):
             filtered = df[value]
         else:
             log(f'error: column "{value}" does not exist in dataframe. cannot load selection',
-                '_filter()', verbosity)
+                'qp.qlang._filter_series', verbosity)
 
 
     #type checks
@@ -914,7 +960,7 @@ def filter_series(query_obj, series, instruction):
         filtered = series.duplicated(keep='last') == False
 
     else:
-        log(f'error: operator "{operator}" is not implemented', '_filter()', verbosity)
+        log(f'error: operator "{operator}" is not implemented', 'qp.qlang._filter_series', verbosity)
         filtered = None
 
 
@@ -925,6 +971,9 @@ def filter_series(query_obj, series, instruction):
 
 
 def _update_selection(values, values_new, connector):
+    """
+    Updates the previously selected rows or columns based on the new selection.
+    """
     if values is None:
         values = values_new
     elif connector == CONNECTORS.RESET:
@@ -939,7 +988,14 @@ def _update_selection(values, values_new, connector):
 @pd.api.extensions.register_dataframe_accessor('q')
 class DataFrameQuery:
     """
-    wip
+    A query language for pandas data exploration/analysis/modification.
+
+    examples:
+    df.q('id')  #selects the column 'id'
+    df.q('id  ´r > 100)  #selects col "id" and rows where the value is greater than 100
+    df.q('´c = id  ´r > 100) #same as above but more explicit
+    df.q('id  ´r > 100  ´c / name  ´r ? john')  #selects col "id" and
+        #rows where the value is greater than 100 or col "name" and rows where the value contains "john"
     """
 
     def __init__(self, df: pd.DataFrame):
@@ -947,7 +1003,7 @@ class DataFrameQuery:
         self.df_og = df
 
     def __repr__(self):
-        return 'docstring of dataframe accessor pd_object.q():' + self.__doc__
+        return 'docstring of dataframe accessor pd_object.q():\n' + self.__doc__
     
     def __call__(self,
             code='',  #code in string form for filtering and modifying data
@@ -982,7 +1038,7 @@ class DataFrameQuery:
 
         #instructions
 
-        self.lines, self.instructions = tokenize(self.code, self.verbosity)
+        self.lines, self.instructions = _tokenize(self.code, self.verbosity)
 
         for instruction in self.instructions:
             instruction.parse()
