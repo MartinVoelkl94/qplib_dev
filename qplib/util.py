@@ -51,7 +51,8 @@ def log(text=None, context='', verbosity=None, clear=False):
     
     if clear:
         logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
-        print('cleared all logs in qp.util.logs.')
+        if verbosity in (None, 3, 4, 5):
+            print('cleared all logs in qp.util.logs.')
         return
     
     if text is None:
