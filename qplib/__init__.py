@@ -1,5 +1,5 @@
 
-from .qlang import DataFrameQuery
+from .qlang import DataFrameQuery, query
 
 from .util import *
 

@@ -415,177 +415,11 @@ def test_idx5():
 
 
 
-
-@pytest.mark.parametrize("instructions", [
-    r"""
-    ´s inplace=True
-    height / weight ´v to num
-    height / weight  ´r all is num
-    """
-    ,
-    r"""
-    ´s inplace= True
-    height / weight ´v to num
-    height / weight  ´r all is num
-    """
-    ,
-    r"""
-    ´sinplace=True
-    height / weight ´v to num
-    height / weight  ´r all is num
-    """
-    r"""
-    ´s inplace=TRUE
-    height / weight ´v to num
-    height / weight  ´r all is num
-    """
-    ,
-    r"""
-    ´s inplace=true
-    height / weight ´v to num
-    height / weight  ´r all is num
-    """
-    ,
-    r"""
-    ´s inplace=True
-    height / weight
-        ´v to num
-        ´r all is num
-    """
-    ,
-
-    ])
-def test_inplace(instructions):
-    df = qp.get_df()
-    result = df.q(instructions)
-    expected = df.loc[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], ['height', 'weight']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str+')
-
-
-
-def test_inplace1():
-    df = get_df()
-    df1 = get_df()
-    result = df.q('id ´v a ´c is any', inplace=True)
-    df1['ID'] = 'a'
-    assert df.equals(df1), qp.diff(df, df1, returns='str+')
-    assert result.equals(df), qp.diff(result, df, returns='str+')
-    assert result.equals(df1), qp.diff(result, df1, returns='str+')
-
-
-def test_inplace2():
-    df = get_df()
-    df1 = get_df()
-    result = df.q('´s inplace=true  ´c id ´v a ´c is any')
-    df1['ID'] = 'a'
-    assert df.equals(df1), qp.diff(df, df1, returns='str+')
-    assert result.equals(df), qp.diff(result, df, returns='str+')
-    assert result.equals(df1), qp.diff(result, df1, returns='str+')
-
-
-def test_inplace3():
-    df = get_df()
-    df1 = get_df()
-    df2 = get_df()
-    result = df.q('id ´v a ´c is any', inplace=False)
-    df1['ID'] = 'a'
-    assert result.equals(df1), qp.diff(result, df1, returns='str+')
-    assert df.equals(df2), qp.diff(df, df2, returns='str+')
-
-def test_inplace4():
-    df = get_df()
-    df1 = get_df()
-    df2 = get_df()
-    result = df.q('id ´v a ´c is any')
-    df1['ID'] = 'a'
-    assert result.equals(df1), qp.diff(result, df1, returns='str+')
-    assert df.equals(df2), qp.diff(df, df2, returns='str+')
-
-
-def test_inplace5():
-    df = get_df()
-    df1 = get_df()
-    result = df.q('´s inplace=true ´c id ´v a ´c is any')
-    df1['ID'] = 'a'
-    assert df.equals(df1), qp.diff(df, df1, returns='str+')
-    assert result.equals(df1), qp.diff(result, df1, returns='str+')
-    assert result.equals(df), qp.diff(result, df, returns='str+')
-
-
-def test_inplace6():
-    df = get_df()
-    df1 = get_df()
-    df2 = get_df()
-    result = df.q('´s inplace=false ´c id ´v a ´c is any')
-    df1['ID'] = 'a'
-    assert result.equals(df1), qp.diff(result, df1, returns='str+')
-    assert df.equals(df2), qp.diff(df, df2, returns='str+')
-
-def test_inplace7():
-    df = get_df()
-    df1 = get_df()
-    result = df.q('´s inplace= True ´c id ´v a ´c is any')
-    df1['ID'] = 'a'
-    assert df.equals(df1), qp.diff(df, df1, returns='str+')
-    assert result.equals(df1), qp.diff(result, df1, returns='str+')
-    assert result.equals(df), qp.diff(result, df, returns='str+')
-
-
-def test_inplace8():
-    df = get_df()
-    df1 = get_df()
-    df2 = get_df()
-    result = df.q('´s inplace=FALSE ´c id ´v a ´c is any')
-    df1['ID'] = 'a'
-    assert result.equals(df1), qp.diff(result, df1, returns='str+')
-    assert df.equals(df2), qp.diff(df, df2, returns='str+')
-
-
-def test_inplace_continous():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df.q(
-        r"""
-        ´s inplace=TRUE
-        a ´r >0
-        b ´v ~ x+1
-        """)
-    df1['b'] = [1, 2, 4]
-    expected = df1
-    assert df.equals(expected), qp.diff(df, expected, returns='str+')
-
-    df.q(
-        r"""
-        a ´r >0
-        b ´v ~ x - 2
-        """,
-        inplace=True,
-        )
-    df1['b'] = [1, 2, 2]
-    expected = df1
-    assert df.equals(expected), qp.diff(df, expected, returns='str+')
-
-    df.q('´s inplace=true  ´c b  ´v ~x*2')
-    df1['b'] = [2, 4, 4]
-    assert df.equals(df1), qp.diff(df, df1, returns='str+')
-
-    df.q(
-        r"""
-        a ´r =0
-        b ´v ~ x`/2
-        """,
-        inplace=True,
-        )
-    df1['b'] = [ 2, 2, 4]
-
-
-
-
 def test_metadata_set():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = ['', '', '>0']
-    df.q('a ´r >0  ´m = >0', inplace=True)
+    df = df.q('a ´r >0  ´m = >0  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -593,7 +427,7 @@ def test_metadata_set1():
     df = get_df_simple()
     df1 = get_df_simple()
     df1['meta'] = ['', '', '>0']
-    df.q('a ´r >0  ´m = >0', inplace=True)
+    df = df.q('a ´r >0  ´m = >0  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -601,7 +435,7 @@ def test_metadata_add():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = ['', '', '>0']
-    df.q('a ´r >0  ´m += >0', inplace=True)
+    df = df.q('a ´r >0  ´m += >0  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -609,7 +443,7 @@ def test_metadata_add1():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a   ´r >0   ´m +=>0', inplace=True)
+    df = df.q('=a   ´r >0   ´m +=>0  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -617,7 +451,7 @@ def test_metadata_add2():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a´r >0     ´m+= >0', inplace=True)
+    df = df.q('=a´r >0     ´m+= >0  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -625,7 +459,7 @@ def test_metadata_eval():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a   ´r >0   ´m ~ x + ">0"', inplace=True)
+    df = df.q('=a   ´r >0   ´m ~ x + ">0"  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -633,7 +467,7 @@ def test_metadata_col_eval():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a   ´r >0   ´m col~ col + ">0"', inplace=True)
+    df = df.q('=a   ´r >0   ´m col~ col + ">0"  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -641,7 +475,7 @@ def test_metadata_tag():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '@a;']
-    df.q('=a´r >0     ´m@', inplace=True)
+    df = df.q('=a´r >0     ´m@   ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -649,15 +483,15 @@ def test_metadata_tag1():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '@a;@b;']
-    df.q('=a´r >0  ´c /b     ´m@', inplace=True)
+    df = df.q('=a´r >0  ´c /b     ´m@   ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
-def test_metadata_tag1():
+def test_metadata_tag2():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', 'value >0 in:@a;value >0 in:@b;']
-    df.q('=a´r >0  ´c /b     ´m@value >0 in:', inplace=True)
+    df = df.q('=a´r >0  ´c /b     ´m@value >0 in:   ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -666,27 +500,27 @@ def test_metadata_continous():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df.q('=a  ´r >0   ´m +=>0', inplace=True)
+    df = df.q('=a  ´r >0   ´m +=>0  ´´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>0>0']
-    df.q('=a   ´r >0  ´m+=>0', inplace=True)
+    df = df.q('=a   ´r >0  ´m+=>0  ´´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '0', '>0>0']
-    df.q('=a   ´r ==0    ´m += 0', inplace=True)
+    df = df.q('=a   ´r ==0    ´m += 0  ´´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>0>0']
-    df.q('a   ´r ==0    ´m ~ x.replace("0", "")', inplace=True)
+    df = df.q('a   ´r ==0    ´m ~ x.replace("0", "")  ´´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>>']
-    df.q('=a   ´r >0    ´m~x.replace("0", "")', inplace=True)
+    df = df.q('=a   ´r >0    ´m~x.replace("0", "")  ´´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '']
-    df.q('=a     ´m=', inplace=True)
+    df = df.q('=a     ´m=  ´´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -958,36 +792,6 @@ def test_add_col7():
     result = df1.q('´n ~ df["ID"]')
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
-
-
-
-def test_add_col_inplace_true():
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('´n ´c is any', inplace=True)
-    df2['new1'] = ''
-    assert result.equals(df2), qp.diff(result, df2, returns='str+')
-    assert df1.equals(df2), qp.diff(df1, df2, returns='str+')
-
-
-def test_add_col_inplace_false():
-    df1 = get_df()
-    df2 = get_df()
-    df3 = get_df()
-    result = df1.q('´n ´c is any', inplace=False)
-    df2['new1'] = ''
-    assert result.equals(df2), qp.diff(result, df2, returns='str+')
-    assert df1.equals(df3), qp.diff(df1, df3, returns='str+')
-
-
-def test_add_col_inplace_default():
-    df1 = get_df()
-    df2 = get_df()
-    df3 = get_df()
-    result = df1.q('´n ´c is any')
-    df2['new1'] = ''
-    assert result.equals(df2), qp.diff(result, df2, returns='str+')
-    assert df1.equals(df3), qp.diff(df1, df3, returns='str+')
 
 
 
