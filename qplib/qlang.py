@@ -292,20 +292,31 @@ def _modify_vals(instruction, df_new, rows, cols, diff, verbosity):
 
         #type conversion
         elif operator == OPERATORS.TO_STR:
-            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(str)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('string')
         elif operator == OPERATORS.TO_INT:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_int)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('Int64')
         elif operator == OPERATORS.TO_FLOAT:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_float)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('Float64')
         elif operator == OPERATORS.TO_NUM:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_num)
         elif operator == OPERATORS.TO_BOOL:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_bool)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('boolean')
         
         elif operator == OPERATORS.TO_DATETIME:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_datetime)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('datetime64[ns]')
         elif operator == OPERATORS.TO_DATE:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_date)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('datetime64[ns]').dt.floor('d')
 
         elif operator == OPERATORS.TO_NA:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_na)
@@ -321,20 +332,31 @@ def _modify_vals(instruction, df_new, rows, cols, diff, verbosity):
 
         #type conversion
         elif operator == OPERATORS.TO_STR:
-            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(str)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('string')
         elif operator == OPERATORS.TO_INT:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_int)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('Int64')
         elif operator == OPERATORS.TO_FLOAT:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_float)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('Float64')
         elif operator == OPERATORS.TO_NUM:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_num)
         elif operator == OPERATORS.TO_BOOL:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_bool)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('boolean')
         
         elif operator == OPERATORS.TO_DATETIME:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_datetime)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('datetime64[ns]')
         elif operator == OPERATORS.TO_DATE:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_date)
+            for col in df_new.columns[cols]:
+                df_new[col] = df_new[col].astype('datetime64[ns]').dt.floor('d')
 
         elif operator == OPERATORS.TO_NA:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_na)
@@ -543,7 +565,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.IS_UNIQUE, OPERATORS.IS_FIRST, OPERATORS.IS_LAST,
             OPERATORS.IS_NA, OPERATORS.IS_NK,
             OPERATORS.IS_STR, OPERATORS.IS_INT, OPERATORS.IS_FLOAT, OPERATORS.IS_NUM, OPERATORS.IS_BOOL,
-            OPERATORS.IS_DATE, OPERATORS.IS_DATETIME,
+            OPERATORS.IS_DATETIME, OPERATORS.IS_DATE,
             OPERATORS.IS_YN, OPERATORS.IS_YES, OPERATORS.IS_NO,
             ],
         apply=_select_rows,
@@ -562,7 +584,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.SET_EVAL, OPERATORS.SET_COL_EVAL,
             OPERATORS.SORT,
             OPERATORS.TO_STR, OPERATORS.TO_INT, OPERATORS.TO_FLOAT, OPERATORS.TO_NUM, OPERATORS.TO_BOOL,
-            OPERATORS.TO_DATE, OPERATORS.TO_DATETIME, OPERATORS.TO_NA, OPERATORS.TO_NK, OPERATORS.TO_YN,
+            OPERATORS.TO_DATETIME, OPERATORS.TO_DATE, OPERATORS.TO_NA, OPERATORS.TO_NK, OPERATORS.TO_YN,
             ],
         apply=_modify_vals,
         ),
@@ -814,29 +836,51 @@ def _filter_series(series, negation, operator, value, verbosity, df_new=None):
     Filters a pandas series according to the given instruction.
     """
 
+    if operator in [OPERATORS.BIGGER_EQUAL, OPERATORS.SMALLER_EQUAL, OPERATORS.BIGGER, OPERATORS.SMALLER]:
+        #convert series to be compared
+        allowed_dtypes = [
+            'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64',
+            'float32', 'float64',
+            'datetime64[ns]', 'timedelta64[ns]',
+            ]
+        if series.dtype not in allowed_dtypes:
+            series = pd.to_numeric(series, errors='coerce')
+        
+        #convert value to be compared with
+        try:
+            value = pd.to_numeric(value)
+        except:
+            value = _datetime(value, errors='ignore')
+        
 
     #numeric comparison
     if operator == OPERATORS.BIGGER_EQUAL:
-        filtered = pd.to_numeric(series, errors='coerce') >= pd.to_numeric(value)
+        filtered = series >= value
     elif operator == OPERATORS.SMALLER_EQUAL:
-        filtered = pd.to_numeric(series, errors='coerce') <= pd.to_numeric(value)
+        filtered = series <= value
     elif operator == OPERATORS.BIGGER:
-        filtered = pd.to_numeric(series, errors='coerce') > pd.to_numeric(value)
+        filtered = series > value
     elif operator == OPERATORS.SMALLER:
-        filtered = pd.to_numeric(series, errors='coerce') < pd.to_numeric(value)
+        filtered = series < value
 
 
     #string equality comparison
     elif operator == OPERATORS.STRICT_EQUAL:
-        filtered = series.astype(str) == value
+        if isinstance(value, pd.Series):
+            filtered = series == value
+        else:
+            filtered = series.astype(str) == value
     elif operator == OPERATORS.EQUAL:
-        value_lenient = [value]
-        try:
-            value_lenient.append(str(float(value)))
-            value_lenient.append(str(int(float(value))))
-        except:
-            value_lenient.append(value.lower())
-        filtered = series.astype(str).str.lower().isin(value_lenient)
+        if isinstance(value, pd.Series):
+            filtered = series == value
+        else:
+            value_lenient = [value]
+            try:
+                value_lenient.append(str(float(value)))
+                value_lenient.append(str(int(float(value))))
+            except:
+                value_lenient.append(value.lower())
+            filtered = series.astype(str).str.lower().isin(value_lenient)
 
 
     #substring comparison
