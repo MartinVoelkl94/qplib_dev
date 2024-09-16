@@ -627,6 +627,38 @@ def test_eval3():
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
 
+@pytest.mark.parametrize("instructions, expected", [
+    (
+        r"""
+        id ´v sort  ´c is any
+        """,
+        'ID'
+    ),
+    (
+        r"""
+        name ´v sort  ´c is any
+        """,
+        'name'
+    ),
+    (
+        r"""
+        id / name ´v sort  ´c is any
+        """,
+        ['ID', 'name']
+    ),
+    (
+        r"""
+        name / id ´v sort  ´c is any
+        """,
+        ['ID', 'name']
+    ),
+    ])
+def test_sort(instructions, expected):
+    df = qp.get_df()
+    result = df.q(instructions)
+    expected_df = df.sort_values(by=expected)
+    assert result.equals(expected_df), qp.diff(result, expected_df, returns='str+')
+
 
 def test_to_int():
     df1 = get_df()

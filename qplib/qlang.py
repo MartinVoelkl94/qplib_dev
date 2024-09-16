@@ -134,6 +134,8 @@ OPERATORS = Symbols('OPERATORS',
 
     Symbol('~', 'SET_EVAL', 'replace value by evaluating a python expression for each selected value/header'),
     Symbol('col~', 'SET_COL_EVAL', 'replace value by evaluating a python expression for each selected column'),
+    
+    Symbol('sort', 'SORT', 'sort values based on the selected column(s)', unary=True),
 
     Symbol('to str', 'TO_STR', 'convert to string', unary=True),
     Symbol('to int', 'TO_INT', 'convert to integer', unary=True),
@@ -278,7 +280,9 @@ def _modify_vals(instruction, df_new, rows, cols, diff, verbosity):
         df_new.loc[rows, cols] = df_new.loc[rows, cols].astype(str) + value
     elif operator == OPERATORS.SET_COL_EVAL:
         df_new.loc[:, cols] = df_new.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
-
+    elif operator == OPERATORS.SORT:
+        df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
+        rows.index = df_new.index
 
     elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
         #data modification
@@ -556,6 +560,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.SET_VAL, #default
             OPERATORS.ADD_VAL,
             OPERATORS.SET_EVAL, OPERATORS.SET_COL_EVAL,
+            OPERATORS.SORT,
             OPERATORS.TO_STR, OPERATORS.TO_INT, OPERATORS.TO_FLOAT, OPERATORS.TO_NUM, OPERATORS.TO_BOOL,
             OPERATORS.TO_DATE, OPERATORS.TO_DATETIME, OPERATORS.TO_NA, OPERATORS.TO_NK, OPERATORS.TO_YN,
             ],
@@ -942,9 +947,9 @@ class DataFrameQuery:
     
     def __call__(self, code=''):
         return query(self.df, code)
- 
- 
- 
+
+
+
 @pd.api.extensions.register_dataframe_accessor('qi')
 class DataFrameQueryInteractiveMode:
     """
@@ -1058,10 +1063,11 @@ class DataFrameQueryInteractiveMode:
 
         
         #some general info and statistics about the df
+        mem_usage = self.df.memory_usage().sum() / 1024
         ui_details = widgets.HTML(
             value=f"""
             <b>shape:</b> {self.df.shape}<br>
-            <b>memory usage:</b> {self.df.memory_usage().sum()} bytes<br>
+            <b>memory usage:</b> {mem_usage:,.3f}kb<br>
             <b>unique values:</b> {self.df.nunique().sum()}<br>
             <b>missing values:</b> {self.df.isna().sum().sum()}<br>
             <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
@@ -1072,7 +1078,7 @@ class DataFrameQueryInteractiveMode:
             children=[
                 ui_code,
                 ui_details,
-                widgets.HTML(value=query.__doc__),
+                widgets.HTML(value=query.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
                 ],
             titles=['code', 'details', 'readme'],
             layout=Layout(width='50%', height='95%')
