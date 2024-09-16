@@ -64,6 +64,7 @@ class Symbols:
 
 
 
+INPLACE = False
 COMMENT = Symbol('#', 'COMMENT', 'comments out the rest of the line')
 ESCAPE = Symbol('`', 'ESCAPE', 'escape the next character')
 
@@ -664,7 +665,10 @@ def query(df_old, code=''):
     #setup
 
     _check_df(df_old)
-    df_new = df_old.copy()
+    if INPLACE:
+        df_new = df_old
+    else:
+        df_new = df_old.copy()
     diff = None
     verbosity = 3
     cols = pd.Series([True for col in df_new.columns])
