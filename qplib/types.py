@@ -229,9 +229,17 @@ def _type(x):
     
     if isinstance(x, str):
         if re.fullmatch(r'\d{4}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}', x.strip(), re.IGNORECASE):
-            return 'date'
+            return 'date'  #year month day with any separator
+        elif re.fullmatch(r'\d{2}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{4}', x.strip(), re.IGNORECASE):
+            return 'date'  #day month year with any separator
+        elif re.fullmatch(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}[-\._\s\\/]\d{4}', x.strip(), re.IGNORECASE):
+            return 'date'  #nonsensical american format
         elif re.fullmatch(r'\d{4}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}[-\._\s\\]\d{2}[-\._\s\\:]\d{2}[-\._\s\\:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime'
+            return 'datetime' #year month day time with any separator
+        elif re.fullmatch(r'\d{2}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{4}[-\._\s\\]\d{2}[-\._\s\\:]\d{2}[-\._\s\\:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime' #day month year time with any separator
+        elif re.fullmatch(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}[-\._\s\\/]\d{4}[-\._\s\\]\d{2}[-\._\s\\:]\d{2}[-\._\s\\:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime' #nonsensical american format
         elif re.fullmatch(r'\d+', x.strip()):
             return 'int'
         elif re.fullmatch(r'\d+\.\d+', x.strip()):
