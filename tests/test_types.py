@@ -427,3 +427,38 @@ def test_yn(input, expected):
 
 
 
+
+@pytest.mark.parametrize("input, expected", [
+    (1, 'int'),
+    (np.int8(1), 'int'),
+    (np.int16(1), 'int'),
+    (np.int32(1), 'int'),
+    (np.int64(1), 'int'),
+
+    (1.0, 'float'),
+    (np.float16(1.0), 'float'),
+    (np.float32(1.0), 'float'),
+    (np.float64(1.0), 'float'),
+
+    (True, 'bool'),
+    (np.bool(True), 'bool'),
+    (np.bool_(True), 'bool'),
+
+
+    ('text', 'str'),
+    ('1', 'int'),
+    ('1.0', 'float'),
+    ('True', 'bool'),
+    ('2024-04-11', 'date'),
+    ('2024.04.11', 'date'),
+    ('2024/04/11', 'date'),
+    ('2024\\04\\11', 'date'),
+    ('2024-04-11 00:00:001', 'datetime'),
+    ('2024-04-11 00:00:001.001', 'datetime'),
+    ('2024-04-11 00:00:001.001.001', 'datetime'),
+    ])
+def test_type(input, expected):
+    result = qp.type(input)
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+
+

@@ -222,7 +222,34 @@ def _yn(x, errors='coerce', yes='yes', no='no', na=None):
             case _:
                 return errors
 
-
+def _type(x):
+    types_int = (int, np.int8, np.int16, np.int32, np.int64)
+    types_float = (float, np.float16, np.float32, np.float64)
+    types_bool = (bool, np.bool, np.bool_)
+    
+    if isinstance(x, str):
+        if re.fullmatch(r'\d{4}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}', x.strip(), re.IGNORECASE):
+            return 'date'
+        elif re.fullmatch(r'\d{4}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}[-\._\s\\]\d{2}[-\._\s\\:]\d{2}[-\._\s\\:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+        elif re.fullmatch(r'\d+', x.strip()):
+            return 'int'
+        elif re.fullmatch(r'\d+\.\d+', x.strip()):
+            return 'float'
+        elif re.fullmatch(r'(true|false)', x.strip(), re.IGNORECASE):
+            return 'bool'
+        else:
+            try:
+                x = pd.to_numeric(x)
+                return 'num'
+            except:
+                return 'str'
+    elif isinstance(x, types_bool):
+        return 'bool'
+    elif isinstance(x, types_int):
+        return 'int'
+    elif isinstance(x, types_float):
+        return 'float'
 
 
 class qpDict(dict):
