@@ -181,7 +181,8 @@ df = get_df()
     ('diabetes ´r is na / is yn', df.loc[:, ['diabetes']]),
     ('diabetes ´r is yes', df.loc[[1,4,5,10], ['diabetes']]),
     ('diabetes ´r is no', df.loc[[0,3,6,9], ['diabetes']]),
-     
+
+
     #using regex equality
     ('ID ´r r=1....', df.loc[[0,1,2], ['ID']]),
     ('ID ´r !r=3....', df.loc[[0,1,2,3,4,5], ['ID']]),
@@ -189,10 +190,18 @@ df = get_df()
     ('name ´r r=^[^A-Z]*$', df.loc[[4], ['name']]), #all lowercase
     ('dose ´r r=^(?=.*[a-zA-Z])(?=.*[0-9]).*$', df.loc[[0,2,3,4,5,8,10], ['dose']]), #containing letters and numbers
 
+
     #using regex search
     ('bp systole ´r r?m', df.loc[[4], ['bp systole']]),
     (r'bp systole ´r r?\D', df.loc[[2,4,6], ['bp systole']]),
     ('bp systole ´r r?\d', df.loc[[0,1,3,4,5,7,9,10], ['bp systole']]),
+
+
+    #comparison between columns
+    ('age / height ´v to num  ´c height ´r > @age', df.loc[[0, 10], ['height']]),
+    ('age / height ´v to num  ´c height ´r < @age', df.loc[[], ['height']]),
+    ('id ´r = @ID', df.loc[:, ['ID']]),
+    ('cholesterol ´r = @bp systole', df.loc[[2], ['cholesterol']]),
 
 
     #apply row filter condition on multiple cols
@@ -361,9 +370,11 @@ df = get_df()
     ),
     ])
 def test_row_selection(instructions, expected_df):
-    result = df.q(instructions)
+    df = get_df()
+    temp = df.q(instructions)
+    result = df.loc[temp.index, temp.columns]
     assert result.equals(expected_df), qp.diff(result, expected_df, returns='str+')
-    
+
 
 
 def test_idx():
@@ -500,27 +511,27 @@ def test_metadata_continous():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
-    df = df.q('=a  ´r >0   ´m +=>0  ´´c is any  ´r is any')
+    df = df.q('=a  ´r >0   ´m +=>0  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>0>0']
-    df = df.q('=a   ´r >0  ´m+=>0  ´´c is any  ´r is any')
+    df = df.q('=a   ´r >0  ´m+=>0  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '0', '>0>0']
-    df = df.q('=a   ´r ==0    ´m += 0  ´´c is any  ´r is any')
+    df = df.q('=a   ´r ==0    ´m += 0  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>0>0']
-    df = df.q('a   ´r ==0    ´m ~ x.replace("0", "")  ´´c is any  ´r is any')
+    df = df.q('a   ´r ==0    ´m ~ x.replace("0", "")  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '>>']
-    df = df.q('=a   ´r >0    ´m~x.replace("0", "")  ´´c is any  ´r is any')
+    df = df.q('=a   ´r >0    ´m~x.replace("0", "")  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
     df1['meta'] = [ '', '', '']
-    df = df.q('=a     ´m=  ´´c is any  ´r is any')
+    df = df.q('=a     ´m=  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str+')
 
 
@@ -664,8 +675,8 @@ def test_to_int():
     df1 = get_df()
     df2 = get_df()
     result = df1.q('age ´v to int')
-    df2['age'] = [-25, 30, np.nan, np.nan, 40, np.nan, np.nan, np.nan, np.nan, np.nan, 35]
-    df2['age'] = df2['age'].astype('object')
+    df2['age'] = [-25, 30, None, None, 40, None, None, None, None, None, 35]
+    df2['age'] = df2['age'].astype('Int64')
     expected = df2.loc[:,['age']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -674,8 +685,8 @@ def test_to_float():
     df1 = get_df()
     df2 = get_df()
     result = df1.q('=age  ´v to float')
-    df2['age'] = [-25.0, 30.0, np.nan, np.nan, 40.0, np.nan, np.nan, np.nan, np.nan, np.nan, 35.0]
-    df2['age'] = df2['age'].astype('object')
+    df2['age'] = [-25.0, 30.0, None, None, 40.0, None, None, None, None, None, 35.0]
+    df2['age'] = df2['age'].astype('Float64')
     expected = df2.loc[:,['age']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -686,7 +697,7 @@ def test_to_num():
     result = df1.q('=age   ´v to num')
     df2['age'] = [-25, 30, np.nan, np.nan, 40, np.nan, np.nan, np.nan, np.nan, np.nan, 35]
     df2['age'] = df2['age'].astype('object')
-    expected = df2.loc[:,['age']]
+    expected = df2.loc[:,['age']].astype('object')
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
 
@@ -695,7 +706,7 @@ def test_to_str():
     df2 = get_df()
     result = df1.q('=age   ´v to str')
     df2['age'] = ['-25', '30', 'nan', 'None', '40.0', 'forty-five', 'nan', 'unk', '', 'unknown', '35']
-    df2['age'] = df2['age'].astype('object')
+    df2['age'] = df2['age'].astype(str)
     expected = df2.loc[:,['age']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 
@@ -717,7 +728,7 @@ def test_to_date():
         pd.to_datetime('1950 Sep 10', dayfirst=False).date(),
         pd.to_datetime('1945 October 11', dayfirst=False).date(),
         ]
-    df2['age'] = df2['age'].astype('object')
+    df2['date of birth'] = pd.to_datetime(df2['date of birth']).astype('datetime64[ns]')
     expected = df2.loc[:,['date of birth']]
     assert result.equals(expected), qp.diff(result, expected, returns='str+')
 

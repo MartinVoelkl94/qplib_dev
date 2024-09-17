@@ -166,35 +166,6 @@ OPERATORS = Symbols('OPERATORS',
 
 
 
-
-def _modify_settings(instruction, df_new, rows, cols, diff, verbosity):
-    """
-    An instruction to change the settings for the query.
-    """
-
-    operator = instruction.operator
-    value = instruction.value
-    
-    if operator == OPERATORS.SET_VERBOSITY:
-        if value in ['0', '1', '2', '3', '4', '5']:
-            verbosity = int(value)
-        else:
-            log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
-                'qp.qlang._modify_settings', verbosity)
-    
-    elif operator == OPERATORS.SET_DIFF:
-        if value.lower() in ['none', '0', 'false']:
-            diff = None
-        elif value.lower() in ['mix', 'new', 'old', 'new+']:
-            diff = value.lower()
-        else:
-            log(f'warning: diff must be one of [None, "mix", "old", "new", "new+"]. "{value}" is not valid',
-                'qp.qlang._modify_settings', verbosity)
-
-    return df_new, rows, cols, diff, verbosity
-
-
-
 def _select_cols(instruction, df_new, rows, cols, diff, verbosity):
     """
     An Instruction to select columns fulfilling a condition.
@@ -293,8 +264,7 @@ def _modify_vals(instruction, df_new, rows, cols, diff, verbosity):
 
         #type conversion
         elif operator == OPERATORS.TO_STR:
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('string')
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(str)
         elif operator == OPERATORS.TO_INT:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_int)
             for col in df_new.columns[cols]:
@@ -333,8 +303,7 @@ def _modify_vals(instruction, df_new, rows, cols, diff, verbosity):
 
         #type conversion
         elif operator == OPERATORS.TO_STR:
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('string')
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(str)
         elif operator == OPERATORS.TO_INT:
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_int)
             for col in df_new.columns[cols]:
@@ -499,6 +468,32 @@ def _miscellaneous(instruction, df_new, rows, cols, diff, verbosity):
 
     return df_new, rows, cols, diff, verbosity
 
+def _modify_settings(instruction, df_new, rows, cols, diff, verbosity):
+    """
+    An instruction to change the settings for the query.
+    """
+
+    operator = instruction.operator
+    value = instruction.value
+    
+    if operator == OPERATORS.SET_VERBOSITY:
+        if value in ['0', '1', '2', '3', '4', '5']:
+            verbosity = int(value)
+        else:
+            log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
+                'qp.qlang._modify_settings', verbosity)
+    
+    elif operator == OPERATORS.SET_DIFF:
+        if value.lower() in ['none', '0', 'false']:
+            diff = None
+        elif value.lower() in ['mix', 'new', 'old', 'new+']:
+            diff = value.lower()
+        else:
+            log(f'warning: diff must be one of [None, "mix", "old", "new", "new+"]. "{value}" is not valid',
+                'qp.qlang._modify_settings', verbosity)
+
+    return df_new, rows, cols, diff, verbosity
+
 
 INSTRUCTIONS = Symbols('INSTRUCTIONS',
                        
@@ -531,6 +526,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.IS_DATE, OPERATORS.IS_DATETIME,
             OPERATORS.IS_YN, OPERATORS.IS_YES, OPERATORS.IS_NO,
             ],
+        copy_df= False,
         apply=_select_cols,
         ),
 
@@ -569,6 +565,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.IS_DATETIME, OPERATORS.IS_DATE,
             OPERATORS.IS_YN, OPERATORS.IS_YES, OPERATORS.IS_NO,
             ],
+        copy_df= False,
         apply=_select_rows,
         ),
 
@@ -587,6 +584,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.TO_STR, OPERATORS.TO_INT, OPERATORS.TO_FLOAT, OPERATORS.TO_NUM, OPERATORS.TO_BOOL,
             OPERATORS.TO_DATETIME, OPERATORS.TO_DATE, OPERATORS.TO_NA, OPERATORS.TO_NK, OPERATORS.TO_YN,
             ],
+        copy_df= True,
         apply=_modify_vals,
         ),
 
@@ -601,6 +599,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.ADD_VAL,
             OPERATORS.SET_EVAL,
             ],
+        copy_df= True,
         apply=_modify_headers,
         ),
 
@@ -615,6 +614,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.EVAL_COL,
             OPERATORS.SAVE_SELECTION,
             ],
+        copy_df= True,
         apply=_new_col,
         ),
 
@@ -631,6 +631,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.SET_METADATA_EVAL,
             OPERATORS.SET_METADATA_COL_EVAL,
             ],
+        copy_df= True,
         apply=_miscellaneous,
         ),
 
@@ -644,6 +645,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.SET_VERBOSITY, #default
             OPERATORS.SET_DIFF
             ],
+        copy_df= False,
         apply=_modify_settings,
         ),
     )
@@ -663,28 +665,29 @@ def query(df_old, code=''):
     """
 
     #setup
-
     _check_df(df_old)
-    if INPLACE:
-        df_new = df_old
-    else:
-        df_new = df_old.copy()
     diff = None
     verbosity = 3
-    cols = pd.Series([True for col in df_new.columns])
-    cols.index = df_new.columns
-    rows = pd.Series([True for row in df_new.index])
-    rows.index = df_new.index
 
 
     #parse and apply instructions
 
-    lines, instruction_strs = _tokenize_code(code, verbosity)
+    lines, instruction_strs, copy_df = _tokenize_code(code, verbosity)
+    if INPLACE:
+        df_new = df_old
+    elif copy_df:
+        df_new = df_old.copy()
+    else:
+        df_new = df_old
+    
+    cols = pd.Series([True for col in df_new.columns])
+    rows = pd.Series([True for row in df_new.index])
+    cols.index = df_new.columns
+    rows.index = df_new.index
 
     for instruction_str in instruction_strs:
         instruction = _parse_instruction(instruction_str, verbosity)
         df_new, rows, cols, diff, verbosity  = instruction.apply(instruction, df_new, rows, cols, diff, verbosity)
-
 
 
     #results
@@ -705,6 +708,7 @@ def query(df_old, code=''):
             )  
         return result
 
+
 def _tokenize_code(code, verbosity):
     """
     Turns the plain text input string into a list of instructions for the query parser.
@@ -719,6 +723,7 @@ def _tokenize_code(code, verbosity):
         lines.append([line_num, line])
         line = line.split(COMMENT.symbol)[0].strip()
         instructions = []
+        copy_df = False
     
         if line == '':
             continue
@@ -742,6 +747,11 @@ def _tokenize_code(code, verbosity):
                 instruction_type = char + line[i+1]
                 instructions.append(char)
                 chars_in_instruction = 1
+                if instruction_type not in [x.symbol for x in INSTRUCTIONS]:
+                    log(f'error: unknown instruction type "{instruction_type}" in line "{line}"',
+                        'qp.qlang._tokenize', verbosity)
+                if INSTRUCTIONS[instruction_type].copy_df== True:
+                    copy_df = True
             elif char in [CONNECTORS.AND.symbol, CONNECTORS.OR.symbol]:
                 if chars_in_instruction >= 3:
                     instructions.append(f'{instruction_type} {char}')
@@ -766,7 +776,7 @@ def _tokenize_code(code, verbosity):
         
         instructions_all += instructions
 
-    return lines, instructions_all
+    return lines, instructions_all, copy_df
 
 
 

@@ -547,8 +547,8 @@ def diff_str(df1, df2, returns='str', verbosity=3):
     df2_shared = df2.loc[idx_shared, cols_shared]
     diffs = df1_shared != df2_shared
 
-    result += f'\ndifferent values in df1:\n{df1_shared[diffs].fillna("")}\n'
-    result += f'\ndifferent values in df2:\n{df2_shared[diffs].fillna("")}\n'
+    result += f'\ndifferent values in df1:\n{df1_shared[diffs].fillna('')}\n'
+    result += f'\ndifferent values in df2:\n{df2_shared[diffs].fillna('')}\n'
 
     if returns=='str+':
         return result
