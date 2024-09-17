@@ -56,10 +56,6 @@ df = get_df()
 
     #using operator: equals
     ('', df.columns),
-    ('=', []),
-    (' =', []),
-    ('= ', []),
-    (' = ', []),
     ('ID', ['ID']),
     (' ID', ['ID']),
     ('ID ', ['ID']),
@@ -159,12 +155,46 @@ def test_col_selection(instructions, expected_cols):
 
 
 
-#old test code:
-
 
 
 df = get_df()
 @pytest.mark.parametrize("instructions, expected_df", [
+
+    #numeric comparison
+    ('age ´r =30', df.loc[[1], ['age']]),
+    ('age ´r ==30.0', df.loc[[1], ['age']]),
+    ('age ´r >30', df.loc[[4,10], ['age']]),
+    ('age ´r >=30', df.loc[[1,4,10], ['age']]),
+    ('age ´r <30', df.loc[[0], ['age']]),
+    ('age ´r <=30', df.loc[[0,1], ['age']]),
+    ('age ´r !=30', df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']]),
+    ('age ´r !==30.0', df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']]),
+    ('age ´r !>30', df.loc[[0,1,2,3,5,6,7,8,9], ['age']]),
+    ('age ´r !>=30', df.loc[[0,2,3,5,6,7,8,9], ['age']]),
+    ('age ´r !<30', df.loc[[1,2,3,4,5,6,7,8,9,10], ['age']]),
+    ('age ´r !<=30', df.loc[[2,3,4,5,6,7,8,9,10], ['age']]),
+    ('age ´r =40', df.loc[[4], ['age']]),
+    ('age ´r ==40', df.loc[[4], ['age']]),
+    ('age ´r =40.0', df.loc[[4], ['age']]),
+    ('age ´r ==40.0', df.loc[[4], ['age']]),
+    
+    #date comparison
+    ('date of birth ´r =1995-01-02', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r ==1995-01-02', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r =1995.01.02', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r =1995_01_02', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r =1995`/01`/02', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r ==1995 01 02', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r =1995-Jan-02', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r =02-01-1995', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r =02-Jan-1995', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r ==Jan-02-1995', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r =02-01.1995', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r =02 Jan-1995', df.loc[[0], ['date of birth']]),
+    ('date of birth ´r ==Jan`/02_1995', df.loc[[0], ['date of birth']]),
+    ('date of birth ´v to datetime ´r =05-11-2007', df.loc[[4], ['date of birth']]),
+    ('date of birth ´v to datetime ´r >1990-01-01', df.loc[[0,1,4], ['date of birth']]),
+    ('date of birth ´v to datetime ´r >1990-01-01 & <2000-01-01', df.loc[[0,1], ['date of birth']]),
 
     #using type operators
     ('name ´r is str', df.loc[:, ['name']]),

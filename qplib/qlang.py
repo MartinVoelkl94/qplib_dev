@@ -8,7 +8,7 @@ from IPython.display import display
 from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 
 from .util import log
-from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn
+from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
 from .pd_util import _check_df, _diff, _format_df
 
 
@@ -28,10 +28,22 @@ class Symbol:
             setattr(self, key, value)
 
     def __repr__(self):
-        return f'{self.name} (symbol: "{self.symbol}" description: "{self.description})"'
-    
+        repr = f'{self.name}\n\tsymbol: "{self.symbol}"\n\tdescription: "{self.description})"'
+        if hasattr(self, 'connector'):
+            repr += f'\n\tconnector: {self.connector.name}'
+        if hasattr(self, 'scope'):
+            repr += f'\n\tscope: {self.scope.name}'
+        if hasattr(self, 'negation'):
+            repr += f'\n\tnegation: {self.negation.name}'
+        if hasattr(self, 'operator'):
+            repr += f'\n\toperator: {self.operator.name}'
+        if hasattr(self, 'value'):
+            repr += f'\n\tvalue: "{self.value}"'
+        return repr
+ 
     def __str__(self):
-        return f'{self.name} (symbol: "{self.symbol}" description: "{self.description})"'
+        return self.__repr__()
+
 
 class Symbols:
     """
@@ -850,24 +862,51 @@ def _filter_series(series, negation, operator, value, verbosity, df_new=None):
     Filters a pandas series according to the given instruction.
     """
 
-    if operator in [OPERATORS.BIGGER_EQUAL, OPERATORS.SMALLER_EQUAL, OPERATORS.BIGGER, OPERATORS.SMALLER]:
-        #convert series to be compared
-        allowed_dtypes = [
+    if operator in [
+        OPERATORS.BIGGER_EQUAL, OPERATORS.SMALLER_EQUAL, OPERATORS.BIGGER, OPERATORS.SMALLER,
+        OPERATORS.EQUAL, OPERATORS.STRICT_EQUAL,
+        ]:
+        value_type = _type(value)
+        numeric_dtypes = [
             'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64',
             'float32', 'float64',
-            'datetime64[ns]', 'timedelta64[ns]',
             ]
-        if series.dtype not in allowed_dtypes:
-            series = pd.to_numeric(series, errors='coerce')
-        
-        #convert value to be compared with
-        try:
-            value = pd.to_numeric(value)
-        except:
-            value = _datetime(value, errors='ignore')
-        
+        datetime_dtypes = [
+            'datetime64[ms]', 'datetime64[ms, UTC]',
+            'datetime64[us]', 'datetime64[us, UTC]',
+            'datetime64[ns]', 'datetime64[ns, UTC]',
+            'datetime64[s]', 'datetime64[s, UTC]',
+            ]
+        string_dtypes = ['object', 'string']
 
-    #numeric comparison
+        if value_type in ('int', 'float', 'num'):
+            value = pd.to_numeric(value, errors='coerce')
+            if series.dtype not in numeric_dtypes:
+                series = pd.to_numeric(series, errors='coerce')
+
+        elif value_type in ('date', 'datetime'):
+            value = _datetime(value, errors='ignore')
+            if series.dtype not in datetime_dtypes:
+                log(f'warning: series "{series.name}" is not a datetime series, consider converting it with "´v to datetime"',
+                    'qp.qlang._filter_series', verbosity)
+                series = pd.to_datetime(series, errors='coerce')
+
+        elif value_type == 'str':
+            if series.dtype not in string_dtypes:
+                series = series.astype(str)
+            if operator == OPERATORS.EQUAL:
+                value = value.lower()
+                series = series.str.lower()
+
+        elif isinstance(value, pd.Series):
+            if operator == OPERATORS.EQUAL:
+                if series.dtype in string_dtypes or value.dtype in string_dtypes:
+                    series = series.str.lower()
+                    value = value.str.lower()
+                
+
+
+    #numeric/date/datetime/order comparison
     if operator == OPERATORS.BIGGER_EQUAL:
         filtered = series >= value
     elif operator == OPERATORS.SMALLER_EQUAL:
@@ -880,21 +919,9 @@ def _filter_series(series, negation, operator, value, verbosity, df_new=None):
 
     #string equality comparison
     elif operator == OPERATORS.STRICT_EQUAL:
-        if isinstance(value, pd.Series):
-            filtered = series == value
-        else:
-            filtered = series.astype(str) == value
+        filtered = series == value
     elif operator == OPERATORS.EQUAL:
-        if isinstance(value, pd.Series):
-            filtered = series == value
-        else:
-            value_lenient = [value]
-            try:
-                value_lenient.append(str(float(value)))
-                value_lenient.append(str(int(float(value))))
-            except:
-                value_lenient.append(value.lower())
-            filtered = series.astype(str).str.lower().isin(value_lenient)
+        filtered = series == value
 
 
     #substring comparison
