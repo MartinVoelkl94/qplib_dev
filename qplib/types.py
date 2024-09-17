@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import datetime
 import re
 
 #these are mostly wrappers type conversions with extra features for dealing with errors
@@ -88,7 +89,11 @@ def _bool(x, errors='coerce', na=None):
 
 
 def _date(x, errors='coerce', na=pd.NaT):
-    if isinstance(x, str):
+    if isinstance(x, datetime.date):
+        return x
+    elif isinstance(x, datetime.datetime):
+        return x.date()
+    elif isinstance(x, str):
         x = x.replace('_', '-')
     try:
         if re.match(r'\D*(1|2)\d\d\d', x):
@@ -113,7 +118,11 @@ def _date(x, errors='coerce', na=pd.NaT):
                 return errors
        
 def _datetime(x, errors='coerce', na=pd.NaT):
-    if isinstance(x, str):
+    if isinstance(x, datetime.datetime):
+        return x
+    elif isinstance(x, datetime.date):
+        return pd.to_datetime(x)
+    elif isinstance(x, str):
         x = x.replace('_', '-')
     try:
         if re.match(r'\D*(1|2\d\d\d)', x):
