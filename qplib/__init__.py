@@ -3,8 +3,8 @@ from .qlang import DataFrameQuery, query
 
 from .util import *
 
-from .pd_util import save, load, get_df, get_dfs, diff_excel, diff_str
-from .pd_util import _diff as diff
+from .pd_util import save, load, get_df, get_dfs
+from ._diff import _diff as diff
 
 from .types import _int as int, _float as float, _num as num, _bool as bool, _type as type
 from .types import _date as date, _datetime as datetime

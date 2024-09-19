@@ -9,7 +9,8 @@ from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 
 from .util import log
 from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
-from .pd_util import _check_df, _diff, _format_df
+from ._diff import _diff
+from .pd_util import _check_df, _format_df
 
 
 

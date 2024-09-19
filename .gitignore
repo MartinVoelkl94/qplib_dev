@@ -3,6 +3,7 @@
 
 #too large
 **cards.csv  
+**cards.xlsx
 
 #filesize would distort the repo
 **/*.html
