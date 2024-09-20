@@ -9,3 +9,4 @@ tomli
 
 [dev]
 pytest
+ipykernel

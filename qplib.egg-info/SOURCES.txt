@@ -2,8 +2,10 @@ LICENSE
 README.md
 pyproject.toml
 qplib/__init__.py
-qplib/pd_query.py
+qplib/_diff.py
 qplib/pd_util.py
+qplib/qlang.py
+qplib/qlang_old.py
 qplib/types.py
 qplib/util.py
 qplib.egg-info/PKG-INFO
@@ -13,6 +15,7 @@ qplib.egg-info/requires.txt
 qplib.egg-info/top_level.txt
 tests/test_diff.py
 tests/test_format.py
+tests/test_log.py
 tests/test_qlang.py
 tests/test_save_load.py
 tests/test_shell_wrappers.py

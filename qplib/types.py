@@ -225,7 +225,7 @@ def _yn(x, errors='coerce', yes='yes', no='no', na=None):
 def _type(x):
     types_int = (int, np.int8, np.int16, np.int32, np.int64)
     types_float = (float, np.float16, np.float32, np.float64)
-    types_bool = (bool, np.bool, np.bool_)
+    types_bool = bool
     
     if isinstance(x, str):
         if re.fullmatch(r'\d{4}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}', x.strip(), re.IGNORECASE):
