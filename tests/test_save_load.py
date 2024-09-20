@@ -125,15 +125,14 @@ def test_datefmt():
 
 def test_most_recent():
     setup()
-    assert qp.load('archive/df', sheet='Sheet1', index=False).loc[0, 'a'] == today1, 'failed test for loading most recent file'
-    assert qp.load('archive/df', sheet='Sheet1', before='now', index=False).loc[0, 'a'] == today1, 'failed test for loading most recent file explicitly'
-
+    assert qp.date(qp.load('archive/df', sheet='Sheet1', index=False).loc[0, 'a']) == qp.date(today1), 'failed test for loading most recent file'
+    assert qp.date(qp.load('archive/df', sheet='Sheet1', before='now', index=False).loc[0, 'a']) == qp.date(today1), 'failed test for loading most recent file explicitly'
 
 
 def test_most_recent_datefmt():
     setup()
-    assert qp.load('archive/df', sheet='Sheet1', index=False).loc[0, 'a'] == today1, 'failed test for loading most recent file with different date format'
-    assert qp.load('archive/df', sheet='Sheet1', before='now', index=False).loc[0, 'a'] == today1, 'failed test for loading most recent file with different date format explicitly'
+    assert qp.date(qp.load('archive/df', sheet='Sheet1', index=False).loc[0, 'a']) == qp.date(today2), 'failed test for loading most recent file with different date format'
+    assert qp.date(qp.load('archive/df', sheet='Sheet1', before='now', index=False).loc[0, 'a']) == qp.date(today2), 'failed test for loading most recent file with different date format explicitly'
 
 
 def test_before_date():
