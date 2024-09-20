@@ -10,7 +10,8 @@ from .util import log, GREEN, ORANGE, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
 def _diff(
     df_new, df_old,
     mode='mix',  returns='df',  #df, summary, str, all, print, <filename.xlsx>
-    index_col=0, max_cols=None, max_rows=None,
+    index_col=0, ignore=None,  #col(s) to ignore for comparison
+    max_cols=None, max_rows=None,
     prefix_old='old: ', verbosity=3):
     """
     compares two dataframes/csv/excel files and returns differences
@@ -52,9 +53,12 @@ def _diff(
     if isinstance(df_new, str) and isinstance(df_old, str) \
         and df_new.endswith('.xlsx') and df_old.endswith('.xlsx'):
         df, summary, string = _diff_excel(
-            df_new, df_old, mode, returns,
-            index_col, max_cols, max_rows,
-            prefix_old, verbosity)
+            df_new, df_old,
+            mode, returns,
+            index_col, ignore,
+            max_cols, max_rows,
+            prefix_old, verbosity
+            )
         
     
     else:
@@ -78,10 +82,11 @@ def _diff(
             df, summary = _diff_df(
                 df_new, df_old,
                 mode, returns,
+                ignore,
                 max_cols, max_rows,
                 prefix_old, verbosity
                 )
-            string = _diff_str(df_new, df_old, verbosity)
+            string = _diff_str(df_new, df_old, ignore, verbosity)
 
 
     if returns == 'df':
@@ -120,13 +125,17 @@ def _diff(
 def _diff_df(
     df_new, df_old,
     mode='mix', returns='df',
+    ignore=None,
     max_rows=None, max_cols=None, 
     prefix_old='old: ',
     verbosity=3):
     '''
     see _diff() for details
     '''
-
+    if ignore is None:
+        ignore = []
+    elif isinstance(ignore, str):
+        ignore = [ignore]
     if max_rows is None:
         max_rows = 200
     if max_cols is None:
@@ -150,9 +159,9 @@ def _diff_df(
 
 
 
-    cols_added = df_new.columns.difference(df_old.columns)
-    cols_removed = df_old.columns.difference(df_new.columns)
-    cols_shared = df_new.columns.intersection(df_old.columns)
+    cols_added = df_new.columns.difference(df_old.columns).difference(ignore)
+    cols_removed = df_old.columns.difference(df_new.columns).difference(ignore)
+    cols_shared = df_new.columns.intersection(df_old.columns).difference(ignore)
 
     rows_added = df_new.index.difference(df_old.index)
     rows_removed = df_old.index.difference(df_new.index)
@@ -292,13 +301,20 @@ def _diff_df(
     return result, summary
     
 
-def _diff_excel(file_new='new.xlsx', file_old='old.xlsx',
-    mode='new+', returns='df', index_col=0, 
+def _diff_excel(
+    file_new='new.xlsx', file_old='old.xlsx',
+    mode='new+', returns='df',
+    index_col=0, ignore=None,
     max_rows=None, max_cols=None, prefix_old='old: ',
     verbosity=3):
     '''
     see _diff() for details
     '''
+
+    if ignore is None:
+        ignore = []
+    elif isinstance(ignore, str):
+        ignore = [ignore]
 
     summary = pd.DataFrame(columns=[
         'sheet',
@@ -334,6 +350,7 @@ def _diff_excel(file_new='new.xlsx', file_old='old.xlsx',
             result, changes = _diff_df(
                 df_new, df_old,
                 mode, returns,
+                ignore,
                 max_rows, max_cols,
                 prefix_old, verbosity
                 )
@@ -363,16 +380,21 @@ def _diff_excel(file_new='new.xlsx', file_old='old.xlsx',
     return results, summary, string
 
 
-def _diff_str(df_new, df_old, verbosity=3):
+def _diff_str(df_new, df_old, ignore=None, verbosity=3):
     """"
     see _diff() for details
     """
+
+    if ignore is None:
+        ignore = []
+    elif isinstance(ignore, str):
+        ignore = [ignore]
 
     if df_new.equals(df_old):
         return 'both dataframes are identical'
     
     idx_shared = df_new.index.intersection(df_old.index)
-    cols_shared = df_new.columns.intersection(df_old.columns)
+    cols_shared = df_new.columns.intersection(df_old.columns).difference(ignore)
 
 
     #different dtypes, headers and indices
@@ -387,12 +409,12 @@ def _diff_str(df_new, df_old, verbosity=3):
     result = 'only in df_new:\n'
     result += f'dtypes: {dtypes_new}\n'
     result += f'indices: {df_new.index.difference(df_old.index).values}\n'
-    result += f'headers: {df_new.columns.difference(df_old.columns).values}\n'
+    result += f'headers: {df_new.columns.difference(df_old.columns).difference(ignore).values}\n'
 
     result += 'only in df_old:\n'
     result += f'dtypes: {dtypes_old}\n'
     result += f'indices: {df_old.index.difference(df_new.index).values}\n'
-    result += f'headers: {df_old.columns.difference(df_new.columns).values}\n'
+    result += f'headers: {df_old.columns.difference(df_new.columns).difference(ignore).values}\n'
 
 
     #different values
