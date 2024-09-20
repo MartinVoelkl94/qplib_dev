@@ -122,7 +122,7 @@ OPERATORS = Symbols('OPERATORS',
     Symbol('~', 'EVAL', 'select values by evaluating a python expression on each value', binary=True),
     Symbol('col~', 'COL_EVAL', 'select rows by evaluating a python expression on a whole column', binary=True),
 
-    Symbol('@', 'LOAD_SELECTION', 'load a saved selection from a boolean column', binary=True),
+    Symbol('load', 'LOAD_SELECTION', 'load a saved selection from a boolean column', binary=True),
 
     Symbol('is any', 'IS_ANY', 'is any value', unary=True),
     Symbol('is str', 'IS_STR', 'is string', unary=True),
@@ -166,13 +166,13 @@ OPERATORS = Symbols('OPERATORS',
     #for adding new columns
     Symbol('=', 'STR_COL', 'add new column, fill it with the given string and select it', binary=True),
     Symbol('~', 'EVAL_COL', 'add new column, fill it by evaluating a python expression and select it', binary=True),
-    Symbol('@', 'SAVE_SELECTION', 'add a new boolean column with the given name and select it. all currently selected rows are set to True, the rest to False', binary=True),
+    Symbol('save', 'SAVE_SELECTION', 'add a new boolean column with the given name and select it. all currently selected rows are set to True, the rest to False', binary=True),
     
     
     #for modifying metadata (part of miscellaneous instructions)
     Symbol('=', 'SET_METADATA', 'set contents of the columnn named "meta" to the given string', binary=True),
     Symbol('+=', 'ADD_METADATA', 'append the given string to the contents of the column named "meta"', binary=True),
-    Symbol('@', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "<value>@<selected col>;" to the column named "meta"', binary=True),
+    Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "<value>@<selected col>;" to the column named "meta"', binary=True),
     Symbol('~', 'SET_METADATA_EVAL', 'set contents of the column named "meta" by evaluating a python expression for each selected value in the metadata', binary=True),
     Symbol('col~', 'SET_METADATA_COL_EVAL', 'set contents of the column named "meta" by evaluating a python expression on the whole metadata column', binary=True),
     )
@@ -388,6 +388,15 @@ def _new_col(instruction, df_new, rows, cols, diff, verbosity):
     operator = instruction.operator
     value = instruction.value
 
+    if value.startswith('@'):
+        column = value[1:]
+        if column in df_new.columns:
+            value = df_new[column]
+        else:
+            log(f'error: column "{column}" not found in dataframe. cannot use "@{column}" as value for row selection',
+                'qp.qlang._select_rows', verbosity)
+
+
     if operator == OPERATORS.STR_COL:
         for i in range(1, 1001):
             if i == 1000:
@@ -398,7 +407,10 @@ def _new_col(instruction, df_new, rows, cols, diff, verbosity):
             header = 'new' + str(i)
             if header not in df_new.columns:
                 df_new[header] = ''
-                df_new.loc[rows, header] = value
+                if isinstance(value, pd.Series):
+                    df_new.loc[rows, header] = value.astype(str)
+                else:
+                    df_new.loc[rows, header] = value
                 cols = pd.Series([True if col == header else False for col in df_new.columns])
                 cols.index = df_new.columns
                 break
@@ -729,6 +741,7 @@ def _tokenize_code(code, verbosity):
 
     lines = []
     instructions_all = []
+    copy_df = False
 
     #get lines and instruction blocks
     for line_num, line in enumerate(code.split('\n')):
@@ -736,7 +749,6 @@ def _tokenize_code(code, verbosity):
         lines.append([line_num, line])
         line = line.split(COMMENT.symbol)[0].strip()
         instructions = []
-        copy_df = False
     
         if line == '':
             continue
