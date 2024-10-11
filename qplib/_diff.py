@@ -428,8 +428,11 @@ def _diff_str(df_new, df_old, ignore=None, verbosity=3):
         df_old_shared = df_old.loc[idx_shared, cols_shared]
         diffs = df_new_shared != df_old_shared
 
-        result += f'\ndifferent values in df_new:\n{df_new_shared[diffs].astype(str).fillna('')}\n'
-        result += f'\ndifferent values in df_old:\n{df_old_shared[diffs].astype(str).fillna('')}\n'
+        temp1 = df_new_shared[diffs].astype(str).fillna('')
+        temp2 = df_old_shared[diffs].astype(str).fillna('')
+        
+        result += f'\ndifferent values in df_new:\n{temp1}\n'
+        result += f'\ndifferent values in df_old:\n{temp2}\n'
 
     return result
 

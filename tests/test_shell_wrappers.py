@@ -37,7 +37,12 @@ def test_cd_pwd():
     setup()
     qp.mkdir('dir1')
     qp.cd('dir1')
-    assert qp.pwd().split('\\')[-1] == 'dir1', 'failed test for changing directory and finding path to current directory'
+    path = qp.pwd()
+    if '\\' in path:
+        path = path.split('\\')[-1]
+    elif '/' in path:
+        path = path.split('/')[-1]
+    assert path == 'dir1', 'failed test for changing directory and finding path to current directory'
 
 
 def test_cd_return():
@@ -45,10 +50,19 @@ def test_cd_return():
     qp.mkdir('dir1')
     qp.mkdir('dir1/dir2')
     qp.cd('dir1/dir2')
-    result1 = qp.pwd().split('\\')[-1]
+    result1 = qp.pwd()
+    if '\\' in result1:
+        result1 = result1.split('\\')[-1]
+    elif '/' in result1:
+        result1 = result1.split('/')[-1]
+
 
     qp.cd('..')
-    result2 = qp.pwd().split('\\')[-1]
+    result2 = qp.pwd()
+    if '\\' in result2:
+        result2 = result2.split('\\')[-1]
+    elif '/' in result2:
+        result2 = result2.split('/')[-1]
 
     assert result1 == 'dir2' and result2 == 'dir1', 'failed test for going back and forth in directory structure'
 
