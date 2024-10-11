@@ -9,61 +9,58 @@ def _int(x, errors='coerce', na=np.nan):
     try:
         return round(float(x))  #float first to handle strings like '1.0'
     except:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to integer.
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns np.nan
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return na
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to integer.
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns np.nan
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return na
+        else:
+            return errors
 
 def _float(x, errors='coerce', na=np.nan):
     try:
         return float(x)
     except:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to float.
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns np.nan
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return na
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to float.
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns np.nan
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return na
+        else:
+            return errors
             
 def _num(x, errors='coerce', na=np.nan):
     try:
         return pd.to_numeric(x)
     except:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to numeric.
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns np.nan
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return na
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to numeric.
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns np.nan
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return na
+        else:
+            return errors
             
 def _bool(x, errors='coerce', na=None):
     if str(x).lower() in ['y', 'yes', 'true', '1', '1.0', 'positive', 'pos']:
@@ -71,21 +68,20 @@ def _bool(x, errors='coerce', na=None):
     elif str(x).lower() in ['n', 'no', 'false', '0', '0.0', 'negative', 'neg']:
         return False
     else:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to boolean.
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns None
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return na
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to boolean.
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns None
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return na
+        else:
+            return errors
 
 
 def _date(x, errors='coerce', na=pd.NaT):
@@ -101,21 +97,20 @@ def _date(x, errors='coerce', na=pd.NaT):
         else:
             return pd.to_datetime(x, dayfirst=True).date()
     except:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to date.
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns pd.NaT
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return na
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to date.
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns pd.NaT
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return na
+        else:
+            return errors
        
 def _datetime(x, errors='coerce', na=pd.NaT):
     if isinstance(x, datetime.datetime):
@@ -130,21 +125,20 @@ def _datetime(x, errors='coerce', na=pd.NaT):
         else:
             return pd.to_datetime(x, dayfirst=True)
     except:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to datetime.
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns pd.NaT
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return na
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to datetime.
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns pd.NaT
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return na
+        else:
+            return errors
 
 
 def _na(x, errors='ignore', na=None):
@@ -158,21 +152,20 @@ def _na(x, errors='ignore', na=None):
     if pd.isna(x) or str(x).lower().strip() in possible_nas:
         return na
     else:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to "{na}".
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns None
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return None
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to "{na}".
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns None
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return None
+        else:
+            return errors
 
 def _nk(x, errors='ignore', nk='unknown', na=None):
     possible_nks = [
@@ -184,21 +177,20 @@ def _nk(x, errors='ignore', nk='unknown', na=None):
     if str(x).lower() in possible_nks:
         return nk
     else:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to "{nk}".
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns None
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return na
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to "{nk}".
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns None
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return na
+        else:
+            return errors
 
 def _yn(x, errors='coerce', yes='yes', no='no', na=None):
     if str(x).lower() in ['y', 'yes', 'true', '1', '1.0', 'positive', 'pos']:
@@ -206,21 +198,20 @@ def _yn(x, errors='coerce', yes='yes', no='no', na=None):
     elif str(x).lower() in ['n', 'no', 'false', '0', '0.0', 'negative', 'neg']:
         return no
     else:
-        match errors:
-            case 'raise':
-                raise ValueError(f"""could not convert "{x}" to "{yes}" or "{no}".
-                    Error handling:
-                    errors='raise': raises a ValueError
-                    errors='ignore': returns the original value
-                    errors='coerce': returns NaN
-                    errors=<any other value>: returns <any other value>
-                    """)
-            case 'ignore':
-                return x
-            case 'coerce':
-                return na
-            case _:
-                return errors
+        if errors == 'raise':
+            raise ValueError(f"""could not convert "{x}" to "{yes}" or "{no}".
+                Error handling:
+                errors='raise': raises a ValueError
+                errors='ignore': returns the original value
+                errors='coerce': returns NaN
+                errors=<any other value>: returns <any other value>
+                """)
+        elif errors == 'ignore':
+            return x
+        elif errors == 'coerce':
+            return na
+        else:
+            return errors
 
 def _type(x):
     types_int = (int, np.int8, np.int16, np.int32, np.int64)

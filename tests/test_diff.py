@@ -620,27 +620,27 @@ def test_returns_summary_ignore2():
 
 def test_returns_str():
     result = qp.diff(df_new, df_old, returns='str')
-    expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     b    a\ny  nan  0.0\nz  3.0  nan\n\ndifferent values in df_old:\n      b    a\ny   nan  2.0\nz  None  3.0\n"
-    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
+    expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     b    a\ny  nan  0.0\nz  3.0  nan\n\ndifferent values in df_old:\n      b    a\ny   nan  2.0\nz  None  3.0\n".replace('\t','')
+    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
 
 
 def test_returns_str_ignore():
     result = qp.diff(df_new, df_old, ignore='a', returns='str')
-    expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     b\ny  nan\nz  3.0\n\ndifferent values in df_old:\n      b\ny   nan\nz  None\n"
-    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
+    expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     b\ny  nan\nz  3.0\n\ndifferent values in df_old:\n      b\ny   nan\nz  None\n".replace('\t','')
+    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
 
 def test_returns_str_ignore1():
     result = qp.diff(df_new, df_old, ignore=['b'], returns='str')
-    expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     a\ny  0.0\nz  nan\n\ndifferent values in df_old:\n      a\ny   2.0\nz  3.0\n"
-    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
+    expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     a\ny  0.0\nz  nan\n\ndifferent values in df_old:\n      a\ny   2.0\nz  3.0\n".replace('\t','')
+    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
 
 def test_returns_str_ignore2():
     result = qp.diff(df_new, df_old, ignore=['a','b'], returns='str')
-    expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     Empty DataFrame\nColumns: []\nIndex: [y, z]\n\ndifferent values in df_old:\n      Empty DataFrame\nColumns: []\nIndex: [y, z]\n"
-    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected.replace('\t','')}'
+    expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     Empty DataFrame\nColumns: []\nIndex: [y, z]\n\ndifferent values in df_old:\n      Empty DataFrame\nColumns: []\nIndex: [y, z]\n".replace('\t','')
+    assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
 
 

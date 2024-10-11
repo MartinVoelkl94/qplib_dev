@@ -307,21 +307,21 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, ver
         
     today = datetime.date.today()
 
-    match before:
-        case 'now':
-            cutoff = today + datetime.timedelta(days=1)
-        case 'today':
-            cutoff = today
-        case 'this day':
-            cutoff = today
-        case 'this week':
-            cutoff = today - datetime.timedelta(days=today.weekday())
-        case 'this month':
-            cutoff = today - datetime.timedelta(days=today.day-1)
-        case 'this year':
-            cutoff = pd.to_datetime(f'{today.year}0101').date()
-        case _:
-            cutoff = _date(before)
+
+    if before == 'now':
+        cutoff = today + datetime.timedelta(days=1)
+    elif before == 'today':
+        cutoff = today
+    elif before == 'this day':
+        cutoff = today
+    elif before == 'this week':
+        cutoff = today - datetime.timedelta(days=today.weekday())
+    elif before == 'this month':
+        cutoff = today - datetime.timedelta(days=today.day-1)
+    elif before == 'this year':
+        cutoff = pd.to_datetime(f'{today.year}0101').date()
+    else:
+        cutoff = _date(before)
 
     name = os.path.basename(path)
     folder = os.path.dirname(path)

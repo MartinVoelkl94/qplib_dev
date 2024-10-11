@@ -76,22 +76,22 @@ def log(text=None, context='', verbosity=None, clear=False):
     elif verbosity < 1:
         return
     
-    match level:
-        case 'trace':
-            logs.loc[idx, 'level'] = 'trace'
-            color = GREY_LIGHT
-        case 'debug':
-            logs.loc[idx, 'level'] = 'debug'
-            color = BLUE_LIGHT
-        case 'info':
-            logs.loc[idx, 'level'] = 'info'
-            color = GREEN_LIGHT
-        case 'warning':
-            logs.loc[idx, 'level'] = 'Warning'
-            color = ORANGE_LIGHT
-        case 'error':
-            logs.loc[idx, 'level'] = 'ERROR'
-            color = RED_LIGHT
+
+    if level == 'trace':
+        logs.loc[idx, 'level'] = 'trace'
+        color = GREY_LIGHT
+    elif level == 'debug':
+        logs.loc[idx, 'level'] = 'debug'
+        color = BLUE_LIGHT
+    elif level == 'info':
+        logs.loc[idx, 'level'] = 'info'
+        color = GREEN_LIGHT
+    elif level == 'warning':
+        logs.loc[idx, 'level'] = 'Warning'
+        color = ORANGE_LIGHT
+    elif level == 'error':
+        logs.loc[idx, 'level'] = 'ERROR'
+        color = RED_LIGHT
 
     logs.loc[idx, 'text'] = text
     logs.loc[idx, 'context'] = context
