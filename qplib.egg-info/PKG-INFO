@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: qplib
-Version: 0.5.1
+Version: 0.5.2
 Summary: query language for pandas
 Author-email: martin v <martinv16248@gmail.com>
 License: MIT License
@@ -29,7 +29,7 @@ Keywords: pandas,query,utility
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python
 Classifier: Programming Language :: Python :: 3
-Requires-Python: >=3.10
+Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: pandas
