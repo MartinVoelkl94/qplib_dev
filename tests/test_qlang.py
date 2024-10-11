@@ -515,7 +515,7 @@ def test_metadata_col_eval():
 def test_metadata_tag():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '@a;']
+    df1['meta'] = [ '', '', '\n@a: ']
     df = df.q('=a´r >0     ´mtag   ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str')
 
@@ -523,7 +523,7 @@ def test_metadata_tag():
 def test_metadata_tag1():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '@a;@b;']
+    df1['meta'] = [ '', '', '\n@a@b: ']
     df = df.q('=a´r >0  ´c /b     ´m tag  ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str')
 
@@ -531,8 +531,8 @@ def test_metadata_tag1():
 def test_metadata_tag2():
     df = get_df_simple_tagged()
     df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', 'value >0 in:@a;value >0 in:@b;']
-    df = df.q('=a´r >0  ´c /b     ´m tagvalue >0 in:   ´c is any  ´r is any')
+    df1['meta'] = [ '', '', '\n@a@b: value >0']
+    df = df.q('=a´r >0  ´c /b     ´m tagvalue >0   ´c is any  ´r is any')
     assert df.equals(df1), qp.diff(df, df1, returns='str')
 
 

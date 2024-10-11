@@ -479,8 +479,8 @@ def _miscellaneous(instruction, df_new, rows, cols, diff, verbosity):
     elif operator == OPERATORS.TAG_METADATA:
         tag = ''
         for col in df_new.columns[cols]:
-            tag += f'{value}@{col};'
-        df_new.loc[rows, 'meta'] += tag
+            tag += f'@{col}'
+        df_new.loc[rows, 'meta'] += f'\n{tag}: {value}'
 
     elif operator == OPERATORS.SET_METADATA_EVAL:
         if pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
@@ -492,6 +492,7 @@ def _miscellaneous(instruction, df_new, rows, cols, diff, verbosity):
         df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
 
     return df_new, rows, cols, diff, verbosity
+
 
 def _modify_settings(instruction, df_new, rows, cols, diff, verbosity):
     """
