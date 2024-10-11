@@ -1072,7 +1072,7 @@ class DataFrameQueryInteractiveMode:
         instruction = INSTRUCTIONS.SELECT_COLS
 
         i_type = widgets.Dropdown(
-            options=[(s.description, s.symbol) for s in INSTRUCTIONS],
+            options=[(f'{s.symbol}: {s.description}', s.symbol) for s in INSTRUCTIONS],
             value=instruction.symbol,
             )
         
@@ -1164,7 +1164,8 @@ class DataFrameQueryInteractiveMode:
         mem_usage = self.df.memory_usage().sum() / 1024
         ui_details = widgets.HTML(
             value=f"""
-            <b>shape:</b> {self.df.shape}<br>
+            <b>rows:</b> {len(self.df.index)}<br>
+            <b>columns:</b> {len(self.df.columns)}<br>
             <b>memory usage:</b> {mem_usage:,.3f}kb<br>
             <b>unique values:</b> {self.df.nunique().sum()}<br>
             <b>missing values:</b> {self.df.isna().sum().sum()}<br>
