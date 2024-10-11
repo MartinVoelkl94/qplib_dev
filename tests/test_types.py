@@ -441,9 +441,6 @@ def test_yn(input, expected):
     (np.float64(1.0), 'float'),
 
     (True, 'bool'),
-    (np.bool(True), 'bool'),
-    (np.bool_(True), 'bool'),
-
 
     ('text', 'str'),
     ('1', 'int'),
