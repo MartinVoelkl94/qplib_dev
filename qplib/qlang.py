@@ -101,7 +101,7 @@ NEGATIONS = Symbols('NEGATIONS',
 OPERATORS = Symbols('OPERATORS',
     #for changing settings
     Symbol('verbosity=', 'SET_VERBOSITY', 'change the verbosity level'),
-    Symbol('diff=', 'SET_DIFF', 'change the diff setting'),
+    Symbol('diff=', 'SET_DIFF', 'change if and how the difference between the old and new dataframe is shown'),
 
 
     #for filtering
@@ -122,21 +122,21 @@ OPERATORS = Symbols('OPERATORS',
     Symbol('~', 'EVAL', 'select values by evaluating a python expression on each value', binary=True),
     Symbol('col~', 'COL_EVAL', 'select rows by evaluating a python expression on a whole column', binary=True),
 
-    Symbol('load', 'LOAD_SELECTION', 'load a saved selection from a boolean column', binary=True),
+    Symbol('load', 'LOAD_SELECTION', 'load a selection of rows (boolean mask) from a boolean column', binary=True),
 
-    Symbol('is any', 'IS_ANY', 'is any value', unary=True),
-    Symbol('is str', 'IS_STR', 'is string', unary=True),
-    Symbol('is int', 'IS_INT', 'is integer', unary=True),
-    Symbol('is float', 'IS_FLOAT', 'is float', unary=True),
-    Symbol('is num', 'IS_NUM', 'is number', unary=True),
-    Symbol('is bool', 'IS_BOOL', 'is boolean', unary=True),
-    Symbol('is datetime', 'IS_DATETIME', 'is datetime', unary=True),
-    Symbol('is date', 'IS_DATE', 'is date', unary=True),
-    Symbol('is na', 'IS_NA', 'is missing value', unary=True),
-    Symbol('is nk', 'IS_NK', 'is not known value', unary=True),
-    Symbol('is yn', 'IS_YN', 'is yes or no value', unary=True),
-    Symbol('is yes', 'IS_YES', 'is yes value', unary=True),
-    Symbol('is no', 'IS_NO', 'is no value', unary=True),
+    Symbol('is any', 'IS_ANY', 'is any value (use to reset selection)', unary=True),
+    Symbol('is str', 'IS_STR', 'is a string', unary=True),
+    Symbol('is int', 'IS_INT', 'is an integer', unary=True),
+    Symbol('is float', 'IS_FLOAT', 'is a float', unary=True),
+    Symbol('is num', 'IS_NUM', 'is a number', unary=True),
+    Symbol('is bool', 'IS_BOOL', 'is a boolean', unary=True),
+    Symbol('is datetime', 'IS_DATETIME', 'is a datetime', unary=True),
+    Symbol('is date', 'IS_DATE', 'is a date', unary=True),
+    Symbol('is na', 'IS_NA', 'is a missing value', unary=True),
+    Symbol('is nk', 'IS_NK', 'is not a known value', unary=True),
+    Symbol('is yn', 'IS_YN', 'is a value representing yes or no', unary=True),
+    Symbol('is yes', 'IS_YES', 'is a value representing yes', unary=True),
+    Symbol('is no', 'IS_NO', 'is a value representing no', unary=True),
     Symbol('is unique', 'IS_UNIQUE', 'is a unique value', unary=True),
     Symbol('is first', 'IS_FIRST', 'is the first value (of multiple values)', unary=True),
     Symbol('is last', 'IS_LAST', 'is the last value (of multiple values)', unary=True),
@@ -172,7 +172,7 @@ OPERATORS = Symbols('OPERATORS',
     #for modifying metadata (part of miscellaneous instructions)
     Symbol('=', 'SET_METADATA', 'set contents of the columnn named "meta" to the given string', binary=True),
     Symbol('+=', 'ADD_METADATA', 'append the given string to the contents of the column named "meta"', binary=True),
-    Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "<value>@<selected col>;" to the column named "meta"', binary=True),
+    Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "\\n@<selected col>: <value>;" to the column named "meta"', binary=True),
     Symbol('~', 'SET_METADATA_EVAL', 'set contents of the column named "meta" by evaluating a python expression for each selected value in the metadata', binary=True),
     Symbol('col~', 'SET_METADATA_COL_EVAL', 'set contents of the column named "meta" by evaluating a python expression on the whole metadata column', binary=True),
     )
@@ -496,7 +496,7 @@ def _miscellaneous(instruction, df_new, rows, cols, diff, verbosity):
 
 def _modify_settings(instruction, df_new, rows, cols, diff, verbosity):
     """
-    An instruction to change the settings for the query.
+    An instruction to change the query settings.
     """
 
     operator = instruction.operator
@@ -552,7 +552,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.IS_DATE, OPERATORS.IS_DATETIME,
             OPERATORS.IS_YN, OPERATORS.IS_YES, OPERATORS.IS_NO,
             ],
-        copy_df= False,
+        copy_df=False,
         apply=_select_cols,
         ),
 
@@ -591,7 +591,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.IS_DATETIME, OPERATORS.IS_DATE,
             OPERATORS.IS_YN, OPERATORS.IS_YES, OPERATORS.IS_NO,
             ],
-        copy_df= False,
+        copy_df=False,
         apply=_select_rows,
         ),
 
@@ -610,7 +610,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.TO_STR, OPERATORS.TO_INT, OPERATORS.TO_FLOAT, OPERATORS.TO_NUM, OPERATORS.TO_BOOL,
             OPERATORS.TO_DATETIME, OPERATORS.TO_DATE, OPERATORS.TO_NA, OPERATORS.TO_NK, OPERATORS.TO_YN,
             ],
-        copy_df= True,
+        copy_df=True,
         apply=_modify_vals,
         ),
 
@@ -737,7 +737,7 @@ def query(df_old, code=''):
 
 def _tokenize_code(code, verbosity):
     """
-    Turns the plain text input string into a list of instructions for the query parser.
+    Turns the plain text input string into a list of instruction strings for the query parser.
     """
 
     lines = []
@@ -873,7 +873,9 @@ def _extract_symbol(string, symbols, verbosity):
 
 def _filter_series(series, negation, operator, value, verbosity, df_new=None):
     """
-    Filters a pandas series according to the given instruction.
+    Filters a pandas series by applying a condition.
+    Conditions are made up of a comparison operator and for binary operators a value to compare to.
+    negation.TRUE inverts the result of the condition.
     """
 
     if operator in [
@@ -1035,7 +1037,7 @@ def _update_selection(values, values_new, connector):
 @pd.api.extensions.register_dataframe_accessor('q')
 class DataFrameQuery:
     """
-    A wrapper for the qp.query function implemented as a dataframe accessor.
+    A wrapper for qp.qlang.query implemented as a dataframe accessor.
     """
 
     def __init__(self, df):
