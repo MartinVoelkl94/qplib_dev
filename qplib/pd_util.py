@@ -15,6 +15,9 @@ from .types import _date, _na, qpDict
 
 
 def get_df(size='small'):
+    """
+    Returns a small sample dataframe containing very messy fake medical data.
+    """
     df = pd.DataFrame({
         'ID': [10001, 10002, 10003, 20001, 20002, 20003, 30001, 30002, 30003, 30004, 30005],
         'name': ['John Doe', 'Jane Smith', 'Alice Johnson', 'Bob Brown', 'eva white', 'Frank miller', 'Grace TAYLOR', 'Harry Clark', 'IVY GREEN', 'JAck Williams', 'john Doe'],
@@ -32,6 +35,10 @@ def get_df(size='small'):
     return df
 
 def get_dfs():
+    """
+    Returns 2 small, slightly similar sample dataframes. Mostly for testing qp.diff().
+    """
+
     df_old = pd.DataFrame(columns=['a', 'b', 'c'], index=['x','y','z'])
 
     df_old.loc['x', 'a'] = 1.0
@@ -72,11 +79,6 @@ class indexQpExtension(qpDict):
     """
     def __init__(self, index):
         self._og = index
-        self._input = None
-        self._operators = None
-        self._operators_binary = None
-        self._modifiers = None
-        self._modifiers_binary = None
 
 
 @pd.api.extensions.register_series_accessor('qp')
@@ -86,11 +88,6 @@ class seriesQpExtension(qpDict):
     """
     def __init__(self, series):
         self._og = series
-        self._input = None
-        self._operators = None
-        self._operators_binary = None
-        self._modifiers = None
-        self._modifiers_binary = None
 
 
 @pd.api.extensions.register_dataframe_accessor('qp')
@@ -100,11 +97,6 @@ class dfQpExtension(qpDict):
     """
     def __init__(self, df):
         self._og = df
-        self._input = None
-        self._operators = None
-        self._operators_binary = None
-        self._modifiers = None
-        self._modifiers_binary = None
 
 
 
@@ -117,6 +109,7 @@ class dfCheckExtension:
         _check_df(self.df, verbosity=verbosity)
         return self.df
 
+
 @pd.api.extensions.register_dataframe_accessor('format')
 class dfFormatExtension:
     def __init__(self, df: pd.DataFrame):
@@ -126,8 +119,10 @@ class dfFormatExtension:
         df = _format_df(self.df, fix_headers=fix_headers, add_metadata=add_metadata, verbosity=verbosity)    
         return df
 
+
 def _check_df(df, verbosity=3):
     """
+    Checks dataframe for issues which could interfere with the query language used by df.q().
     df.q() uses '&', '/' and '´' for expression syntax.
     """
     problems_found = False
@@ -173,7 +168,12 @@ def _check_df(df, verbosity=3):
     if problems_found is False:
         log('info: df was checked. no problems found', 'qp.pd_util._check_df', verbosity)
 
+
 def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
+    """
+    Formats dataframe to ensure compatibility with the query language used by df.q().
+    """
+
     qp_old = df.qp
     df = copy.deepcopy(df)
 

@@ -214,6 +214,9 @@ def _yn(x, errors='coerce', yes='yes', no='no', na=None):
             return errors
 
 def _type(x):
+    """
+    Returns what type something "should" be. e.g.: qp.type('1') == 'int'
+    """
     types_int = (int, np.int8, np.int16, np.int32, np.int64)
     types_float = (float, np.float16, np.float32, np.float64)
     types_bool = bool

@@ -25,9 +25,9 @@ RED_LIGHT = '#f7746a'
 logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
 def log(text=None, context='', verbosity=None, clear=False):
     """
-    A very basic "logger".
+    A very basic "logger" meant to be used in place of print() statements in jupyter notebooks. 
     For more extensive logging purposes use a logging module.
-    This is mostly meant to be used as a replacement for print() statements. 
+    
 
     examples:
 
@@ -113,6 +113,18 @@ def log(text=None, context='', verbosity=None, clear=False):
 
 
 def header(word='header', slim=True, width=None, filler=' '):
+    """
+    Creates text headers for code sections or plain text.
+
+    slim header:
+    ######################     Header     ######################
+
+    normal header:
+    ##########################################
+    #                 Header                 #
+    ##########################################
+    """
+
     if slim is True:
         if width is None:
             width = 60
@@ -145,8 +157,9 @@ def header(word='header', slim=True, width=None, filler=' '):
 
 def now(fmt='%Y_%m_%d'):
     """
-    wrapper for the datetime.datetime.now() function
-    common formats:
+    alias for datetime.datetime.now().strftime(format_str)
+
+    common format_str options:
     '%Y_%m_%d_%Hh%Mm%Ss': standard
     %Y_%b_%d:  3 letter month
     """

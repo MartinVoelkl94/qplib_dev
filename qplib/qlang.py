@@ -542,7 +542,6 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.STRICT_CONTAINS, OPERATORS.CONTAINS,
             OPERATORS.MATCHES_REGEX, OPERATORS.CONTAINS_REGEX,
             OPERATORS.EVAL,
-            OPERATORS.LOAD_SELECTION,
         
             #unary
             OPERATORS.IS_ANY,
@@ -812,34 +811,26 @@ def _parse_instruction(instruction_str, verbosity):
     """
 
     instruction, text = _extract_symbol(instruction_str, symbols=[x for x in INSTRUCTIONS], verbosity=verbosity)
-    instruction.str = instruction_str
-    instruction.repr = f'{instruction.name}:\n'
-
     instruction.connector, text = _extract_symbol(text, symbols=instruction.connectors, verbosity=verbosity)
-    instruction.repr += f'\tconnector: {instruction.connector}\n'
 
     if hasattr(instruction, 'scopes'):
         instruction.scope, text = _extract_symbol(text, symbols=instruction.scopes, verbosity=verbosity)
-        instruction.repr += f'\tscope: {instruction.scope}\n'
 
     if hasattr(instruction, 'negations'):
         instruction.negation, text = _extract_symbol(text, symbols=instruction.negations, verbosity=verbosity)
-        instruction.repr += f'\tnegation: {instruction.negation}\n'
 
     instruction.operator, text = _extract_symbol(text, symbols=instruction.operators, verbosity=verbosity)
-    instruction.repr += f'\toperator: {instruction.operator}\n'
-
     instruction.value = text.strip()
-    instruction.repr += f'\tvalue: {instruction.value}\n'
 
     if instruction.operator.unary and len(instruction.value)>0:
         log(f'warning: unary operator "{instruction.operator}" cannot use a value. value "{instruction.value}" will be ignored',
             'qp.qlang._parse_instruction', verbosity)
         instruction.value = ''
 
-    log(f'debug: parsed "{instruction.str}" as instruction:\n{instruction.repr}',
+    log(f'debug: parsed "{instruction_str}" as instruction:\n{instruction}',
         'qp.qlang._parse_instruction', verbosity)
 
+    instruction.str = instruction_str
     return instruction
 
 
