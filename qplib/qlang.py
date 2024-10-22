@@ -14,6 +14,10 @@ from .pd_util import _check_df, _format_df
 
 
 
+INPLACE = False
+VERBOSITY = 3
+DIFF = None
+
 
 class Symbol:
     """
@@ -76,8 +80,6 @@ class Symbols:
         return f'{self.name}:\n' + '\n\t'.join([str(val) for key,val in self.by_name.items()])
 
 
-
-INPLACE = False
 COMMENT = Symbol('#', 'COMMENT', 'comments out the rest of the line')
 ESCAPE = Symbol('`', 'ESCAPE', 'escape the next character')
 
@@ -197,7 +199,7 @@ def _select_cols(instruction, df_new, rows, cols, diff, verbosity):
         log(f'warning: no columns fulfill the condition in "{instruction.str}"',
             'qp.qlang._select_cols', verbosity)
 
-    cols = _update_selection(cols, cols_new, connector)
+    cols = _update_selection(cols, cols_new, connector, verbosity)
 
     if cols.any() == False and connector == CONNECTORS.AND:
         log(f'warning: no columns fulfill the condition in "{instruction.str}" and the previous conditions',
@@ -235,14 +237,14 @@ def _select_rows(instruction, df_new, rows, cols, diff, verbosity):
             
     if scope == SCOPES.IDX:
         rows_new = _filter_series(rows_all, negation, operator, value, verbosity, df_new)
-        rows = _update_selection(rows, rows_new, connector)
+        rows = _update_selection(rows, rows_new, connector, verbosity)
 
     else:
         rows_temp = None
         for col in df_new.columns[cols]:
             rows_new = _filter_series(df_new[col], negation, operator, value, verbosity, df_new)
-            rows_temp = _update_selection(rows_temp, rows_new, scope)
-        rows = _update_selection(rows, rows_temp, connector)
+            rows_temp = _update_selection(rows_temp, rows_new, scope, verbosity)
+        rows = _update_selection(rows, rows_temp, connector, verbosity)
 
         if rows_temp.any() == False:
             log(f'warning: no rows fulfill the condition in "{instruction}"', 'qp.qlang._select_rows', verbosity)
@@ -394,7 +396,7 @@ def _new_col(instruction, df_new, rows, cols, diff, verbosity):
             value = df_new[column]
         else:
             log(f'error: column "{column}" not found in dataframe. cannot use "@{column}" as value for row selection',
-                'qp.qlang._select_rows', verbosity)
+                'qp.qlang._new_col', verbosity)
 
 
     if operator == OPERATORS.STR_COL:
@@ -463,7 +465,7 @@ def _miscellaneous(instruction, df_new, rows, cols, diff, verbosity):
         ]
     if operator in operators_metadata and 'meta' not in df_new.columns:
         log(f'info: no metadata column found in dataframe. creating new column named "meta',
-            'qp.qlang.Miscellaneous.apply', verbosity)
+            'qp.qlang._miscellaneous.apply', verbosity)
         df_new['meta'] = ''
         cols = pd.concat([cols, pd.Series([False])])
         cols.index = df_new.columns
@@ -691,8 +693,8 @@ def query(df_old, code=''):
 
     #setup
     _check_df(df_old)
-    diff = None
-    verbosity = 3
+    verbosity = VERBOSITY
+    diff = DIFF
 
 
     #parse and apply instructions
@@ -774,7 +776,7 @@ def _tokenize_code(code, verbosity):
                 chars_in_instruction = 1
                 if instruction_type not in [x.symbol for x in INSTRUCTIONS]:
                     log(f'error: unknown instruction type "{instruction_type}" in line "{line}"',
-                        'qp.qlang._tokenize', verbosity)
+                        'qp.qlang._tokenize_code', verbosity)
                 if INSTRUCTIONS[instruction_type].copy_df== True:
                     copy_df = True
             elif char in [CONNECTORS.AND.symbol, CONNECTORS.OR.symbol]:
@@ -797,7 +799,7 @@ def _tokenize_code(code, verbosity):
                 chars_in_instruction += 1
 
         log(f'debug: parsed line "{line}" into instruction strings: {instructions}',
-            'qp.qlang._tokenize', verbosity)
+            'qp.qlang._tokenize_code', verbosity)
         
         instructions_all += instructions
 
@@ -1008,7 +1010,7 @@ def _filter_series(series, negation, operator, value, verbosity, df_new=None):
     return filtered
 
 
-def _update_selection(values, values_new, connector):
+def _update_selection(values, values_new, connector, verbosity):
     """
     Updates the previously selected rows or columns based on the new selection.
     """
@@ -1020,6 +1022,8 @@ def _update_selection(values, values_new, connector):
         values &= values_new
     elif connector in [CONNECTORS.OR, SCOPES.ANY]:
         values |= values_new
+    else:
+        log(f'error: connector "{connector}" is not implemented', 'qp.qlang._update_selection', verbosity)
     return values
 
 
