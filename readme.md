@@ -13,7 +13,7 @@ An interactive wrapper can be called with df.qi() to help with query creation an
 
 ## logging with qp.log()
 
-A small logger to be used in notebooks. Makes it easier to keep track of outputs in large notebooks by providing color coded output. Does not log to file, but instead to a dataframe which can then be viewed at the end of the notebook.
+A small logger to be used in notebooks or the REPL. Makes it easier to keep track of outputs in large notebooks by providing color coded output. Does not log to file, but instead to a dataframe which can then be viewed at the end of the notebook.
 <br>
 <br>
 

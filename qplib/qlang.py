@@ -738,7 +738,7 @@ def query(df_old, code=''):
 
 def _tokenize_code(code, verbosity):
     """
-    Turns the plain text input string into a list of instruction strings for the query parser.
+    Turns the plain text input string into a list of instruction strings for the instruction parser.
     """
 
     lines = []

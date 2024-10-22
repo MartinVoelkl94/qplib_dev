@@ -7,6 +7,7 @@ import sys
 import shutil
 import datetime
 from IPython.display import display
+from IPython import get_ipython
 from .types import _num
 from .types import _na
 from .types import _nk
@@ -99,15 +100,19 @@ def log(text=None, context='', verbosity=None, clear=False):
 
     if level_int <= verbosity:
         last = logs.tail(1)
-        last.loc[:, 'text'] = last.loc[:, 'text'].str.replace('\n', '<br>')
-        last.loc[:, 'text'] = last.loc[:, 'text'].str.replace('\t', '&emsp;')
-        last.loc[:, 'context'] = last.loc[:, 'context'].str.replace('\n', '<br>')
-        last.loc[:, 'context'] = last.loc[:, 'context'].str.replace('\t', '&emsp;')
 
-        display(last.style.hide(axis=1).apply(
-                lambda x: [f'background-color: {color}' for i in x], axis=1
-                ).set_properties(**{'text-align': 'left'})
-            )
+        if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':
+            last.loc[:, 'text'] = last.loc[:, 'text'].str.replace('\n', '<br>')
+            last.loc[:, 'text'] = last.loc[:, 'text'].str.replace('\t', '&emsp;')
+            last.loc[:, 'context'] = last.loc[:, 'context'].str.replace('\n', '<br>')
+            last.loc[:, 'context'] = last.loc[:, 'context'].str.replace('\t', '&emsp;')
+
+            display(last.style.hide(axis=1).apply(
+                    lambda x: [f'background-color: {color}' for i in x], axis=1
+                    ).set_properties(**{'text-align': 'left'})
+                )
+        else:
+            print(last)
 
 
 
