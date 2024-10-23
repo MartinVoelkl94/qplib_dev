@@ -219,7 +219,6 @@ def _type(x):
     """
     types_int = (int, np.int8, np.int16, np.int32, np.int64)
     types_float = (float, np.float16, np.float32, np.float64)
-    types_bool = bool
     
     if isinstance(x, str):
         if re.fullmatch(r'\d{4}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}', x.strip(), re.IGNORECASE):
@@ -246,12 +245,14 @@ def _type(x):
                 return 'num'
             except:
                 return 'str'
-    elif isinstance(x, types_bool):
+    elif isinstance(x, bool):
         return 'bool'
     elif isinstance(x, types_int):
         return 'int'
     elif isinstance(x, types_float):
         return 'float'
+    else:
+        return type(x).__name__.lower()
 
 
 class qpDict(dict):
