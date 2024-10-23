@@ -23,6 +23,7 @@ GREEN_LIGHT = '#c0e7b0'
 ORANGE_LIGHT = '#f7d67c'
 RED_LIGHT = '#f7746a'
 
+
 logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
 def log(text=None, context='', verbosity=None, clear=False):
     """

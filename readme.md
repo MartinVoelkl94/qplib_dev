@@ -9,13 +9,17 @@ An interactive wrapper can be called with df.qi() to help with query creation an
 <br>
 
 
+
+
 # other utilities
+
 
 ## logging with qp.log()
 
 A small logger to be used in notebooks or the REPL. Makes it easier to keep track of outputs in large notebooks by providing color coded output. Does not log to file, but instead to a dataframe which can then be viewed at the end of the notebook.
 <br>
 <br>
+
 
 ## "bashlike" wrappers
 
@@ -30,26 +34,28 @@ available wrappers:
 - qp.cd()  
 - qp.cp()  
 - qp.mkdir()  
-- qp.isfile()  
 - qp.isdir()  
+- qp.isfile()  
 - qp.ispath()  
 <br>
 <br>
 
 
 ## type conversion 
+
 Mostly wrappers for pandas functions but with some additional functionality and generally more lenient handling of edge cases. 
 
 available functions:  
-- qp.int()
-- qp.float()
-- qp.num()
-- qp.bool()
+- qp.int()  
+- qp.float()  
+- qp.num()  
+- qp.bool()  
 - qp.date()  
-- qp.datetime()
+- qp.datetime()  
 - qp.na()  
 - qp.nk()  
 - qp.yn()  
+- qp.type()  
 <br>
 <br>
 
