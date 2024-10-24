@@ -320,7 +320,7 @@ df = get_df()
     ),
     (
         r"""
-        ID  ´r r=1.... / r=2....  ´m save1
+        ID  ´r r=1.... / r=2....  ´n save1
         gender ´r =m / =male & load1
         ID / gender
         """,
@@ -328,21 +328,21 @@ df = get_df()
     ),
     (
         r"""
-        ID  ´r r=1.... / r=2....  ´m save 1
+        ID  ´r r=1.... / r=2....  ´n save 1
         gender ´r =m / =male &load1
         """,
         df.loc[[0,3,5], ['gender']]
     ), 
     (
         r"""
-        ID  ´r r=1.... / r=2....  ´m save1
+        ID  ´r r=1.... / r=2....  ´n save1
         gender ´r =m / =m / =male  / load 1
         """,
         df.loc[[0,1,2,3,4,5], ['gender']]
     ),
     (
         r"""
-        ID  ´r r=1.... / r=2....  ´m save1
+        ID  ´r r=1.... / r=2....  ´n save1
         gender ´r =f / =f / =female  / load 1
         ID
         """,
@@ -357,7 +357,7 @@ df = get_df()
     ),
     (
         r"""
-        gender ´r =f / =female  ´m save a
+        gender ´r =f / =female  ´n save a
         age ´r >30  & load a 
         """,
         df.loc[[10], ['age']]
@@ -371,7 +371,7 @@ df = get_df()
     ),
     (
         r"""
-        age ´r >30  ´m save a
+        age ´r >30  ´n save a
         age ´r <18 /loada
         """,
         df.loc[[0,4,10], ['age']]
@@ -384,16 +384,16 @@ df = get_df()
     ),
     (
         r"""
-        weight ´r <70 & >40  ´m save between 40 and 70
+        weight ´r <70 & >40  ´n save between 40 and 70
         diabetes ´r is yes & loadbetween 40 and 70   
         """,
         df.loc[[1], ['diabetes']]
     ),
     (
         r"""
-        weight ´r <70  ´m save <70
-        &weight ´r >40  ´msave>40
-        diabetes ´r is no & load<70
+        weight ´r <70  ´n save <70
+        &weight ´r >40  ´nsave>40
+        diabetes ´r is no & load<70 & @ >40
         weight / diabetes
         """,
         df.loc[[], ['weight', 'diabetes']]

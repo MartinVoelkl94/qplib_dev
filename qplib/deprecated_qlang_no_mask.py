@@ -90,12 +90,10 @@ CONNECTORS = Symbols('CONNECTORS',
     )
 
 SCOPES = Symbols('SCOPES',
-    Symbol('any', 'ANY', 'select whole row if any value in the selected columns fulfills the condition'),
-    Symbol('all', 'ALL', 'select whole row if all values in the selected columns fulfill the condition'),
-    Symbol('idx', 'IDX', 'select whole row if the index of the row fulfills the condition'),
-    Symbol('val', 'VAL', 'select only values (not the whole row) that fulfill the condition'),
+    Symbol('any', 'ANY', 'any of the currently selected columns must fulfill the condition'),
+    Symbol('all', 'ALL', 'all of the currently selected columns must fulfill the condition'),
+    Symbol('idx', 'IDX', 'the index of the dataframe must fulfill the condition'),
     )
-
 
 NEGATIONS = Symbols('NEGATIONS',
     Symbol('', 'FALSE', 'dont negate the condition'),
@@ -170,21 +168,20 @@ OPERATORS = Symbols('OPERATORS',
     #for adding new columns
     Symbol('=', 'STR_COL', 'add new column, fill it with the given string and select it', binary=True),
     Symbol('~', 'EVAL_COL', 'add new column, fill it by evaluating a python expression and select it', binary=True),
+    Symbol('save', 'SAVE_SELECTION', 'add a new boolean column with the given name and select it. all currently selected rows are set to True, the rest to False', binary=True),
     
-
-    #miscellaneous instructions
+    
+    #for modifying metadata (part of miscellaneous instructions)
     Symbol('=', 'SET_METADATA', 'set contents of the columnn named "meta" to the given string', binary=True),
     Symbol('+=', 'ADD_METADATA', 'append the given string to the contents of the column named "meta"', binary=True),
     Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "\\n@<selected col>: <value>;" to the column named "meta"', binary=True),
     Symbol('~', 'SET_METADATA_EVAL', 'set contents of the column named "meta" by evaluating a python expression for each selected value in the metadata', binary=True),
     Symbol('col~', 'SET_METADATA_COL_EVAL', 'set contents of the column named "meta" by evaluating a python expression on the whole metadata column', binary=True),
-    Symbol('save', 'SAVE_SELECTION', 'save current selection with given <name>. load using: "´r load <name>', binary=True),
-    
     )
 
 
 
-def _select_cols(instruction, df_new, masks, cols, diff, verbosity):
+def _select_cols(instruction, df_new, rows, cols, diff, verbosity):
     """
     An Instruction to select columns fulfilling a condition.
     """
@@ -202,35 +199,28 @@ def _select_cols(instruction, df_new, masks, cols, diff, verbosity):
         log(f'warning: no columns fulfill the condition in "{instruction.str}"',
             'qp.qlang._select_cols', verbosity)
 
-    cols = _update_selected_cols(cols, cols_new, connector, verbosity)
+    cols = _update_selection(cols, cols_new, connector, verbosity)
 
     if cols.any() == False and connector == CONNECTORS.AND:
         log(f'warning: no columns fulfill the condition in "{instruction.str}" and the previous conditions',
             'qp.qlang._select_cols', verbosity)
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, rows, cols, diff, verbosity
 
 
 
-def _select_rows(instruction, df_new, masks, cols, diff, verbosity):
+def _select_rows(instruction, df_new, rows, cols, diff, verbosity):
     """
     An Instruction to select rows fulfilling a condition.
     """
-    
+
     connector = instruction.connector
     scope = instruction.scope
     negation = instruction.negation
     operator = instruction.operator
     value = instruction.value
     rows_all = df_new.index.to_series()
-    mask = pd.DataFrame(np.zeros(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
-
-    if cols.any() == False:
-        log(f'warning: row filter cannot be applied when no columns where selected', 'qp.qlang._select_rows', verbosity)
-        masks[0] = mask
-        return df_new, masks, cols, diff, verbosity
- 
-
+        
     if value.startswith('@'):
         column = value[1:]
         if column in df_new.columns:
@@ -239,150 +229,131 @@ def _select_rows(instruction, df_new, masks, cols, diff, verbosity):
             log(f'error: column "{column}" not found in dataframe. cannot use "@{column}" as value for row selection',
                 'qp.qlang._select_rows', verbosity)
 
-    
 
+    if cols.any() == False:
+        log(f'warning: row filter cannot be applied when no columns where selected', 'qp.qlang._select_rows', verbosity)
+        rows = pd.Series(False, index=rows_all.index)
+        return df_new, rows, cols, diff, verbosity
+            
     if scope == SCOPES.IDX:
-        rows = _filter_series(rows_all, negation, operator, value, verbosity, df_new)
-        mask.loc[rows, :] = True
-    elif operator == OPERATORS.LOAD_SELECTION:
-        if value in masks.index:
-            mask = masks[value]
-        else:
-            log(f'error: selection "{value}" not found in saved selections', 'qp.qlang._select_rows', verbosity)
-            masks[0] = mask
+        rows_new = _filter_series(rows_all, negation, operator, value, verbosity, df_new)
+        rows = _update_selection(rows, rows_new, connector, verbosity)
+
     else:
+        rows_temp = None
         for col in df_new.columns[cols]:
-            rows = _filter_series(df_new[col], negation, operator, value, verbosity, df_new)
-            mask.loc[rows, col] = True
+            rows_new = _filter_series(df_new[col], negation, operator, value, verbosity, df_new)
+            rows_temp = _update_selection(rows_temp, rows_new, scope, verbosity)
+        rows = _update_selection(rows, rows_temp, connector, verbosity)
 
-    if scope == SCOPES.ANY:
-        rows = mask.any(axis=1)
-        mask.loc[rows, :] = True  
-    elif scope == SCOPES.ALL:
-        rows = mask.loc[:, cols].all(axis=1)
-        mask.loc[rows, :] = True
-        mask.loc[~rows, :] = False
-    
-    if connector == CONNECTORS.RESET:
-        masks[0] = mask
-    elif connector == CONNECTORS.AND:
-        masks[0] = masks[0] & mask
-    elif connector == CONNECTORS.OR:
-        masks[0] = masks[0] | mask
+        if rows_temp.any() == False:
+            log(f'warning: no rows fulfill the condition in "{instruction}"', 'qp.qlang._select_rows', verbosity)
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, rows, cols, diff, verbosity
 
 
-
-def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
+def _modify_vals(instruction, df_new, rows, cols, diff, verbosity):
     """
     An Instruction to modify the selected values.
     """
-    
-    mask = masks[0]
-    mask.loc[:, ~cols] = False
 
     operator = instruction.operator
     value = instruction.value
 
     #data modification  
     if operator == OPERATORS.SET_VAL:
-        df_new[mask] = value
+        df_new.loc[rows, cols] = value
     elif operator == OPERATORS.ADD_VAL:
-        df_new[mask] = df_new[mask].astype(str) + value
+        df_new.loc[rows, cols] = df_new.loc[rows, cols].astype(str) + value
     elif operator == OPERATORS.SET_COL_EVAL:
         df_new.loc[:, cols] = df_new.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
     elif operator == OPERATORS.SORT:
         df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
-        mask.index = df_new.index
+        rows.index = df_new.index
 
     elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
         #data modification
         if operator == OPERATORS.SET_EVAL:
-            cols = mask.any(axis=0)
-            rows = mask.any(axis=1)
             df_new.loc[rows, cols] = df_new.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
 
 
         #type conversion
         elif operator == OPERATORS.TO_STR:
-            df_new[mask] = df_new[mask].map(str)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(str)
         elif operator == OPERATORS.TO_INT:
-            df_new[mask] = df_new[mask].map(_int)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_int)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('Int64')
         elif operator == OPERATORS.TO_FLOAT:
-            df_new[mask] = df_new[mask].map(_float)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_float)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('Float64')
         elif operator == OPERATORS.TO_NUM:
-            df_new[mask] = df_new[mask].map(_num)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_num)
         elif operator == OPERATORS.TO_BOOL:
-            df_new[mask] = df_new[mask].map(_bool)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_bool)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('boolean')
         
         elif operator == OPERATORS.TO_DATETIME:
-            df_new[mask] = df_new[mask].map(_datetime)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_datetime)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('datetime64[ns]')
         elif operator == OPERATORS.TO_DATE:
-            df_new[mask] = df_new[mask].map(_date)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_date)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('datetime64[ns]').dt.floor('d')
 
         elif operator == OPERATORS.TO_NA:
-            df_new[mask] = df_new[mask].map(_na)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_na)
         elif operator == OPERATORS.TO_NK:
-            df_new[mask] = df_new[mask].map(_nk)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_nk)
         elif operator == OPERATORS.TO_YN:
-            df_new[mask] = df_new[mask].map(_yn)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(_yn)
 
     else:
         #data modification
         if operator == OPERATORS.SET_EVAL:
-            cols = mask.any(axis=0)
-            rows = mask.any(axis=1)
             df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
 
         #type conversion
         elif operator == OPERATORS.TO_STR:
-            df_new[mask] = df_new[mask].applymap(str)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(str)
         elif operator == OPERATORS.TO_INT:
-            df_new[mask] = df_new[mask].applymap(_int)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_int)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('Int64')
         elif operator == OPERATORS.TO_FLOAT:
-            df_new[mask] = df_new[mask].applymap(_float)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_float)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('Float64')
         elif operator == OPERATORS.TO_NUM:
-            df_new[mask] = df_new[mask].applymap(_num)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_num)
         elif operator == OPERATORS.TO_BOOL:
-            df_new[mask] = df_new[mask].applymap(_bool)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_bool)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('boolean')
         
         elif operator == OPERATORS.TO_DATETIME:
-            df_new[mask] = df_new[mask].applymap(_datetime)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_datetime)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('datetime64[ns]')
         elif operator == OPERATORS.TO_DATE:
-            df_new[mask] = df_new[mask].applymap(_date)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_date)
             for col in df_new.columns[cols]:
                 df_new[col] = df_new[col].astype('datetime64[ns]').dt.floor('d')
 
         elif operator == OPERATORS.TO_NA:
-            df_new[mask] = df_new[mask].applymap(_na)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_na)
         elif operator == OPERATORS.TO_NK:
-            df_new[mask] = df_new[mask].applymap(_nk)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_nk)
         elif operator == OPERATORS.TO_YN:
-            df_new[mask] = df_new[mask].applymap(_yn)
+            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(_yn)
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, rows, cols, diff, verbosity
 
 
-def _modify_headers(instruction, df_new, masks, cols, diff, verbosity):
+def _modify_headers(instruction, df_new, rows, cols, diff, verbosity):
     """
     An Instruction to modify the headers of the selected column(s).
     """
@@ -408,17 +379,16 @@ def _modify_headers(instruction, df_new, masks, cols, diff, verbosity):
             )
         cols.index = df_new.columns
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, rows, cols, diff, verbosity
 
 
-def _new_col(instruction, df_new, masks, cols, diff, verbosity):
+def _new_col(instruction, df_new, rows, cols, diff, verbosity):
     """
     An Instruction to add a new column.
     """
 
     operator = instruction.operator
     value = instruction.value
-    rows = masks[0].any(axis=1)
 
     if value.startswith('@'):
         column = value[1:]
@@ -439,7 +409,6 @@ def _new_col(instruction, df_new, masks, cols, diff, verbosity):
             header = 'new' + str(i)
             if header not in df_new.columns:
                 df_new[header] = ''
-                masks[0][header] = False
                 if isinstance(value, pd.Series):
                     df_new.loc[rows, header] = value.astype(str)
                 else:
@@ -463,23 +432,29 @@ def _new_col(instruction, df_new, masks, cols, diff, verbosity):
                 else:
                     df_new[header] = pd.NA
                     df_new.loc[rows, header] = value
-                masks[0][header] = False
                 cols = pd.Series([True if col == header else False for col in df_new.columns])
                 cols.index = df_new.columns
                 break
     
 
-    return df_new, masks, cols, diff, verbosity
+    elif operator == OPERATORS.SAVE_SELECTION:
+        if value in df_new.columns:
+            log(f'warning: column "{value}" already exists in dataframe. selecting existing col and resetting values',
+                'qp.qlang._new_col', verbosity)
+        df_new[value] = rows
+        cols = pd.Series([True if col == value else False for col in df_new.columns])
+        cols.index = df_new.columns
+
+    return df_new, rows, cols, diff, verbosity
 
 
-def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
+def _miscellaneous(instruction, df_new, rows, cols, diff, verbosity):
     """
     An Instruction for miscellaneous tasks, for example, modifying metadata.
     """
     
     operator = instruction.operator
     value = instruction.value
-    rows = masks[0].any(axis=1)
     
     operators_metadata = [
         OPERATORS.SET_METADATA,
@@ -518,16 +493,10 @@ def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
     elif operator == OPERATORS.SET_METADATA_COL_EVAL:
         df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
 
-    elif operator == OPERATORS.SAVE_SELECTION:
-        if value in masks.index:
-            log(f'warning: a selection was already saved as "{value}". overwriting it',
-                'qp.qlang._new_col', verbosity)
-        masks[value] = masks[0]
-
-    return df_new, masks, cols, diff, verbosity
+    return df_new, rows, cols, diff, verbosity
 
 
-def _modify_settings(instruction, df_new, masks, cols, diff, verbosity):
+def _modify_settings(instruction, df_new, rows, cols, diff, verbosity):
     """
     An instruction to change the query settings.
     """
@@ -551,7 +520,7 @@ def _modify_settings(instruction, df_new, masks, cols, diff, verbosity):
             log(f'warning: diff must be one of [None, "mix", "old", "new", "new+"]. "{value}" is not valid',
                 'qp.qlang._modify_settings', verbosity)
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, rows, cols, diff, verbosity
 
 
 INSTRUCTIONS = Symbols('INSTRUCTIONS',
@@ -560,11 +529,11 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
         connectors=[
             CONNECTORS.RESET,#default
             CONNECTORS.AND,
-            CONNECTORS.OR,
+            CONNECTORS.OR
             ],
         negations=[
             NEGATIONS.FALSE, #default
-            NEGATIONS.TRUE,
+            NEGATIONS.TRUE
             ],
         operators=[
             OPERATORS.EQUAL, #default
@@ -593,17 +562,16 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
         connectors=[
             CONNECTORS.RESET,#default
             CONNECTORS.AND,
-            CONNECTORS.OR,
+            CONNECTORS.OR
             ],
         scopes=[
             SCOPES.ANY, #default
             SCOPES.ALL,
-            SCOPES.IDX,
-            SCOPES.VAL,
+            SCOPES.IDX
             ],
         negations=[
             NEGATIONS.FALSE, #default
-            NEGATIONS.TRUE,
+            NEGATIONS.TRUE
             ],
         operators=[
             OPERATORS.EQUAL, #default
@@ -633,7 +601,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
         connectors=[
             CONNECTORS.RESET,#default
             CONNECTORS.AND,
-            CONNECTORS.OR,
+            CONNECTORS.OR
             ],
         operators=[
             OPERATORS.SET_VAL, #default
@@ -651,7 +619,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
         connectors=[
             CONNECTORS.RESET,#default
             CONNECTORS.AND,
-            CONNECTORS.OR,
+            CONNECTORS.OR
             ],
         operators=[
             OPERATORS.SET_VAL, #default
@@ -666,11 +634,12 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
         connectors=[
             CONNECTORS.RESET,#default
             CONNECTORS.AND,
-            CONNECTORS.OR,
+            CONNECTORS.OR
             ],
         operators=[
             OPERATORS.STR_COL, #default
             OPERATORS.EVAL_COL,
+            OPERATORS.SAVE_SELECTION,
             ],
         copy_df= True,
         apply=_new_col,
@@ -680,7 +649,7 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
         connectors=[
             CONNECTORS.RESET,#default
             CONNECTORS.AND,
-            CONNECTORS.OR,
+            CONNECTORS.OR
             ],
         operators=[
             OPERATORS.SET_METADATA, #default
@@ -688,7 +657,6 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
             OPERATORS.TAG_METADATA,
             OPERATORS.SET_METADATA_EVAL,
             OPERATORS.SET_METADATA_COL_EVAL,
-            OPERATORS.SAVE_SELECTION,
             ],
         copy_df= True,
         apply=_miscellaneous,
@@ -698,11 +666,11 @@ INSTRUCTIONS = Symbols('INSTRUCTIONS',
         connectors=[
             CONNECTORS.RESET,#default
             CONNECTORS.AND,
-            CONNECTORS.OR,
+            CONNECTORS.OR
             ],
         operators=[
             OPERATORS.SET_VERBOSITY, #default
-            OPERATORS.SET_DIFF,
+            OPERATORS.SET_DIFF
             ],
         copy_df= False,
         apply=_modify_settings,
@@ -740,18 +708,17 @@ def query(df_old, code=''):
         df_new = df_old
     
     cols = pd.Series([True for col in df_new.columns])
+    rows = pd.Series([True for row in df_new.index])
     cols.index = df_new.columns
-    mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
-    masks = pd.Series([mask])
+    rows.index = df_new.index
 
     for instruction_str in instruction_strs:
         instruction = _parse_instruction(instruction_str, verbosity)
-        df_new, masks, cols, diff, verbosity  = instruction.apply(instruction, df_new, masks, cols, diff, verbosity)
+        df_new, rows, cols, diff, verbosity  = instruction.apply(instruction, df_new, rows, cols, diff, verbosity)
 
 
     #results
 
-    rows = masks[0].any(axis=1)
     df_filtered = df_new.loc[rows, cols]
 
     if diff is None:
@@ -1043,7 +1010,7 @@ def _filter_series(series, negation, operator, value, verbosity, df_new=None):
     return filtered
 
 
-def _update_selected_cols(values, values_new, connector, verbosity):
+def _update_selection(values, values_new, connector, verbosity):
     """
     Updates the previously selected rows or columns based on the new selection.
     """
@@ -1058,6 +1025,7 @@ def _update_selected_cols(values, values_new, connector, verbosity):
     else:
         log(f'error: connector "{connector}" is not implemented', 'qp.qlang._update_selection', verbosity)
     return values
+
 
 
 
