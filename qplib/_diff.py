@@ -394,6 +394,10 @@ def _diff_excel(
             
         else:
             log(f'warning: sheet "{sheet}" is only in new file. nothing to compare', 'qp.diff()', verbosity)
+            if index_col is None:
+                df_new = pd.read_excel(file_new, sheet_name=sheet)
+            else:
+                df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=index_col)
             idx = len(summary)
             summary.loc[idx, 'sheet'] = sheet
             summary.loc[idx, f'is in new file'] = True
