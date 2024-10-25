@@ -227,6 +227,21 @@ df = get_df()
     ('bp systole ´r r?\d', df.loc[[0,1,3,4,5,7,9,10], ['bp systole']]),
 
 
+     #using index
+    ('´r idx = 3', df.iloc[[3], :]),
+    ('´r idx > 5', df.iloc[6:, :]),
+    ('´r idx < 5',df.iloc[:5, :]),
+    ('´r idx >= 5', df.iloc[5:, :]),
+    ('´r idx <= 5', df.iloc[:6, :]),
+    ('´r idx != 5', df.iloc[[0,1,2,3,4,6,7,8,9,10], :]),
+    ('´r idx == 5', df.iloc[[5], :]),
+    ('´r idx >5 & idx <8', df.iloc[6:8, :]),
+    ('´r idx >5 & idx <8 & idx != 6', df.iloc[[7], :]),
+    ('´r idx >5 & idx <8 & idx != 6 & idx != 7', df.iloc[[], :]),
+    ('´r idx ~ len(str(x)) > 1', df.iloc[[10], :]),
+    ('´r idx ?1', df.iloc[[1, 10], :]),
+
+
     #comparison between columns
     ('age / height ´v to num  ´c height ´r > @age', df.loc[[0, 10], ['height']]),
     ('age / height ´v to num  ´c height ´r < @age', df.loc[[], ['height']]),
@@ -398,6 +413,7 @@ df = get_df()
         """,
         df.loc[[], ['weight', 'diabetes']]
     ),
+
     ])
 def test_row_selection(instructions, expected_df):
     df = get_df()
@@ -407,133 +423,65 @@ def test_row_selection(instructions, expected_df):
 
 
 
-def test_idx():
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('´r idx > 5')
-    expected = df2.iloc[6:, :]
+df = get_df()
+@pytest.mark.parametrize("code, metadata", [
+    ('a ´r >0  ´m = >0  ´c is any  ´r is any', ['', '', '>0']),
+    ('a ´r >0  ´m += >0  ´c is any  ´r is any', ['', '', '>0']),
+    ('=a   ´r >0   ´m +=>0  ´c is any  ´r is any', [ '', '', '>0']),
+    ('=a´r >0     ´m+= >0  ´c is any  ´r is any', [ '', '', '>0']),
+    ('=a   ´r >0   ´m ~ x + ">0"  ´c is any  ´r is any', [ '', '', '>0']),
+    ('=a   ´r >0   ´m col~ col + ">0"  ´c is any  ´r is any', [ '', '', '>0']),
+    ('=a´r >0     ´mtag   ´c is any  ´r is any', [ '', '', '\n@a: ']),
+    ('=a´r >0  ´c /b     ´m tag  ´c is any  ´r is any', [ '', '', '\n@a@b: ']),
+    ('=a´r >0  ´c /b     ´m tagvalue >0   ´c is any  ´r is any', [ '', '', '\n@a@b: value >0']),
+    ])
+
+def test_metadata(code, metadata):
+    df = get_df_simple_tagged()
+    df = df.q(code)
+    df1 = get_df_simple_tagged()
+    df1['meta'] = metadata
+    assert df.equals(df1), qp.diff(df, df1, returns='str')
+
+
+def test_scope1():
+    df1 = qp.get_df()
+    result = df1.q('´r is na ´v')
+    df2 = qp.get_df()
+    df2.loc[[1,2,3,4,6,7,8,9,10], :] = ''
+    expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    
+def test_scope2():
+    df1 = qp.get_df()
+    result = df1.q('´r any is na ´v')
+    df2 = qp.get_df()
+    df2.loc[[1,2,3,4,6,7,8,9,10], :] = ''
+    expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
-
-def test_idx1():
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('´r idx = 3')
-    expected = df2.iloc[[3], :]
+def test_scope3():
+    df1 = qp.get_df()
+    result = df1.q('´r all is na ´v')
+    df2 = qp.get_df()
+    expected = df2.loc[[], :]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
-
-def test_idx2():
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('´r idx < 5')
-    expected = df2.iloc[:5, :]
+def test_scope4():
+    df1 = qp.get_df()
+    result = df1.q('´r val is na ´v')
+    df2 = qp.get_df()
+    df2.loc[[2,3,6], 'age'] = ''
+    df2.loc[[7,8], 'gender'] = ''
+    df2.loc[[2,4], 'height'] = ''
+    df2.loc[[3,6], 'weight'] = ''
+    df2.loc[[2,6], 'bp systole'] = ''
+    df2.loc[[2,4,6,7,10], 'bp diastole'] = ''
+    df2.loc[[2,4,7], 'cholesterol'] = ''
+    df2.loc[[2,7,8], 'diabetes'] = ''
+    df2.loc[[1,6,7], 'dose'] = ''
+    expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-
-def test_idx3():
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('´r idx >5 & idx <8')
-    expected = df2.iloc[6:8, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-
-def test_idx4():
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('´r idx ~ len(str(x)) > 1')
-    expected = df2.iloc[[10], :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-
-def test_idx5():
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('´r idx ?1')
-    expected = df2.iloc[[1, 10], :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-
-
-def test_metadata_set():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = ['', '', '>0']
-    df = df.q('a ´r >0  ´m = >0  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_set1():
-    df = get_df_simple()
-    df1 = get_df_simple()
-    df1['meta'] = ['', '', '>0']
-    df = df.q('a ´r >0  ´m = >0  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_add():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = ['', '', '>0']
-    df = df.q('a ´r >0  ´m += >0  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_add1():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '>0']
-    df = df.q('=a   ´r >0   ´m +=>0  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_add2():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '>0']
-    df = df.q('=a´r >0     ´m+= >0  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_eval():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '>0']
-    df = df.q('=a   ´r >0   ´m ~ x + ">0"  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_col_eval():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '>0']
-    df = df.q('=a   ´r >0   ´m col~ col + ">0"  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_tag():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '\n@a: ']
-    df = df.q('=a´r >0     ´mtag   ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_tag1():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '\n@a@b: ']
-    df = df.q('=a´r >0  ´c /b     ´m tag  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
-
-
-def test_metadata_tag2():
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '\n@a@b: value >0']
-    df = df.q('=a´r >0  ´c /b     ´m tagvalue >0   ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
 
 
 def test_metadata_continous():
@@ -565,55 +513,6 @@ def test_metadata_continous():
     assert df.equals(df1), qp.diff(df, df1, returns='str')
 
 
-
-
-def test_col_eval():
-    df = qp.get_df()
-    df1 = qp.get_df()
-    result = df.q(
-        r"""
-        id ´v col~ df["name"]
-        """)
-    df1['ID'] = df1['name']
-    expected = df1.loc[:, ['ID']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-def test_col_eval1():
-    df = qp.get_df()
-    df1 = qp.get_df()
-    result = df.q(
-        r"""
-        id ´v col~ df["name"]
-        is any ´r is any
-        """)
-    df1['ID'] = df1['name']
-    expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-def test_col_eval2():
-    df = qp.get_df()
-    df1 = qp.get_df()
-    result = df.q(
-        r"""
-        id / age ´v col~ df["name"]
-        """)
-    df1['ID'] = df1['name']
-    df1['age'] = df1['name']
-    expected = df1.loc[:, ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-
-def test_col_eval3():
-    df = qp.get_df()
-    df1 = qp.get_df()
-    result = df.q(
-        r"""
-        ´v col~ df["name"]
-        """)
-    for col in df1.columns:
-        df1[col] = df1['name']
-    expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 
 def test_eval():
@@ -666,6 +565,57 @@ def test_eval3():
     df1['gender'] = df1['gender'].astype(str).str.lower()
     expected = df1.loc[:, :]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+
+def test_col_eval():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id ´v col~ df["name"]
+        """)
+    df1['ID'] = df1['name']
+    expected = df1.loc[:, ['ID']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+def test_col_eval1():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id ´v col~ df["name"]
+        is any ´r is any
+        """)
+    df1['ID'] = df1['name']
+    expected = df1.loc[:, :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+def test_col_eval2():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id / age ´v col~ df["name"]
+        """)
+    df1['ID'] = df1['name']
+    df1['age'] = df1['name']
+    expected = df1.loc[:, ['ID', 'age']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_col_eval3():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        ´v col~ df["name"]
+        """)
+    for col in df1.columns:
+        df1[col] = df1['name']
+    expected = df1.loc[:, :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
 
 
 @pytest.mark.parametrize("instructions, expected", [
@@ -794,85 +744,91 @@ def test_to_yn():
 
 
 
+# @pytest.mark.parametrize("code, expected_cols", [
+#     ('ID', ['ID']),
+#     ])
 
-def test_add_col():
+# def test(code, expected_cols):
+#     result = df.q(code)
+#     expected = df.loc[:, expected_cols]
+#     assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+
+@pytest.mark.parametrize("code, content, cols", [
+    ('´n', '', ['new1']),
+    ('´n a', 'a', ['new1']),
+    ('´na', 'a', ['new1']),
+    ('´n =a', 'a', ['new1']),
+    ('´n= a', 'a', ['new1']),
+    ('´n = a', 'a', ['new1']),
+    ('´n ~ "a"', 'a', ['new1']),
+    ('´n ~ df["ID"]', qp.get_df()['ID'], ['new1']),
+    ('´n @ID', qp.get_df()['ID'].astype(str), ['new1']),
+    ('´n ´c id', '', ['ID']),
+    ])
+def test_new_col(code, content, cols):
     df1 = get_df()
+    result = df1.q(code)
     df2 = get_df()
-    df2['new1'] = ''
-    result = df1.q('´n')
-    expected = df2.loc[:,['new1']]
+    df2['new1'] = content
+    expected = df2.loc[:, cols]
+    assert result.equals(expected), f'{code}:\n{qp.diff(result, expected, returns='str')}'
+
+def test_new_col1():
+    df1 = get_df()
+    result = df1.q('´n a  ´h new col')
+    df2 = get_df()
+    df2['new col'] = 'a'
+    expected = df2.loc[:,['new col']]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 
-def test_add_col1():
+def test_new_col2():
     df1 = get_df()
+    result = df1.q('´n a & b ´c new1 / new2')
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n a')
-    expected = df2.loc[:,['new1']]
+    df2['new2'] = 'b'
+    expected = df2.loc[:,['new1', 'new2']]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 
-def test_add_col2():
+def test_new_col3():
     df1 = get_df()
+    result = df1.q('´n a / b ´c new1 / new2')
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´na')
-    expected = df2.loc[:,['new1']]
+    df2['new2'] = 'b'
+    expected = df2.loc[:,['new1', 'new2']]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 
-def test_add_col3():
+def test_new_col4():
     df1 = get_df()
+    result = df1.q('´r idx = 0  ´n a')
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n =a')
-    expected = df2.loc[:,['new1']]
+    expected = df2.loc[[0],['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 
-def test_add_col4():
+def test_new_col5():
     df1 = get_df()
+    result = df1.q('´n a  ´r idx = 0  ')
+
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n= a')
-    expected = df2.loc[:,['new1']]
+    expected = df2.loc[[0],['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 
-def test_add_col5():
+def test_new_col6():
     df1 = get_df()
+    result = df1.q('´r idx = 0  ´m save 1 ´r is any ´n a  ´r load 1')
     df2 = get_df()
     df2['new1'] = 'a'
-    result = df1.q('´n = a')
-    expected = df2.loc[:,['new1']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-
-def test_add_col6():
-    df1 = get_df()
-    df2 = get_df()
-    df2['new1'] = 'a'
-    result = df1.q('´n ~ "a"')
-    expected = df2.loc[:,['new1']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-
-def test_add_col7():
-    df1 = get_df()
-    df2 = get_df()
-    df2['new1'] = df2['ID']
-    result = df1.q('´n ~ df["ID"]')
-    expected = df2.loc[:,['new1']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
-
-
-def test_add_col8():
-    df1 = get_df()
-    df2 = get_df()
-    df2['new1'] = df2['ID'].astype(str)
-    result = df1.q('´n @ID')
-    expected = df2.loc[:,['new1']]
+    expected = df2.loc[[0],['new1']]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 
