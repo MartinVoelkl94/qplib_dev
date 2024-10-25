@@ -84,7 +84,9 @@ def _diff(
                 mode, returns,
                 ignore,
                 max_cols, max_rows,
-                prefix_old, verbosity
+                prefix_old,
+                name_new='new df', name_old='old df',
+                verbosity=verbosity
                 )
             string = _diff_str(df_new, df_old, ignore, verbosity)
 
@@ -102,15 +104,14 @@ def _diff(
         return None
     elif returns.endswith('.xlsx') and isinstance(df, dict): 
         with pd.ExcelWriter(returns) as writer:
-            summary.to_excel(writer, sheet_name='summary', index=False)
-            if index_col:
-                index = True
-            else:
-                index = False
-
+            summary.to_excel(writer, sheet_name='diff_summary', index=False)
             for sheet, df in df.items():
-                df.data['meta'] = df.data['meta'].str.replace('<br>', '\n')
-                df.to_excel(writer, sheet_name=sheet, index=index)
+                if sheet == 'diff_summary':
+                    log(f'warning: comparison for sheet "diff_summary" will not be written to file since this name is reserved', 'qp._diff.diff()', verbosity)
+                    continue
+                if hasattr(df, 'data'):
+                    df.data['meta'] = df.data['meta'].str.replace('<br>', '\n')
+                    df.to_excel(writer, sheet_name=sheet, index=True)
         log(f'info: differences saved to "{returns}"', 'qp._diff.diff()', verbosity)
         return df, summary, string
     elif returns.endswith('.xlsx'):
@@ -128,10 +129,12 @@ def _diff_df(
     ignore=None,
     max_rows=None, max_cols=None, 
     prefix_old='old: ',
+    name_new='new df', name_old='old df',
     verbosity=3):
     '''
     see _diff() for details
     '''
+
     if ignore is None:
         ignore = []
     elif isinstance(ignore, str):
@@ -145,17 +148,29 @@ def _diff_df(
     else:
         newline = '<br>'
 
-
+    flag_return = False
+    summary_empty = {
+        'cols added': None,
+        'cols removed': None,
+        'rows added': None,
+        'rows removed': None,
+        'vals added': None,
+        'vals removed': None,
+        'vals changed': None,
+        }
     if not df_new.index.is_unique:
-        log('error: index of new dataframe is not unique', 'qp.diff()', verbosity)
+        log(f'warning: index of {name_new} is not unique. "index_col=None" to use sequential numbering as index', 'qp.diff()', verbosity)
+        flag_return = True
     if not df_old.index.is_unique:
-        log('error: index of old dataframe is not unique', 'qp.diff()', verbosity)
-
+        log(f'warning: index of {name_old} is not unique. "index_col=None" to use sequential numbering as index', 'qp.diff()', verbosity)
+        flag_return = True
+    if flag_return:
+        return pd.DataFrame(), summary_empty
 
 
     #prepare dataframes
-    df_new = _format_df(df_new, fix_headers=False, add_metadata=True, verbosity=verbosity)
-    df_old = _format_df(df_old, fix_headers=False, add_metadata=True, verbosity=verbosity)
+    df_new = _format_df(df_new, fix_headers=False, add_metadata=True, verbosity=2)
+    df_old = _format_df(df_old, fix_headers=False, add_metadata=True, verbosity=2)
 
 
 
@@ -282,9 +297,9 @@ def _diff_df(
         result = df_diff.style.apply(lambda x: _apply_style(x, df_diff_style), axis=None) 
     else:
         if max_cols is not None and max_cols < len(df_diff.columns):
-            log(f'warning: showing {max_cols} out of {len(df_diff.columns)} columns', 'qp.diff()', verbosity)
+            log(f'warning: highlighting differences in {max_cols} out of {len(df_diff.columns)} columns. change with "max_cols="', 'qp.diff()', verbosity)
         if max_rows is not None and max_rows < len(df_diff.index):
-            log(f'warning: showing {max_rows} out of {len(df_diff.index)} rows', 'qp.diff()', verbosity)
+            log(f'warning: highlighting differences in {max_rows} out of {len(df_diff.index)} rows. change with "max_rows="', 'qp.diff()', verbosity)
 
         df_diff = df_diff.iloc[:max_rows, :max_cols]
         df_diff_style = df_diff_style.iloc[:max_rows, :max_cols]
@@ -347,13 +362,23 @@ def _diff_excel(
                 df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=index_col)
                 df_old = pd.read_excel(file_old, sheet_name=sheet, index_col=index_col)
 
+            name_new=f'sheet "{sheet}" in file "{file_new}"'
+            name_old=f'sheet "{sheet}" in file "{file_old}"'
             result, changes = _diff_df(
                 df_new, df_old,
                 mode, returns,
                 ignore,
                 max_rows, max_cols,
-                prefix_old, verbosity
+                prefix_old,
+                name_new, name_old,
+                verbosity
                 )
+            
+            #check if df is empty
+            if isinstance(result, pd.DataFrame) and result.empty:
+                log(f'error: comparison was not possible for sheet "{sheet}"', 'qp.diff', verbosity)
+            else:
+                log(f'info: compared sheet "{sheet}" from both files', 'qp.diff()', verbosity)
             
             results[sheet] = result
         
@@ -368,6 +393,7 @@ def _diff_excel(
                 summary.loc[idx, key] = val
             
         else:
+            log(f'warning: sheet "{sheet}" is only in new file. nothing to compare', 'qp.diff()', verbosity)
             idx = len(summary)
             summary.loc[idx, 'sheet'] = sheet
             summary.loc[idx, f'is in new file'] = True

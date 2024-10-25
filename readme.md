@@ -4,7 +4,9 @@ A query language for pandas data exploration/analysis/modification.
 
 It is implemented as an [accessor extension](https://pandas.pydata.org/docs/development/extending.html), meaning it can be called from a dataframe without any further preparation by calling df.q() with a valid text string.  
 
-An interactive wrapper can be called with df.qi() to help with query creation and for exploring the syntax.
+An interactive wrapper can be called with df.qi() to help with query creation and for exploring the syntax.  
+
+Currently published on [testpypi](https://test.pypi.org/project/qplib/).
 <br>
 <br>
 
