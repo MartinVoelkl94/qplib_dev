@@ -773,7 +773,7 @@ def test_new_col(code, content, cols):
     df2 = get_df()
     df2['new1'] = content
     expected = df2.loc[:, cols]
-    assert result.equals(expected), f'{code}:\n{qp.diff(result, expected, returns='str')}'
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 def test_new_col1():
     df1 = get_df()
