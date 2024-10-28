@@ -567,6 +567,59 @@ def test_eval3():
     assert result.equals(expected), qp.diff(result, expected, returns='str')
 
 
+def test_eval4():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id ´r 10001  ´v ~ str(10001)
+        """)
+    df1.loc[0, 'ID'] = '10001'
+    expected = df1.loc[[0], ['ID']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_eval5():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id / age ´r is num ´v ~ str(0)
+        """)
+    df1['ID'] = str(0)
+    df1['age'] = str(0)
+    expected = df1.loc[:, ['ID', 'age']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_eval6():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id / age ´r all is num ´v ~ 0
+        """)
+    df1.loc[[0,1,2,3,4,8,10], 'ID'] = 0
+    df1.loc[[0,1,2,3,4,8,10], 'age'] = 0
+    expected = df1.loc[[0,1,2,3,4,8,10], ['ID', 'age']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_eval7():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id / age ´r val is num ´v ~ 10
+        """)
+    df1['ID'] = 10
+    df1.loc[[0,1,2,3,4,8,10], 'age'] = 10
+    expected = df1.loc[:, ['ID', 'age']]
+    assert (result['ID'] == 10).all()
+    assert (result.loc[[5,6,7,9], 'age'] != 10).all()
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
 
 def test_col_eval():
     df = qp.get_df()
@@ -615,6 +668,47 @@ def test_col_eval3():
         df1[col] = df1['name']
     expected = df1.loc[:, :]
     assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_col_eval4():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id / age ´r is num ´v col~ df["name"]
+        """)
+    df1['ID'] = df1['name']
+    df1['age'] = df1['name']
+    expected = df1.loc[:, ['ID', 'age']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_col_eval5():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id / age ´r all is num ´v col~ df["name"]
+        """)
+    df1['ID'] = df1['name']
+    df1['age'] = df1['name']
+    expected = df1.loc[[0,1,2,3,4,8,10], ['ID', 'age']]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_col_eval6():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        id / age ´r val is num ´v col~ df["name"]
+        """)
+    df1['ID'] = df1['name']
+    df1.loc[[0,1,2,3,4,8,10], 'age'] = df1.loc[[0,1,2,3,4,8,10], 'name']
+    expected = df1.loc[:, ['ID', 'age']]
+    assert (result.loc[[5,6,7,9], 'age'] != df.loc[[5,6,7,9], 'name']).all()
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
 
 
 

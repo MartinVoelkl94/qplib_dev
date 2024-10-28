@@ -291,7 +291,8 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
     elif operator == OPERATORS.ADD_VAL:
         df_new[mask] = df_new[mask].astype(str) + value
     elif operator == OPERATORS.SET_COL_EVAL:
-        df_new.loc[:, cols] = df_new.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
+        changed = df_new.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
+        df_new = df_new.mask(mask, changed)
     elif operator == OPERATORS.SORT:
         df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
         mask.index = df_new.index
@@ -301,7 +302,8 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
         if operator == OPERATORS.SET_EVAL:
             cols = mask.any(axis=0)
             rows = mask.any(axis=1)
-            df_new.loc[rows, cols] = df_new.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            changed = df_new.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            df_new = df_new.mask(mask, changed)
 
 
         #type conversion
@@ -343,8 +345,9 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
         if operator == OPERATORS.SET_EVAL:
             cols = mask.any(axis=0)
             rows = mask.any(axis=1)
-            df_new.loc[rows, cols] = df_new.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
-
+            changed = df_new.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            df_new = df_new.mask(mask, changed)
+        
         #type conversion
         elif operator == OPERATORS.TO_STR:
             df_new[mask] = df_new[mask].applymap(str)
