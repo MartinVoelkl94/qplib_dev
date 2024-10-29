@@ -155,16 +155,16 @@ OPERATORS = Symbols('OPERATORS',
     
     Symbol('sort', 'SORT', 'sort values based on the selected column(s)', unary=True),
 
-    Symbol('to str', 'TO_STR', 'convert to string', unary=True),
-    Symbol('to int', 'TO_INT', 'convert to integer', unary=True),
-    Symbol('to float', 'TO_FLOAT', 'convert to float', unary=True),
-    Symbol('to num', 'TO_NUM', 'convert to number', unary=True),
-    Symbol('to bool', 'TO_BOOL', 'convert to boolean', unary=True),
-    Symbol('to datetime', 'TO_DATETIME', 'convert to datetime', unary=True),
-    Symbol('to date', 'TO_DATE', 'convert to date', unary=True),
-    Symbol('to na', 'TO_NA', 'convert to missing value', unary=True),
-    Symbol('to nk', 'TO_NK', 'convert to not known value', unary=True),
-    Symbol('to yn', 'TO_YN', 'convert to yes or no value', unary=True),
+    Symbol('to str', 'TO_STR', 'convert to string', unary=True, func=str, dtype=str),
+    Symbol('to int', 'TO_INT', 'convert to integer', unary=True, func=_int, dtype='Int64'),
+    Symbol('to float', 'TO_FLOAT', 'convert to float', unary=True, func=_float, dtype='Float64'),
+    Symbol('to num', 'TO_NUM', 'convert to number', unary=True, func=_num, dtype='object'),
+    Symbol('to bool', 'TO_BOOL', 'convert to boolean', unary=True, func=_bool, dtype='bool'),
+    Symbol('to datetime', 'TO_DATETIME', 'convert to datetime', unary=True, func=_datetime, dtype='datetime64[ns]'),
+    Symbol('to date', 'TO_DATE', 'convert to date', unary=True, func=_date, dtype='datetime64[ns]'),
+    Symbol('to na', 'TO_NA', 'convert to missing value', unary=True, func=_na),
+    Symbol('to nk', 'TO_NK', 'convert to not known value', unary=True, func=_nk, dtype='object'),
+    Symbol('to yn', 'TO_YN', 'convert to yes or no value', unary=True, func=_yn, dtype='object'),
 
 
     #for adding new columns
@@ -284,14 +284,20 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
 
     operator = instruction.operator
     value = instruction.value
+    type_conversions = [
+        OPERATORS.TO_STR, OPERATORS.TO_INT, OPERATORS.TO_FLOAT, OPERATORS.TO_NUM, OPERATORS.TO_BOOL,
+        OPERATORS.TO_DATETIME, OPERATORS.TO_DATE,
+        OPERATORS.TO_NA, OPERATORS.TO_NK, OPERATORS.TO_YN,
+        ]
 
     #data modification  
     if operator == OPERATORS.SET_VAL:
         df_new[mask] = value
     elif operator == OPERATORS.ADD_VAL:
         df_new[mask] = df_new[mask].astype(str) + value
-    elif operator == OPERATORS.SET_COL_EVAL:
-        changed = df_new.loc[:, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
+    elif operator == OPERATORS.SET_COL_EVAL:   
+        rows = mask.any(axis=1)
+        changed = df_new.loc[rows, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
         df_new = df_new.mask(mask, changed)
     elif operator == OPERATORS.SORT:
         df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
@@ -300,87 +306,42 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
     elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
         #data modification
         if operator == OPERATORS.SET_EVAL:
-            cols = mask.any(axis=0)
             rows = mask.any(axis=1)
-            changed = df_new.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            if 'x' in value:  #needs to be evaluated for each value
+                changed = df_new.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            else:  #only needs to be evaluated once
+                eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
+                changed = df_new.loc[rows, cols].map(lambda x: eval_result)  #setting would be faster but map is dtype compatible
             df_new = df_new.mask(mask, changed)
 
-
         #type conversion
-        elif operator == OPERATORS.TO_STR:
-            df_new[mask] = df_new[mask].map(str)
-        elif operator == OPERATORS.TO_INT:
-            df_new[mask] = df_new[mask].map(_int)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('Int64')
-        elif operator == OPERATORS.TO_FLOAT:
-            df_new[mask] = df_new[mask].map(_float)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('Float64')
-        elif operator == OPERATORS.TO_NUM:
-            df_new[mask] = df_new[mask].map(_num)
-        elif operator == OPERATORS.TO_BOOL:
-            df_new[mask] = df_new[mask].map(_bool)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('boolean')
-        
-        elif operator == OPERATORS.TO_DATETIME:
-            df_new[mask] = df_new[mask].map(_datetime)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('datetime64[ns]')
-        elif operator == OPERATORS.TO_DATE:
-            df_new[mask] = df_new[mask].map(_date)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('datetime64[ns]').dt.floor('d')
-
-        elif operator == OPERATORS.TO_NA:
-            df_new[mask] = df_new[mask].map(_na)
-        elif operator == OPERATORS.TO_NK:
-            df_new[mask] = df_new[mask].map(_nk)
-        elif operator == OPERATORS.TO_YN:
-            df_new[mask] = df_new[mask].map(_yn)
+        elif operator in type_conversions:
+            rows = mask.any(axis=1)
+            changed = df_new.loc[rows, cols].map(lambda x: operator.func(x))
+            df_new.loc[rows, cols] = changed
+            if hasattr(operator, 'dtype'):
+                for col in df_new.columns[cols]:
+                    df_new[col] = df_new[col].astype(operator.dtype)
 
     else:
         #data modification
         if operator == OPERATORS.SET_EVAL:
-            cols = mask.any(axis=0)
             rows = mask.any(axis=1)
-            changed = df_new.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            if 'x' in value:  #needs to be evaluated for each value
+                changed = df_new.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            else:  #only needs to be evaluated once
+                eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
+                changed = df_new.loc[rows, cols].applymap(lambda x: eval_result)  #setting would be faster but map is dtype compatible
             df_new = df_new.mask(mask, changed)
-        
-        #type conversion
-        elif operator == OPERATORS.TO_STR:
-            df_new[mask] = df_new[mask].applymap(str)
-        elif operator == OPERATORS.TO_INT:
-            df_new[mask] = df_new[mask].applymap(_int)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('Int64')
-        elif operator == OPERATORS.TO_FLOAT:
-            df_new[mask] = df_new[mask].applymap(_float)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('Float64')
-        elif operator == OPERATORS.TO_NUM:
-            df_new[mask] = df_new[mask].applymap(_num)
-        elif operator == OPERATORS.TO_BOOL:
-            df_new[mask] = df_new[mask].applymap(_bool)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('boolean')
-        
-        elif operator == OPERATORS.TO_DATETIME:
-            df_new[mask] = df_new[mask].applymap(_datetime)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('datetime64[ns]')
-        elif operator == OPERATORS.TO_DATE:
-            df_new[mask] = df_new[mask].applymap(_date)
-            for col in df_new.columns[cols]:
-                df_new[col] = df_new[col].astype('datetime64[ns]').dt.floor('d')
 
-        elif operator == OPERATORS.TO_NA:
-            df_new[mask] = df_new[mask].applymap(_na)
-        elif operator == OPERATORS.TO_NK:
-            df_new[mask] = df_new[mask].applymap(_nk)
-        elif operator == OPERATORS.TO_YN:
-            df_new[mask] = df_new[mask].applymap(_yn)
+        #type conversion
+        elif operator in type_conversions:
+            rows = mask.any(axis=1)
+            changed = df_new.loc[rows, cols].applymap(lambda x: operator.func(x))
+            df_new.loc[rows, cols] = changed
+            if hasattr(operator, 'dtype'):
+                for col in df_new.columns[cols]:
+                    df_new[col] = df_new[col].astype(operator.dtype)
 
     return df_new, masks, cols, diff, verbosity
 
@@ -514,10 +475,18 @@ def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
 
     elif operator == OPERATORS.SET_METADATA_EVAL:
         if pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
-            df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            if 'x' in value:  #needs to be evaluated for each value
+                df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            else:  #only needs to be evaluated once
+                eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
+                df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].map(lambda x: eval_result)
         else:
-            df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
-        
+            if 'x' in value:
+                df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            else:
+                eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
+                df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].applymap(lambda x: eval_result)
+    
     elif operator == OPERATORS.SET_METADATA_COL_EVAL:
         df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
 
