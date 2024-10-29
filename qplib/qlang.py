@@ -245,7 +245,7 @@ def _select_rows(instruction, df_new, masks, cols, diff, verbosity):
         rows = _filter_series(rows_all, negation, operator, value, verbosity, df_new)
         mask.loc[rows, :] = True
     elif operator == OPERATORS.LOAD_SELECTION:
-        if value in masks.index:
+        if value in masks.keys():
             mask = masks[value]
         else:
             log(f'error: selection "{value}" not found in saved selections', 'qp.qlang._select_rows', verbosity)
@@ -491,7 +491,7 @@ def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
         df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
 
     elif operator == OPERATORS.SAVE_SELECTION:
-        if value in masks.index:
+        if value in masks.keys():
             log(f'warning: a selection was already saved as "{value}". overwriting it',
                 'qp.qlang._new_col', verbosity)
         masks[value] = masks[0]
@@ -696,9 +696,9 @@ def query(df_old, code=''):
     """
 
     #setup
-    _check_df(df_old)
     verbosity = VERBOSITY
     diff = DIFF
+    _check_df(df_old, verbosity=verbosity)
 
 
     #parse and apply instructions
@@ -714,7 +714,10 @@ def query(df_old, code=''):
     cols = pd.Series([True for col in df_new.columns])
     cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
-    masks = pd.Series([mask])
+    masks = {0: mask}
+
+
+
 
     for instruction_str in instruction_strs:
         instruction = _parse_instruction(instruction_str, verbosity)
