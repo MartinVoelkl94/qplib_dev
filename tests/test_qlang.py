@@ -514,6 +514,47 @@ def test_metadata_continous():
 
 
 
+def test_set_val():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        name ´v a
+        is any ´r is any
+        """)
+    df1['name'] = 'a'
+    expected = df1.loc[:, :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_set_val1():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        name ´v =a
+        is any ´r is any
+        """)
+    df1['name'] = 'a'
+    expected = df1.loc[:, :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
+def test_set_val2():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        name ´v a
+        gender ´v b
+        is any ´r is any
+        """)
+    df1['name'] = 'a'
+    df1['gender'] = 'b'
+    expected = df1.loc[:, :]
+    assert result.equals(expected), qp.diff(result, expected, returns='str')
+
+
 
 def test_eval():
     df = qp.get_df()

@@ -277,9 +277,8 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
     """
     An Instruction to modify the selected values.
     """
-    
-    mask = masks[0]
-    mask.loc[:, ~cols] = False
+    mask_temp = masks[0].copy()
+    mask_temp.loc[:, ~cols] = False
 
     operator = instruction.operator
     value = instruction.value
@@ -291,30 +290,30 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
 
     #data modification  
     if operator == _OPERATORS.SET_VAL:
-        df_new[mask] = value
+        df_new[mask_temp] = value
     elif operator == _OPERATORS.ADD_VAL:
-        df_new[mask] = df_new[mask].astype(str) + value
+        df_new[mask_temp] = df_new[mask_temp].astype(str) + value
     elif operator == _OPERATORS.SET_COL_EVAL:   
-        rows = mask.any(axis=1)
+        rows = mask_temp.any(axis=1)
         changed = df_new.loc[rows, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
-        df_new = df_new.mask(mask, changed)
+        df_new = df_new.mask(mask_temp, changed)
     elif operator == _OPERATORS.SORT:
         df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
 
     elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
         #data modification
         if operator == _OPERATORS.SET_EVAL:
-            rows = mask.any(axis=1)
+            rows = mask_temp.any(axis=1)
             if 'x' in value:  #needs to be evaluated for each value
                 changed = df_new.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
             else:  #only needs to be evaluated once
                 eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
                 changed = df_new.loc[rows, cols].map(lambda x: eval_result)  #setting would be faster but map is dtype compatible
-            df_new = df_new.mask(mask, changed)
+            df_new = df_new.mask(mask_temp, changed)
 
         #type conversion
         elif operator in type_conversions:
-            rows = mask.any(axis=1)
+            rows = mask_temp.any(axis=1)
             changed = df_new.loc[rows, cols].map(lambda x: operator.func(x))
             df_new.loc[rows, cols] = changed
             if hasattr(operator, 'dtype'):
@@ -324,17 +323,17 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
     else:
         #data modification
         if operator == _OPERATORS.SET_EVAL:
-            rows = mask.any(axis=1)
+            rows = mask_temp.any(axis=1)
             if 'x' in value:  #needs to be evaluated for each value
                 changed = df_new.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
             else:  #only needs to be evaluated once
                 eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
                 changed = df_new.loc[rows, cols].applymap(lambda x: eval_result)  #setting would be faster but map is dtype compatible
-            df_new = df_new.mask(mask, changed)
+            df_new = df_new.mask(mask_temp, changed)
 
         #type conversion
         elif operator in type_conversions:
-            rows = mask.any(axis=1)
+            rows = mask_temp.any(axis=1)
             changed = df_new.loc[rows, cols].applymap(lambda x: operator.func(x))
             df_new.loc[rows, cols] = changed
             if hasattr(operator, 'dtype'):
@@ -376,9 +375,9 @@ def _modify_headers(instruction, df_new, masks, cols, diff, verbosity):
         cols.index = df_new.columns
         for mask in masks.values():
             mask.rename(
-                    columns={
+                columns={
                     col: eval(value, {'x': col, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
-                    for col in df_new.columns[cols]
+                    for col in mask.columns[cols]
                     },
                 inplace=True
                 )
@@ -431,14 +430,14 @@ def _new_col(instruction, df_new, masks, cols, diff, verbosity):
                 break
 
             header = 'new' + str(i)
-            if header not in df_new.columns: 
+            if header not in df_new.columns:
+                masks[0][header] = rows
                 value = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
                 if isinstance(value, pd.Series):
                     df_new[header] = value
                 else:
                     df_new[header] = pd.NA
                     df_new.loc[rows, header] = value
-                masks[0][header] = rows
                 cols = pd.Series([True if col == header else False for col in df_new.columns])
                 cols.index = df_new.columns
                 break
@@ -505,7 +504,7 @@ def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
         if value in masks.keys():
             log(f'warning: a selection was already saved as "{value}". overwriting it',
                 'qp.qlang._new_col', verbosity)
-        masks[value] = masks[0]
+        masks[value] = masks[0].copy()
 
     return df_new, masks, cols, diff, verbosity
 
