@@ -355,10 +355,15 @@ def _modify_headers(instruction, df_new, masks, cols, diff, verbosity):
     if operator == _OPERATORS.SET_VAL:
         df_new.rename(columns={col: value for col in df_new.columns[cols]}, inplace=True)
         cols.index = df_new.columns
+        for mask in masks.values():
+            mask.rename(columns={col: value for col in mask.columns[cols]}, inplace=True)
+
 
     if operator == _OPERATORS.ADD_VAL:
         df_new.rename(columns={col: col + value for col in df_new.columns[cols]}, inplace=True)
         cols.index = df_new.columns
+        for mask in masks.values():
+            mask.rename(columns={col: col + value for col in mask.columns[cols]}, inplace=True)
 
     if operator == _OPERATORS.SET_EVAL:
         df_new.rename(
@@ -369,6 +374,14 @@ def _modify_headers(instruction, df_new, masks, cols, diff, verbosity):
             inplace=True
             )
         cols.index = df_new.columns
+        for mask in masks.values():
+            mask.rename(
+                    columns={
+                    col: eval(value, {'x': col, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
+                    for col in df_new.columns[cols]
+                    },
+                inplace=True
+                )
 
     return df_new, masks, cols, diff, verbosity
 
@@ -387,7 +400,7 @@ def _new_col(instruction, df_new, masks, cols, diff, verbosity):
         if column in df_new.columns:
             value = df_new[column]
         else:
-            log(f'error: column "{column}" not found in dataframe. cannot use "@{column}" as value for row selection',
+            log(f'error: column "{column}" not found in dataframe. cannot add a new column thats a copy of it',
                 'qp.qlang._new_col', verbosity)
 
 
@@ -401,7 +414,7 @@ def _new_col(instruction, df_new, masks, cols, diff, verbosity):
             header = 'new' + str(i)
             if header not in df_new.columns:
                 df_new[header] = ''
-                masks[0][header] = False
+                masks[0][header] = rows
                 if isinstance(value, pd.Series):
                     df_new.loc[rows, header] = value.astype(str)
                 else:
@@ -425,7 +438,7 @@ def _new_col(instruction, df_new, masks, cols, diff, verbosity):
                 else:
                     df_new[header] = pd.NA
                     df_new.loc[rows, header] = value
-                masks[0][header] = False
+                masks[0][header] = rows
                 cols = pd.Series([True if col == header else False for col in df_new.columns])
                 cols.index = df_new.columns
                 break
