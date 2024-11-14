@@ -151,6 +151,8 @@ _OPERATORS = _Symbols('OPERATORS',
 
     _Symbol('~', 'SET_EVAL', 'replace value by evaluating a python expression for each selected value'),
     _Symbol('col~', 'SET_COL_EVAL', 'replace value by evaluating a python expression for each selected column'),
+
+    _Symbol('r~', 'EXTRACT_REGEX', 'extract a value using a regex with capture group. returns the first capture group'),
     
     _Symbol('sort', 'SORT', 'sort values based on the selected column(s)', unary=True),
 
@@ -249,7 +251,7 @@ def _select_rows(instruction, df_new, masks, cols, diff, verbosity):
         else:
             log(f'error: selection "{value}" not found in saved selections', 'qp.qlang._select_rows', verbosity)
             masks[0] = mask
-    else:
+    else: #corresponds to behaviour of _SCOPES.VAL
         for col in df_new.columns[cols]:
             rows = _filter_series(df_new[col], negation, operator, value, verbosity, df_new)
             mask.loc[rows, col] = True
@@ -291,12 +293,20 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
     #data modification  
     if operator == _OPERATORS.SET_VAL:
         df_new[mask_temp] = value
+
     elif operator == _OPERATORS.ADD_VAL:
         df_new[mask_temp] = df_new[mask_temp].astype(str) + value
-    elif operator == _OPERATORS.SET_COL_EVAL:   
+
+    elif operator == _OPERATORS.SET_COL_EVAL:
         rows = mask_temp.any(axis=1)
         changed = df_new.loc[rows, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
         df_new = df_new.mask(mask_temp, changed)
+    
+    elif operator == _OPERATORS.EXTRACT_REGEX:
+        rows = mask_temp.any(axis=1)
+        for col in df_new.columns[cols]:
+            df_new.loc[rows, col] = df_new.loc[rows, col].str.extract(value).loc[rows, 0]
+    
     elif operator == _OPERATORS.SORT:
         df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
 
@@ -621,6 +631,7 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
             _OPERATORS.SET_VAL, #default
             _OPERATORS.ADD_VAL,
             _OPERATORS.SET_EVAL, _OPERATORS.SET_COL_EVAL,
+            _OPERATORS.EXTRACT_REGEX,
             _OPERATORS.SORT,
             _OPERATORS.TO_STR, _OPERATORS.TO_INT, _OPERATORS.TO_FLOAT, _OPERATORS.TO_NUM, _OPERATORS.TO_BOOL,
             _OPERATORS.TO_DATETIME, _OPERATORS.TO_DATE, _OPERATORS.TO_NA, _OPERATORS.TO_NK, _OPERATORS.TO_YN,
