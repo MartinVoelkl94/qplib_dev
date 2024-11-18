@@ -32,7 +32,7 @@ class _Symbol:
             setattr(self, key, value)
 
     def __repr__(self):
-        repr = f'{self.name}\n\tsymbol: "{self.symbol}"\n\tdescription: "{self.description})"'
+        repr = f'{self.name}\n\tsymbol: "{self.symbol}"\n\tdescription: "{self.description}"'
         if hasattr(self, 'connector'):
             repr += f'\n\tconnector: {self.connector.name}'
         if hasattr(self, 'scope'):
@@ -66,7 +66,7 @@ class _Symbols:
         elif key in self.by_name:
             return self.by_name[key]
         else:
-            log(f'error: symbol "{key}" not found in "{self.name}"', 'qp.qlang.Symbols.__getitem__', 3)
+            log(f'error: symbol "{key}" not found in "{self.name}"', 'qp.qlang.Symbols.__getitem__', VERBOSITY)
             return None
 
     def __iter__(self):
@@ -103,7 +103,7 @@ _NEGATIONS = _Symbols('NEGATIONS',
 
 _OPERATORS = _Symbols('OPERATORS',
     #for changing settings
-    _Symbol('verbosity=', 'SET_VERBOSITY', 'change the verbosity level'),
+    _Symbol('verbosity=', 'SET_VERBOSITY', 'change the verbosity/logging level'),
     _Symbol('diff=', 'SET_DIFF', 'change if and how the difference between the old and new dataframe is shown'),
 
 
@@ -122,10 +122,10 @@ _OPERATORS = _Symbols('OPERATORS',
     _Symbol('r=', 'MATCHES_REGEX', 'matches a regex', binary=True),
     _Symbol('r?', 'CONTAINS_REGEX', 'contains a regex', binary=True),
 
-    _Symbol('~', 'EVAL', 'select values by evaluating a python expression on each value', binary=True),
-    _Symbol('col~', 'COL_EVAL', 'select rows by evaluating a python expression on a whole column', binary=True),
+    _Symbol('~', 'EVAL', 'select rows/values by evaluating a python expression on each value', binary=True),
+    _Symbol('col~', 'COL_EVAL', 'select rows/values by evaluating a python expression on a whole column', binary=True),
 
-    _Symbol('load', 'LOAD_SELECTION', 'load a selection of rows (boolean mask) from a boolean column', binary=True),
+    _Symbol('load', 'LOAD_SELECTION', 'load a saved selection of rows/values (boolean mask). save using: "´m save <name>', binary=True),
 
     _Symbol('is any', 'IS_ANY', 'is any value (use to reset selection)', unary=True),
     _Symbol('is str', 'IS_STR', 'is a string', unary=True),
@@ -176,7 +176,7 @@ _OPERATORS = _Symbols('OPERATORS',
     #miscellaneous instructions
     _Symbol('=', 'SET_METADATA', 'set contents of the columnn named "meta" to the given string', binary=True),
     _Symbol('+=', 'ADD_METADATA', 'append the given string to the contents of the column named "meta"', binary=True),
-    _Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "\\n@<selected col>: <value>;" to the column named "meta"', binary=True),
+    _Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "\\n@<selected col>: <value>" to the column named "meta"', binary=True),
     _Symbol('~', 'SET_METADATA_EVAL', 'set contents of the column named "meta" by evaluating a python expression for each selected value in the metadata', binary=True),
     _Symbol('col~', 'SET_METADATA_COL_EVAL', 'set contents of the column named "meta" by evaluating a python expression on the whole metadata column', binary=True),
     _Symbol('save', 'SAVE_SELECTION', 'save current selection with given <name>. load using: "´r load <name>', binary=True),
@@ -206,7 +206,7 @@ def _select_cols(instruction, df_new, masks, cols, diff, verbosity):
     cols = _update_selected_cols(cols, cols_new, connector, verbosity)
 
     if cols.any() == False and connector == _CONNECTORS.AND:
-        log(f'warning: no columns fulfill the condition in "{instruction.str}" and the previous conditions',
+        log(f'warning: no columns fulfill the condition in "{instruction.str}" and the previous condition(s)',
             'qp.qlang._select_cols', verbosity)
 
     return df_new, masks, cols, diff, verbosity
@@ -215,7 +215,7 @@ def _select_cols(instruction, df_new, masks, cols, diff, verbosity):
 
 def _select_rows(instruction, df_new, masks, cols, diff, verbosity):
     """
-    An Instruction to select rows fulfilling a condition.
+    An Instruction to select rows/values fulfilling a condition.
     """
     
     connector = instruction.connector
@@ -279,6 +279,12 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
     """
     An Instruction to modify the selected values.
     """
+
+    if masks[0].any().any() == False or cols.any() == False:
+        log(f'warning: value modification cannot be applied when no values where selected', 'qp.qlang._modify_vals', verbosity)
+        return df_new, masks, cols, diff, verbosity
+
+
     mask_temp = masks[0].copy()
     mask_temp.loc[:, ~cols] = False
 
@@ -289,6 +295,7 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
         _OPERATORS.TO_DATETIME, _OPERATORS.TO_DATE,
         _OPERATORS.TO_NA, _OPERATORS.TO_NK, _OPERATORS.TO_YN,
         ]
+    
 
     #data modification  
     if operator == _OPERATORS.SET_VAL:
@@ -358,8 +365,13 @@ def _modify_headers(instruction, df_new, masks, cols, diff, verbosity):
     An Instruction to modify the headers of the selected column(s).
     """
 
+    if cols.any() == False:
+        log(f'warning: header modification cannot be applied when no columns where selected', 'qp.qlang._modify_headers', verbosity)
+        return df_new, masks, cols, diff, verbosity
+
     operator = instruction.operator
     value = instruction.value
+
 
     if operator == _OPERATORS.SET_VAL:
         df_new.rename(columns={col: value for col in df_new.columns[cols]}, inplace=True)
@@ -458,7 +470,9 @@ def _new_col(instruction, df_new, masks, cols, diff, verbosity):
 
 def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
     """
-    An Instruction for miscellaneous tasks, for example, modifying metadata.
+    An Instruction for miscellaneous tasks:
+    - modifying metadata
+    - saving selections
     """
     
     operator = instruction.operator
@@ -473,8 +487,8 @@ def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
         _OPERATORS.SET_METADATA_COL_EVAL,
         ]
     if operator in operators_metadata and 'meta' not in df_new.columns:
-        log(f'info: no metadata column found in dataframe. creating new column named "meta',
-            'qp.qlang._miscellaneous.apply', verbosity)
+        log(f'info: no metadata column found in dataframe. creating new column named "meta"',
+            'qp.qlang._miscellaneous', verbosity)
         df_new['meta'] = ''
         cols = pd.concat([cols, pd.Series([False])])
         cols.index = df_new.columns
@@ -513,7 +527,7 @@ def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
     elif operator == _OPERATORS.SAVE_SELECTION:
         if value in masks.keys():
             log(f'warning: a selection was already saved as "{value}". overwriting it',
-                'qp.qlang._new_col', verbosity)
+                'qp.qlang._miscellaneous', verbosity)
         masks[value] = masks[0].copy()
 
     return df_new, masks, cols, diff, verbosity
@@ -540,7 +554,7 @@ def _modify_settings(instruction, df_new, masks, cols, diff, verbosity):
         elif value.lower() in ['mix', 'new', 'old', 'new+']:
             diff = value.lower()
         else:
-            log(f'warning: diff must be one of [None, "mix", "old", "new", "new+"]. "{value}" is not valid',
+            log(f'warning: diff must be one of [None, mix, old, new, new+]. "{value}" is not valid',
                 'qp.qlang._modify_settings', verbosity)
 
     return df_new, masks, cols, diff, verbosity
@@ -581,7 +595,7 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
         ),
 
 
-    _Symbol('´r', 'SELECT_ROWS', 'select rows fulfilling a condition',
+    _Symbol('´r', 'SELECT_ROWS', 'select rows/values fulfilling a condition',
         connectors=[
             _CONNECTORS.RESET,#default
             _CONNECTORS.AND,
@@ -706,14 +720,7 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
 
 def query(df_old, code=''):
     """
-    A query language for pandas data exploration/analysis/modification.
-
-    examples:
-    df.q('id')  #selects the column 'id'
-    df.q('id  ´r > 100)  #selects col "id" and rows where the value is greater than 100
-    df.q('´c = id  ´r > 100) #same as above but more explicit
-    df.q('id  ´r > 100  ´c / name  ´r ? john')  #selects col "id" and
-        #rows where the value is greater than 100 or col "name" and rows where the value contains "john"
+    Used by the dataframe accessors df.q() (DataFrameQuery) and df.qi() (DataFrameQueryInteractive).
     """
 
     #setup
@@ -735,7 +742,7 @@ def query(df_old, code=''):
     cols = pd.Series([True for col in df_new.columns])
     cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
-    masks = {0: mask}
+    masks = {0: mask}  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
 
 
 
@@ -883,13 +890,13 @@ def _extract_symbol(string, symbols, verbosity):
 
     for symbol in symbols:
         if string.startswith(symbol.symbol):
-            log(f'trace: found symbol "{symbol}" in string "{string}"', 'qp.qlang._extract_symbol', verbosity)
+            log(f'trace: found symbol in string "{string}":\n{symbol}', 'qp.qlang._extract_symbol', verbosity)
             return symbol, string[len(symbol.symbol):].strip()
     
     if string.startswith(default.symbol):
         return default, string[len(default.symbol):].strip()
     else:
-        log(f'trace: no symbol found in string "{string}". using default "{default}"', 'qp.qlang._extract_symbol', verbosity)
+        log(f'trace: no symbol found in string "{string}". using default:\n{default}', 'qp.qlang._extract_symbol', verbosity)
         return default, string
 
 
@@ -982,14 +989,6 @@ def _filter_series(series, negation, operator, value, verbosity, df_new=None):
     elif operator == _OPERATORS.COL_EVAL:
         filtered = eval(value, {'col': series, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
 
-    #load saved selection
-    elif operator == _OPERATORS.LOAD_SELECTION:
-        if value in df_new.columns:
-            filtered = df_new[value]
-        else:
-            log(f'error: column "{value}" does not exist in dataframe. cannot load selection',
-                'qp.qlang._filter_series', verbosity)
-
 
     #type checks
     elif operator == _OPERATORS.IS_STR:
@@ -1041,7 +1040,7 @@ def _filter_series(series, negation, operator, value, verbosity, df_new=None):
 
 def _update_selected_cols(values, values_new, connector, verbosity):
     """
-    Updates the previously selected rows or columns based on the new selection.
+    Updates the previously selected columns based on the new selection.
     """
     if values is None:
         values = values_new
@@ -1052,7 +1051,7 @@ def _update_selected_cols(values, values_new, connector, verbosity):
     elif connector in [_CONNECTORS.OR, _SCOPES.ANY]:
         values |= values_new
     else:
-        log(f'error: connector "{connector}" is not implemented', 'qp.qlang._update_selection', verbosity)
+        log(f'error: connector "{connector}" is not implemented', 'qp.qlang._update_selected_cols', verbosity)
     return values
 
 
@@ -1060,7 +1059,16 @@ def _update_selected_cols(values, values_new, connector, verbosity):
 @pd.api.extensions.register_dataframe_accessor('q')
 class DataFrameQuery:
     """
-    A wrapper for qp.qlang.query implemented as a dataframe accessor.
+    A query language for pandas data exploration/analysis/modification.
+    df.qi() without any args can be used to interactively build a query in Jupyter notebooks.
+
+    examples:
+    df.q('id')  #selects the column 'id'
+    df.q('id  ´r > 100)  #selects col "id" and rows where the value is greater than 100
+    df.q('´c = id  ´r > 100) #same as above but more explicit
+    df.q('id  ´r > 100  ´c / name  ´r ? john')  #selects col "id"
+        #and rows where the value is greater than 100
+        #or col "name" and rows where the value contains "john"
     """
 
     def __init__(self, df):
@@ -1077,7 +1085,7 @@ class DataFrameQuery:
 @pd.api.extensions.register_dataframe_accessor('qi')
 class DataFrameQueryInteractiveMode:
     """
-    Wrapper for qp.qlang.query for interactive use in Jupyter notebooks.
+    Interactive version of df.q() for building queries in Jupyter notebooks.
     """
     def __init__(self, df: pd.DataFrame):
         self.df = df
@@ -1087,8 +1095,7 @@ class DataFrameQueryInteractiveMode:
 
         #code input
         ui_code = widgets.Textarea(
-            value='´s verbosity=3\n´s diff=None\n\n',
-            placeholder='Enter query code here',
+            value='´s verbosity=3\n´s diff=None\n\n#Enter query code here\n\n',
             layout=Layout(width='99%', height='97%')
             )
 
@@ -1161,9 +1168,9 @@ class DataFrameQueryInteractiveMode:
 
         
         ui_add_instruction = widgets.Button(
-            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            button_style='success',
             tooltip='adds the selected instruction to the query code',
-            icon='check' # (FontAwesome names without the `fa-` prefix)
+            icon='check'
             )
 
         def add_instruction(ui_code, i_text):
@@ -1203,7 +1210,7 @@ class DataFrameQueryInteractiveMode:
             children=[
                 ui_code,
                 ui_details,
-                widgets.HTML(value=query.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
+                widgets.HTML(value=DataFrameQuery.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
                 ],
             titles=['code', 'details', 'readme'],
             layout=Layout(width='50%', height='95%')
