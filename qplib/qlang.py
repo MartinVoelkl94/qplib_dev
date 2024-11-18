@@ -10,8 +10,6 @@ from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 from .util import log
 from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
 from ._diff import _diff
-from .pd_util import _check_df, _format_df
-
 
 VERBOSITY = 3
 DIFF = None
@@ -77,6 +75,7 @@ class _Symbols:
     
     def __str__(self):
         return f'{self.name}:\n' + '\n\t'.join([str(val) for key,val in self.by_name.items()])
+    
 
 
 COMMENT = _Symbol('#', 'COMMENT', 'comments out the rest of the line')
@@ -770,6 +769,69 @@ def query(df_old, code=''):
             verbosity=verbosity
             )  
         return result
+
+
+
+def _check_df(df, verbosity=3):
+    """
+    Checks dataframe for issues which could interfere with the query language used by df.q().
+    df.q() uses '&', '/' and '´' for expression syntax.
+    """
+    problems_found = False
+
+    if len(df.index) != len(df.index.unique()):
+        log('error: index is not unique', 'qp.qlang._check_df', verbosity)
+        problems_found = True
+
+    if len(df.columns) != len(df.columns.unique()):
+        log('error: columns are not unique', 'qp.qlang._check_df', verbosity)
+        problems_found = True
+
+    problems = {
+        '"&"': [],
+        '"/"': [],
+        '"´"': [],
+        'leading whitespace': [],
+        'trailing whitespace': [],
+        }
+
+    for col in df.columns:
+        if isinstance(col, str):
+            if '&' in col:
+                problems['"&"'].append(col)
+            if '/' in col:
+                problems['"/"'].append(col)
+            if '´' in col:
+                problems['"´"'].append(col)
+            if col.startswith(' '):
+                problems['leading whitespace'].append(col)
+            if col.endswith(' '):
+                problems['trailing whitespace'].append(col)
+
+    for problem, cols in problems.items():
+        if len(cols) > 0:
+            log(f'warning: the following column headers contain {problem}, use a tick (`) to escape such characters: {cols}',
+                'qp.qlang._check_df', verbosity)
+            problems_found = True
+    
+
+    symbol_conflicts = []
+    symbols = tuple(_SCOPES.by_symbol.keys()) + tuple(_NEGATIONS.by_symbol.keys()) + tuple(_OPERATORS.by_symbol.keys())
+    symbols = tuple(symbol for symbol in symbols if symbol != '')
+
+    for col in df.columns:
+        if str(col).startswith(tuple(symbols)):
+            symbol_conflicts.append(col)
+
+    if len(symbol_conflicts) > 0:
+        log(f'warning: the following column headers start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:\n{symbol_conflicts}\nexplicitely use a valid operator to avoid conflicts.',
+            'qp.qlang._check_df', verbosity)
+        problems_found = True
+
+
+    if problems_found is False:
+        log('info: df was checked. no problems found', 'qp.qlang._check_df', verbosity)
+
 
 
 def _tokenize_code(code, verbosity):

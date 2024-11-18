@@ -13,7 +13,6 @@ from .types import _date, _na, qpDict
 
 
 
-
 def get_df(size='small'):
     """
     Returns a small sample dataframe containing very messy fake medical data.
@@ -119,54 +118,6 @@ class dfFormatExtension:
         df = _format_df(self.df, fix_headers=fix_headers, add_metadata=add_metadata, verbosity=verbosity)    
         return df
 
-
-def _check_df(df, verbosity=3):
-    """
-    Checks dataframe for issues which could interfere with the query language used by df.q().
-    df.q() uses '&', '/' and '´' for expression syntax.
-    """
-    problems_found = False
-
-    if len(df.index) != len(df.index.unique()):
-        log('error: index is not unique', 'qp.pd_util._check_df', verbosity)
-        problems_found = True
-
-    if len(df.columns) != len(df.columns.unique()):
-        log('error: columns are not unique', 'qp.pd_util._check_df', verbosity)
-        problems_found = True
-
-    problems = {
-        '"&"': [],
-        '"/"': [],
-        '"´"': [],
-        'leading whitespace': [],
-        'trailing whitespace': [],
-        }
-    metadata = []
-
-    for col in df.columns:
-        if isinstance(col, str):
-            if '&' in col:
-                problems['"&"'].append(col)
-            if '/' in col:
-                problems['"/"'].append(col)
-            if '´' in col:
-                problems['"´"'].append(col)
-
-            if col.startswith(' '):
-                problems['leading whitespace'].append(col)
-            if col.endswith(' '):
-                problems['trailing whitespace'].append(col)
-
-
-    for problem, cols in problems.items():
-        if len(cols) > 0:
-            log(f'warning: the following column headers contain {problem}, use a tick (`) to escape such characters: {cols}',
-                'qp.pd_util._check_df', verbosity)
-            problems_found = True
-
-    if problems_found is False:
-        log('info: df was checked. no problems found', 'qp.pd_util._check_df', verbosity)
 
 
 def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
