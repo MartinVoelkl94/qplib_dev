@@ -9,7 +9,7 @@ from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 
 from .util import log
 from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
-from ._diff import _diff
+from .pd_util import _diff
 
 VERBOSITY = 3
 DIFF = None
@@ -1116,6 +1116,15 @@ def _update_selected_cols(values, values_new, connector, verbosity):
         log(f'error: connector "{connector}" is not implemented', 'qp.qlang._update_selected_cols', verbosity)
     return values
 
+
+@pd.api.extensions.register_dataframe_accessor('check')
+class DataFrameCheck:
+    def __init__(self, df: pd.DataFrame):
+        self.df = df 
+
+    def __call__(self, verbosity=3):
+        _check_df(self.df, verbosity=verbosity)
+        return self.df
 
 
 @pd.api.extensions.register_dataframe_accessor('q')

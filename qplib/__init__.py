@@ -1,13 +1,14 @@
 
 from .qlang import query, DataFrameQuery, DataFrameQueryInteractiveMode
 
-from ._diff import _diff as diff
 
 from .pd_util import \
     save, \
     load, \
     get_df, \
-    get_dfs
+    get_dfs, \
+    _diff as diff
+
 
 from .util import \
     log, \
