@@ -213,6 +213,8 @@ def _yn(x, errors='coerce', yes='yes', no='no', na=None):
         else:
             return errors
 
+
+
 def _type(x):
     """
     Returns what type something "should" be. e.g.: qp.type('1') == 'int'
@@ -220,39 +222,106 @@ def _type(x):
     types_int = (int, np.int8, np.int16, np.int32, np.int64)
     types_float = (float, np.float16, np.float32, np.float64)
     
-    if isinstance(x, str):
-        if re.fullmatch(r'\d{4}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}', x.strip(), re.IGNORECASE):
-            return 'date'  #year month day with any separator
-        elif re.fullmatch(r'\d{2}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{4}', x.strip(), re.IGNORECASE):
-            return 'date'  #day month year with any separator
-        elif re.fullmatch(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}[-\._\s\\/]\d{4}', x.strip(), re.IGNORECASE):
-            return 'date'  #nonsensical american format
-        elif re.fullmatch(r'\d{4}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}[-\._\s\\]\d{2}[-\._\s\\:]\d{2}[-\._\s\\:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime' #year month day time with any separator
-        elif re.fullmatch(r'\d{2}[-\._\s\\/](\d{2}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{4}[-\._\s\\]\d{2}[-\._\s\\:]\d{2}[-\._\s\\:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime' #day month year time with any separator
-        elif re.fullmatch(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]\d{2}[-\._\s\\/]\d{4}[-\._\s\\]\d{2}[-\._\s\\:]\d{2}[-\._\s\\:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime' #nonsensical american format
+
+    if isinstance(x, bool):
+        return 'bool'
+    elif isinstance(x, types_int):
+        return 'int'
+    elif isinstance(x, types_float):
+        return 'float'
+    
+
+    elif isinstance(x, str):
+        if re.fullmatch(r'(true|false)', x.strip(), re.IGNORECASE):
+            return 'bool'
         elif re.fullmatch(r'\d+', x.strip()):
             return 'int'
         elif re.fullmatch(r'\d+\.\d+', x.strip()):
             return 'float'
-        elif re.fullmatch(r'(true|false)', x.strip(), re.IGNORECASE):
-            return 'bool'
+        
+
+        #date formats from most expected to unexpected
+
+        #yyyy-mm-dd with any separator
+        elif re.fullmatch(r'\d{4}[-\._\s\\/]\d{2}[-\._\s\\/]\d{2}', x.strip(), re.IGNORECASE):
+            return 'date'
+        
+        #dd-mm-yyyy with any separator
+        elif re.fullmatch(r'\d{2}[-\._\s\\/]\d{2}[-\._\s\\/]\d{4}', x.strip(), re.IGNORECASE):
+            return 'date'
+
+        #yyyy-mmm-dd with any or no separator
+        elif re.fullmatch(r'\d{4}[-\._\s\\/]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{2}', x.strip(), re.IGNORECASE):
+            return 'date'
+        
+        #dd-mmm-yyyy with any or no separator
+        elif re.fullmatch(r'\d{2}[-\._\s\\/]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{4}', x.strip(), re.IGNORECASE):
+            return 'date'
+        
+        #mmm-dd-yyyy with any or no separator
+        elif re.fullmatch(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{2}[-\._\s\\/]*\d{4}', x.strip(), re.IGNORECASE):
+            return 'date'
+        
+        #yyyy-month-dd with any or no separator
+        elif re.fullmatch(r'\d{4}[-\._\s\\/]*(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{2}', x.strip(), re.IGNORECASE):
+            return 'date'
+        
+        #dd-month-yyyy with any or no separator
+        elif re.fullmatch(r'\d{2}[-\._\s\\/]*(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{4}', x.strip(), re.IGNORECASE):
+            return 'date'
+        
+        #month-dd-yyyy with any or no separator
+        elif re.fullmatch(r'(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{2}[-\._\s\\/]*\d{4}', x.strip(), re.IGNORECASE):
+            return 'date'
+        
+
+        #datetime formats from most expected to unexpected
+
+        #yyyy-mm-dd-hh-mm-s  with any separator and arbitrary number of digits
+        elif re.fullmatch(r'\d{4}[-\._\s\\/]\d{2}[-\._\s\\/]\d{2}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+        
+        #dd-mm-yyyy with any separator and arbitrary number of digits
+        elif re.fullmatch(r'\d{2}[-\._\s\\/]\d{2}[-\._\s\\/]\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+
+        #yyyy-mmm-dd with any or no separator and arbitrary number of digits
+        elif re.fullmatch(r'\d{4}[-\._\s\\/]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{2}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+        
+        #dd-mmm-yyyy with any or no separator and arbitrary number of digits
+        elif re.fullmatch(r'\d{2}[-\._\s\\/]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+        
+        #mmm-dd-yyyy with any or no separator and arbitrary number of digits
+        elif re.fullmatch(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{2}[-\._\s\\/]*\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+        
+        #yyyy-month-dd with any or no separator and arbitrary number of digits
+        elif re.fullmatch(r'\d{4}[-\._\s\\/]*(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{2}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+        
+        #dd-month-yyyy with any or no separator and arbitrary number of digits
+        elif re.fullmatch(r'\d{2}[-\._\s\\/]*(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+        
+        #month-dd-yyyy with any or no separator and arbitrary number of digits
+        elif re.fullmatch(r'(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{2}[-\._\s\\/]*\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+            return 'datetime'
+
+
         else:
             try:
                 x = pd.to_numeric(x)
                 return 'num'
             except:
                 return 'str'
-    elif isinstance(x, bool):
-        return 'bool'
-    elif isinstance(x, types_int):
-        return 'int'
-    elif isinstance(x, types_float):
-        return 'float'
+            
+            
     else:
         return type(x).__name__.lower()
+
+
 
 
 class qpDict(dict):
