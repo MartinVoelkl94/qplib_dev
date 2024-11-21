@@ -151,7 +151,7 @@ df = get_df()
 def test_col_selection(instructions, expected_cols):
     result = df.q(instructions)
     expected = df.loc[:, expected_cols]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 
@@ -419,7 +419,7 @@ def test_row_selection(instructions, expected_df):
     df = get_df()
     temp = df.q(instructions)
     result = df.loc[temp.index, temp.columns]
-    assert result.equals(expected_df), qp.diff(result, expected_df, returns='str')
+    assert result.equals(expected_df), qp.diff(result, expected_df, output='str')
 
 
 
@@ -441,7 +441,7 @@ def test_metadata(code, metadata):
     df = df.q(code)
     df1 = get_df_simple_tagged()
     df1['meta'] = metadata
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
 
 
 def test_scope1():
@@ -450,7 +450,7 @@ def test_scope1():
     df2 = qp.get_df()
     df2.loc[[1,2,3,4,6,7,8,9,10], :] = ''
     expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
     
 def test_scope2():
     df1 = qp.get_df()
@@ -458,14 +458,14 @@ def test_scope2():
     df2 = qp.get_df()
     df2.loc[[1,2,3,4,6,7,8,9,10], :] = ''
     expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 def test_scope3():
     df1 = qp.get_df()
     result = df1.q('´r all is na ´v')
     df2 = qp.get_df()
     expected = df2.loc[[], :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 def test_scope4():
     df1 = qp.get_df()
@@ -481,7 +481,7 @@ def test_scope4():
     df2.loc[[2,7,8], 'diabetes'] = ''
     df2.loc[[1,6,7], 'dose'] = ''
     expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_metadata_continous():
@@ -490,27 +490,27 @@ def test_metadata_continous():
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
     df = df.q('=a  ´r >0   ´m +=>0  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '', '>0>0']
     df = df.q('=a   ´r >0  ´m+=>0  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '0', '>0>0']
     df = df.q('=a   ´r ==0    ´m += 0  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '', '>0>0']
     df = df.q('a   ´r ==0    ´m ~ x.replace("0", "")  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '', '>>']
     df = df.q('=a   ´r >0    ´m~x.replace("0", "")  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '', '']
     df = df.q('=a     ´m=  ´c is any  ´r is any')
-    assert df.equals(df1), qp.diff(df, df1, returns='str')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
 
 
 
@@ -524,7 +524,7 @@ def test_set_val():
         """)
     df1['name'] = 'a'
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_set_val1():
@@ -537,7 +537,7 @@ def test_set_val1():
         """)
     df1['name'] = 'a'
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_set_val2():
@@ -552,7 +552,7 @@ def test_set_val2():
     df1['name'] = 'a'
     df1['gender'] = 'b'
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 
@@ -566,7 +566,7 @@ def test_eval():
         """)
     df1['name'] = df1['name'].str.lower()
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_eval1():
@@ -579,7 +579,7 @@ def test_eval1():
         """)
     df1['name'] = df1['name'].str.lower()
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_eval2():
@@ -592,7 +592,7 @@ def test_eval2():
         """)
     df1['gender'] = df1['gender'].astype(str).str.lower()
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_eval3():
@@ -605,7 +605,7 @@ def test_eval3():
         """)
     df1['gender'] = df1['gender'].astype(str).str.lower()
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_eval4():
@@ -617,7 +617,7 @@ def test_eval4():
         """)
     df1.loc[0, 'ID'] = '10001'
     expected = df1.loc[[0], ['ID']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_eval5():
@@ -630,7 +630,7 @@ def test_eval5():
     df1['ID'] = str(0)
     df1['age'] = str(0)
     expected = df1.loc[:, ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_eval6():
@@ -643,7 +643,7 @@ def test_eval6():
     df1.loc[[0,1,2,3,4,8,10], 'ID'] = 0
     df1.loc[[0,1,2,3,4,8,10], 'age'] = 0
     expected = df1.loc[[0,1,2,3,4,8,10], ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_eval7():
@@ -658,7 +658,7 @@ def test_eval7():
     expected = df1.loc[:, ['ID', 'age']]
     assert (result['ID'] == 10).all()
     assert (result.loc[[5,6,7,9], 'age'] != 10).all()
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 
@@ -671,7 +671,7 @@ def test_col_eval():
         """)
     df1['ID'] = df1['name']
     expected = df1.loc[:, ['ID']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 def test_col_eval1():
     df = qp.get_df()
@@ -683,7 +683,7 @@ def test_col_eval1():
         """)
     df1['ID'] = df1['name']
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 def test_col_eval2():
     df = qp.get_df()
@@ -695,7 +695,7 @@ def test_col_eval2():
     df1['ID'] = df1['name']
     df1['age'] = df1['name']
     expected = df1.loc[:, ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_col_eval3():
@@ -708,7 +708,7 @@ def test_col_eval3():
     for col in df1.columns:
         df1[col] = df1['name']
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_col_eval4():
@@ -721,7 +721,7 @@ def test_col_eval4():
     df1['ID'] = df1['name']
     df1['age'] = df1['name']
     expected = df1.loc[:, ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_col_eval5():
@@ -734,7 +734,7 @@ def test_col_eval5():
     df1['ID'] = df1['name']
     df1['age'] = df1['name']
     expected = df1.loc[[0,1,2,3,4,8,10], ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_col_eval6():
@@ -748,7 +748,7 @@ def test_col_eval6():
     df1.loc[[0,1,2,3,4,8,10], 'age'] = df1.loc[[0,1,2,3,4,8,10], 'name']
     expected = df1.loc[:, ['ID', 'age']]
     assert (result.loc[[5,6,7,9], 'age'] != df.loc[[5,6,7,9], 'name']).all()
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 
@@ -783,7 +783,7 @@ def test_sort(instructions, expected):
     df = qp.get_df()
     result = df.q(instructions)
     expected_df = df.sort_values(by=expected)
-    assert result.equals(expected_df), qp.diff(result, expected_df, returns='str')
+    assert result.equals(expected_df), qp.diff(result, expected_df, output='str')
 
 
 def test_to_int():
@@ -793,7 +793,7 @@ def test_to_int():
     df2['age'] = [-25, 30, None, None, 40, None, None, None, None, None, 35]
     df2['age'] = df2['age'].astype('Int64')
     expected = df2.loc[:,['age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_to_float():
@@ -803,7 +803,7 @@ def test_to_float():
     df2['age'] = [-25.0, 30.0, None, None, 40.0, None, None, None, None, None, 35.0]
     df2['age'] = df2['age'].astype('Float64')
     expected = df2.loc[:,['age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_to_num():
@@ -813,7 +813,7 @@ def test_to_num():
     df2['age'] = [-25, 30, np.nan, np.nan, 40, np.nan, np.nan, np.nan, np.nan, np.nan, 35]
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']].astype('object')
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_to_str():
@@ -823,7 +823,7 @@ def test_to_str():
     df2['age'] = ['-25', '30', 'nan', 'None', '40.0', 'forty-five', 'nan', 'unk', '', 'unknown', '35']
     df2['age'] = df2['age'].astype(str)
     expected = df2.loc[:,['age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_to_date():
@@ -845,7 +845,7 @@ def test_to_date():
         ]
     df2['date of birth'] = pd.to_datetime(df2['date of birth']).astype('datetime64[ns]')
     expected = df2.loc[:,['date of birth']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_to_na():
@@ -855,7 +855,7 @@ def test_to_na():
     df2['age'] = [-25, '30', None, None, '40.0', 'forty-five', None, 'unk', None, 'unknown', 35]
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_to_nk():
@@ -865,7 +865,7 @@ def test_to_nk():
     df2['age'] = [-25, '30', np.nan, None, '40.0', 'forty-five', 'nan', 'unknown', '', 'unknown', 35]
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['age']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_to_yn():
@@ -875,7 +875,7 @@ def test_to_yn():
     df2['diabetes'] = ['no', 'yes', None, 'no', 'yes', 'yes', 'no', None, None, 'no', 'yes']
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['diabetes']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 
@@ -908,7 +908,7 @@ def test_new_col(code, content, cols):
     df2 = get_df()
     df2['new1'] = content
     expected = df2.loc[:, cols]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 def test_new_col1():
     df1 = get_df()
@@ -916,7 +916,7 @@ def test_new_col1():
     df2 = get_df()
     df2['new col'] = 'a'
     expected = df2.loc[:,['new col']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_new_col2():
@@ -926,7 +926,7 @@ def test_new_col2():
     df2['new1'] = 'a'
     df2['new2'] = 'b'
     expected = df2.loc[:,['new1', 'new2']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_new_col3():
@@ -936,7 +936,7 @@ def test_new_col3():
     df2['new1'] = 'a'
     df2['new2'] = 'b'
     expected = df2.loc[:,['new1', 'new2']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_new_col4():
@@ -945,7 +945,7 @@ def test_new_col4():
     df2 = get_df()
     df2['new1'] = 'a'
     expected = df2.loc[[0],['new1']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_new_col5():
@@ -955,7 +955,7 @@ def test_new_col5():
     df2 = get_df()
     df2['new1'] = 'a'
     expected = df2.loc[[0],['new1']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_new_col6():
@@ -964,7 +964,7 @@ def test_new_col6():
     df2 = get_df()
     df2['new1'] = 'a'
     expected = df2.loc[[0],['new1']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 
@@ -973,7 +973,7 @@ def test_header_replace():
     df2 = get_df()
     result = df1.q('id ´h id')
     expected = df2.rename(columns={'ID': 'id'}).loc[:, ['id']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_header_replace1():
@@ -981,7 +981,7 @@ def test_header_replace1():
     df2 = get_df()
     result = df1.q('id ´h id  ´c name ´h n  ´c date of birth ´h dob ´c is any')
     expected = df2.rename(columns={'ID': 'id', 'name': 'n', 'date of birth': 'dob'})
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_header_append():
@@ -989,7 +989,7 @@ def test_header_append():
     df2 = get_df()
     result = df1.q('id ´h += abc')
     expected = df2.rename(columns={'ID': 'IDabc'}).loc[:, ['IDabc']]
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_header_append1():
@@ -997,7 +997,7 @@ def test_header_append1():
     df2 = get_df()
     result = df1.q('id / name / date of birth  ´h += abc ´c is any')
     expected = df2.rename(columns={'ID': 'IDabc', 'name': 'nameabc', 'date of birth': 'date of birthabc'})
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_header_eval():
@@ -1005,7 +1005,7 @@ def test_header_eval():
     df2 = get_df()
     result = df1.q('id ´h ~ x.lower() + str(len(x))  ´c is any')
     expected = df2.rename(columns={'ID': 'id2'})
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_header_eval1():
@@ -1013,7 +1013,7 @@ def test_header_eval1():
     df2 = get_df()
     result = df1.q('id / weight / diabetes   ´h ~ x.lower() + str(len(x))  ´c is any')
     expected = df2.rename(columns={'ID': 'id2', 'weight': 'weight6', 'diabetes': 'diabetes8'})
-    assert result.equals(expected), qp.diff(result, expected, returns='str')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 

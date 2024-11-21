@@ -1133,13 +1133,30 @@ class DataFrameQuery:
     A query language for pandas data exploration/analysis/modification.
     df.qi() without any args can be used to interactively build a query in Jupyter notebooks.
 
+    
     examples:
-    df.q('id')  #selects the column 'id'
-    df.q('id  ´r > 100)  #selects col "id" and rows where the value is greater than 100
-    df.q('´c = id  ´r > 100) #same as above but more explicit
-    df.q('id  ´r > 100  ´c / name  ´r ? john')  #selects col "id"
-        #and rows where the value is greater than 100
-        #or col "name" and rows where the value contains "john"
+
+    #select col
+    df.q('id')
+
+    #equivalent to
+    df.q('´c id')
+
+    #select multiple cols
+    df.q('id / name')
+
+    #select rows in a col which fullfill a condition
+    df.q('id  ´r > 20000')
+
+    #select rows fullfilling multiple conditions in the same col
+    df.q('id  ´r > 20000 & < 30000')
+
+    #select rows fullfilling both conditions in different cols
+    df.q('id  ´r > 20000   ´c name  ´r & ?john')
+
+    #select rows fullfilling either condition in different cols
+    df.q('id  ´r > 20000   ´c name  ´r / ?john')
+
     """
 
     def __init__(self, df):

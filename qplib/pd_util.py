@@ -143,13 +143,10 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 @pd.api.extensions.register_dataframe_accessor('save')
 class DataFrameSave:
     """
-    saves the dataframe to a sheet in an excel file. If the file/sheet already exists, the data will be overwritten.
+    saves a dataframe to a sheet in an excel file. If the file/sheet already exists, the data will be overwritten.
 
-    "archive" controls if and where a timestamped copy of the file is saved:
-    False: do not save a copy
-    'source': save copy in an archive folder located in current working directory
-    'destination': save copy in an archive folder located in the same directory as the file to be saved
-    'both': save copy in both locations
+    if a folder named "archive" exists at the chosen path, a timestamped copy of the file will be saved there,
+    unless archive=False.
     """
 
     def __init__(self, df: pd.DataFrame):
@@ -160,34 +157,57 @@ class DataFrameSave:
     
     def __call__(
         self,
-        path='df.xlsx', sheet='data1', index=True, if_sheet_exists='replace',
-        diff_before=None, diff_show='new+',
-        archive=True, datefmt='%Y_%m_%d',
+        path='df.xlsx',
+        sheet='data1',
+        index=True,
+        if_sheet_exists='replace',
+        archive=True,
+        datefmt='%Y_%m_%d',
+        diff_before=None,
+        diff_mode='new+',
+        verbosity=3,
         ):
-        save(self.df, path=path, sheet=sheet, index=index, if_sheet_exists=if_sheet_exists, archive=archive, datefmt=datefmt, diff_before=diff_before, diff_show=diff_show)
+        save(
+            self.df,
+            path,
+            sheet,
+            index,
+            if_sheet_exists,
+            archive,
+            datefmt,
+            diff_before,
+            diff_mode,
+            verbosity,
+            )
+
 
 def save(
     df,
-    path='df.xlsx', sheet='data1', index=True, if_sheet_exists='replace',
-    diff_before=None, diff_show='new+',
-    archive=True, datefmt='%Y_%m_%d',
+    path='df.xlsx',
+    sheet='data1',
+    index=True,
+    if_sheet_exists='replace',
+    archive=True,
+    datefmt='%Y_%m_%d',
+    diff_before=None,
+    diff_mode='new+',
     verbosity=3,
     ):
     """
-    saves a dataframe to a sheet in an excel file. If the file/sheet already exists, the data will be overwritten.
-
-    if a folder named "archive" exists at the chosen path, a timestamped copy of the file will be saved there,
-    unless archive=False.
+    see qp.save() for details
     """
     if diff_before is not None:
-        df_old, date_old = load(path, sheet, before=diff_before, return_date=True)
-        df = _diff(df, df_old, show=diff_show, verbose=False, newline='\n')
+        df_old = load(path, sheet, before=diff_before)
+        df = _diff(
+            df,
+            df_old,
+            mode=diff_mode,
+            verbosity=3,
+            )
         
-
 
     if not path.endswith('.xlsx'):
         path = f'{path}.xlsx'
-
 
     if os.path.isfile(path):
         log(f'warning: file "{path}" already exists. data in sheet "{sheet}" will be overwritten', 'df.save()', verbosity)
@@ -199,13 +219,12 @@ def save(
             df.to_excel(writer, sheet_name=sheet, index=index)
 
 
-    #archiving
-    folder = os.path.dirname(path)
-    if folder == '':
-        folder = os.getcwd()
-    archive_folder = f'{folder}/archive'
-
     if archive is True:
+        folder = os.path.dirname(path)
+        if folder == '':
+            folder = os.getcwd()
+        archive_folder = f'{folder}/archive'
+
         if not os.path.isdir(f'{archive_folder}'):
             log(f'warning: did not find archive folder "{archive_folder}"', 'df.save()', verbosity)
             return
@@ -225,25 +244,25 @@ def save(
                 df.to_excel(writer, sheet_name=sheet, index=index)      
 
 
-def load(path='df', sheet='data1', index=0, before='now', return_date=False, verbosity=3, **kwargs):
+
+def load(path='df', sheet='data1', index_col=0, before='now', return_date=False, verbosity=3, **kwargs):
     """
     loads .xlsx file from before a given date.
     assumes that the filenames end with a timestamp.
-
     
-    "before" defines recency of the file:
-
-    now: most recent version
-    today: most recent version before today
-    this day: most recent version before today
-    this week: ...
-    this month: ...
-    this year: ...
-
-    '2024_01_01': most recent version before 2024_01_01
+    before:
+    defines recency of the file
+    - now: most recent version
+    - today: most recent version before today
+    - this day: most recent version before today
+    - this week: ...
+    - this month: ...
+    - this year: ...
+    - '2024_01_01': most recent version before 2024_01_01 (accepts many date formats)
     """
+
     if os.path.isfile(path):
-        df = pd.read_excel(path, sheet_name=sheet, index_col=index, **kwargs)
+        df = pd.read_excel(path, sheet_name=sheet, index_col=index_col, **kwargs)
         if 'meta' in df.columns:
             df.loc[:, 'meta'] = df.loc[:, 'meta'].apply(lambda x: _na(x, errors='ignore', na=''))
         return df
@@ -271,11 +290,6 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, ver
     
     if folder == '':
         folder = os.getcwd()
-    if os.path.isdir(f'{folder}/archive'):
-        folder = f'{folder}/archive'
-    else:
-        log(f'info: no archive folder found. looking for most recent file in "{folder}" instead',
-            'df.load()', verbosity)
 
     timestamps = pd.Series([])
     for file in os.listdir(folder):
@@ -290,42 +304,49 @@ def load(path='df', sheet='data1', index=0, before='now', return_date=False, ver
 
     if len(timestamps) == 0:
         log(f'warning: no timestamped files starting with "{name}" found in "{folder}" before {cutoff}',
-            'df.load()', verbosity)
+            'qp.load()', verbosity)
         return None
     else:
         timestamps = timestamps.sort_index()
         latest = timestamps.iloc[len(timestamps) - 1]
         path = f'{folder}/{name}{latest}.xlsx'
-        log(f'info: loading "{path}"', 'df.load()', verbosity)
-        if return_date is True:
-            df = pd.read_excel(path, sheet_name=sheet, index_col=index, **kwargs), latest
-        else:
-            df = pd.read_excel(path, sheet_name=sheet, index_col=index, **kwargs)
+        log(f'info: loading "{path}"', 'qp.load()', verbosity)
+        df = pd.read_excel(path, sheet_name=sheet, index_col=index_col, **kwargs)
         
         if 'meta' in df.columns:
             df.loc[:, 'meta'] = df.loc[:, 'meta'].apply(lambda x: _na(x, errors='ignore', na=''))
-
-        return df
+ 
+        if return_date is True:
+            return df, latest
+        else:
+            return df
 
 
 
 def _diff(
-    df_new, df_old,
-    mode='mix',  returns='df',  #df, summary, str, all, print, <filename.xlsx>
-    index_col=0, ignore=None,  #col(s) to ignore for comparison
-    max_cols=None, max_rows=None,
-    prefix_old='old: ', verbosity=3):
+    df_new,
+    df_old,
+    mode='mix',
+    output='df',  #df, summary, str, all, print, <filename.xlsx>
+    ignore=None,  #col(s) to ignore for comparison
+    rename=None,  #rename cols before comparison
+    index_col=0,  #column to use as index when reading from file
+    max_cols=None,
+    max_rows=None,
+    prefix_old='old: ',
+    verbosity=3,
+    ):
     """
     compares two dataframes/csv/excel files and returns differences
 
     mode:
-    not needed for returns="summary" or "str" or "print"
+    not needed for output="summary" or "str" or "print"
     - 'new': creates new dataframe with highlighted value additions, removals and changes
     - 'new+': also shows old values in columns next to new values
     - 'old': creates old dataframe with highlighted value additions, removals and changes
     - 'mix': creates mixture of new and old dataframe with highlighted value additions, removals and changes
     
-    returns:
+    output:
     - 'df': returns the dataframe with highlighted differences (using the given mode argument)
     - 'summary': returns a dictionary containing the number of added, removed and changed values and columns for each sheet
     - 'str': returns a string containing a summary of the differences
@@ -333,7 +354,14 @@ def _diff(
     - 'print': prints the string containing a summary of the differences and returns None
     - '<filename.xlsx>': saves the differences to an excel file with the given name and returns as with 'all'
 
-    
+    ignore:
+    - column(s) to ignore for comparison
+
+    rename:
+    - dictionary to rename columns before comparison
+    - is applied to both dataframes
+
+
     Excel comparison:
 
     when two excel files are compared, all sheets with the same name in both files are compared, meaning that 'df'
@@ -355,11 +383,17 @@ def _diff(
     if isinstance(df_new, str) and isinstance(df_old, str) \
         and df_new.endswith('.xlsx') and df_old.endswith('.xlsx'):
         df, summary, string = _diff_excel(
-            df_new, df_old,
-            mode, returns,
-            index_col, ignore,
-            max_cols, max_rows,
-            prefix_old, verbosity
+            df_new,
+            df_old,
+            mode,
+            output,
+            ignore,
+            rename,
+            index_col,
+            max_cols,
+            max_rows,
+            prefix_old,
+            verbosity,
             )
         
     
@@ -382,30 +416,34 @@ def _diff(
             string = 'both dataframes are identical'
         else:
             df, summary = _diff_df(
-                df_new, df_old,
-                mode, returns,
+                df_new,
+                df_old,
+                mode,
+                output,
                 ignore,
+                rename,
                 max_cols, max_rows,
                 prefix_old,
-                name_new='new df', name_old='old df',
+                name_new='new df',
+                name_old='old df',
                 verbosity=verbosity
                 )
             string = _diff_str(df_new, df_old, ignore, verbosity)
 
 
-    if returns == 'df':
+    if output == 'df':
         return df
-    if returns == 'str':
+    if output == 'str':
         return string
-    if returns == 'summary':
+    if output == 'summary':
         return summary
-    if returns == 'all':
+    if output == 'all':
         return df, summary, string
-    if returns == 'print':
+    if output == 'print':
         print(string)
         return None
-    elif returns.endswith('.xlsx') and isinstance(df, dict): 
-        with pd.ExcelWriter(returns) as writer:
+    elif output.endswith('.xlsx') and isinstance(df, dict): 
+        with pd.ExcelWriter(output) as writer:
             summary.to_excel(writer, sheet_name='diff_summary', index=False)
             for sheet, df in df.items():
                 if sheet == 'diff_summary':
@@ -414,25 +452,31 @@ def _diff(
                 if hasattr(df, 'data'):
                     df.data['meta'] = df.data['meta'].str.replace('<br>', '\n')
                     df.to_excel(writer, sheet_name=sheet, index=True)
-        log(f'info: differences saved to "{returns}"', 'qp._diff.diff()', verbosity)
+        log(f'info: differences saved to "{output}"', 'qp._diff.diff()', verbosity)
         return df, summary, string
-    elif returns.endswith('.xlsx'):
-        df.to_excel(returns, index=index_col)
-        log(f'info: differences saved to "{returns}"', 'qp._diff.diff()', verbosity)
+    elif output.endswith('.xlsx'):
+        df.to_excel(output, index=index_col)
+        log(f'info: differences saved to "{output}"', 'qp._diff.diff()', verbosity)
         return df, summary, string
     else:
-        log(f'error: unknown return value: {returns}', 'qp._diff.diff()', verbosity)
+        log(f'error: unknown return value: {output}', 'qp._diff.diff()', verbosity)
         return None
    
 
 def _diff_df(
-    df_new, df_old,
-    mode='mix', returns='df',
+    df_new,
+    df_old,
+    mode='mix',
+    output='df',
     ignore=None,
-    max_rows=None, max_cols=None, 
+    rename=None,
+    max_rows=None,
+    max_cols=None, 
     prefix_old='old: ',
-    name_new='new df', name_old='old df',
-    verbosity=3):
+    name_new='new df',
+    name_old='old df',
+    verbosity=3,
+    ):
     '''
     see _diff() for details
     '''
@@ -445,7 +489,7 @@ def _diff_df(
         max_rows = 200
     if max_cols is None:
         max_cols = 20
-    if returns.endswith('.xlsx'):
+    if output.endswith('.xlsx'):
         newline = '\n'
     else:
         newline = '<br>'
@@ -471,6 +515,14 @@ def _diff_df(
 
 
     #prepare dataframes
+    if rename is None:
+        pass
+    elif isinstance(rename, dict):
+        df_new = df_new.rename(columns=rename)
+        df_old = df_old.rename(columns=rename)
+    else:
+        log('error: rename argument must be a dictionary', 'qp.diff()', verbosity)
+
     df_new = _format_df(df_new, fix_headers=False, add_metadata=True, verbosity=2)
     df_old = _format_df(df_old, fix_headers=False, add_metadata=True, verbosity=2)
 
@@ -595,7 +647,7 @@ def _diff_df(
         df_diff.loc[rows_shared, cols_shared_metadata] = df_old_changed.values
 
 
-    if returns.endswith('.xlsx'):
+    if output.endswith('.xlsx'):
         result = df_diff.style.apply(lambda x: _apply_style(x, df_diff_style), axis=None) 
     else:
         if max_cols is not None and max_cols < len(df_diff.columns):
@@ -619,19 +671,21 @@ def _diff_df(
     
 
 def _diff_excel(
-    file_new='new.xlsx', file_old='old.xlsx',
-    mode='new+', returns='df',
-    index_col=0, ignore=None,
-    max_rows=None, max_cols=None, prefix_old='old: ',
-    verbosity=3):
+    file_new='new.xlsx',
+    file_old='old.xlsx',
+    mode='new+',
+    output='df',
+    ignore=None,
+    rename=None,
+    index_col=0,
+    max_rows=None,
+    max_cols=None,
+    prefix_old='old: ',
+    verbosity=3,
+    ):
     '''
     see _diff() for details
     '''
-
-    if ignore is None:
-        ignore = []
-    elif isinstance(ignore, str):
-        ignore = [ignore]
 
     summary = pd.DataFrame(columns=[
         'sheet',
@@ -667,13 +721,18 @@ def _diff_excel(
             name_new=f'sheet "{sheet}" in file "{file_new}"'
             name_old=f'sheet "{sheet}" in file "{file_old}"'
             result, changes = _diff_df(
-                df_new, df_old,
-                mode, returns,
+                df_new,
+                df_old,
+                mode,
+                output,
                 ignore,
-                max_rows, max_cols,
+                rename,
+                max_rows,
+                max_cols,
                 prefix_old,
-                name_new, name_old,
-                verbosity
+                name_new,
+                name_old,
+                verbosity,
                 )
             
             #check if df is empty

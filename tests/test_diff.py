@@ -465,7 +465,7 @@ def test_mode_mix_ignore2():
 
 
 def test_returns_df():
-    result = qp.diff(df_new, df_old, 'new', returns='df', verbosity=0).data
+    result = qp.diff(df_new, df_old, 'new', output='df', verbosity=0).data
 
     result_expected = pd.DataFrame(columns=['meta', 'd', 'b', 'a'], index=['y','x2','z'])
 
@@ -489,7 +489,7 @@ def test_returns_df():
 
 
 def test_returns_df_ignore():
-    result = qp.diff(df_new, df_old, 'new', ignore='a', returns='df', verbosity=0).data
+    result = qp.diff(df_new, df_old, 'new', ignore='a', output='df', verbosity=0).data
 
     result_expected = pd.DataFrame(columns=['meta', 'd', 'b', 'a'], index=['y','x2','z'])
 
@@ -513,7 +513,7 @@ def test_returns_df_ignore():
 
 
 def test_returns_df_ignore1():
-    result = qp.diff(df_new, df_old, 'new', ignore=['b'], returns='df', verbosity=0).data
+    result = qp.diff(df_new, df_old, 'new', ignore=['b'], output='df', verbosity=0).data
 
     result_expected = pd.DataFrame(columns=['meta', 'd', 'b', 'a'], index=['y','x2','z'])
 
@@ -537,7 +537,7 @@ def test_returns_df_ignore1():
 
 
 def test_returns_df_ignore2():
-    result = qp.diff(df_new, df_old, 'new', ignore=['b', 'a'], returns='df', verbosity=0).data
+    result = qp.diff(df_new, df_old, 'new', ignore=['b', 'a'], output='df', verbosity=0).data
 
     result_expected = pd.DataFrame(columns=['meta', 'd', 'b', 'a'], index=['y','x2','z'])
 
@@ -562,7 +562,7 @@ def test_returns_df_ignore2():
 
 
 def test_returns_summary():
-    result = qp.diff(df_new, df_old, returns='summary')
+    result = qp.diff(df_new, df_old, output='summary')
     expected = {
         'cols added': 1,
         'cols removed': 1,
@@ -576,7 +576,7 @@ def test_returns_summary():
 
 
 def test_returns_summary_ignore():
-    result = qp.diff(df_new, df_old, ignore='a', returns='summary')
+    result = qp.diff(df_new, df_old, ignore='a', output='summary')
     expected = {
         'cols added': 1,
         'cols removed': 1,
@@ -590,7 +590,7 @@ def test_returns_summary_ignore():
 
 
 def test_returns_summary_ignore1():
-    result = qp.diff(df_new, df_old, ignore=['b'], returns='summary')
+    result = qp.diff(df_new, df_old, ignore=['b'], output='summary')
     expected = {
         'cols added': 1,
         'cols removed': 1,
@@ -604,7 +604,7 @@ def test_returns_summary_ignore1():
 
 
 def test_returns_summary_ignore2():
-    result = qp.diff(df_new, df_old, ignore=['a','b'], returns='summary')
+    result = qp.diff(df_new, df_old, ignore=['a','b'], output='summary')
     expected = {
         'cols added': 1,
         'cols removed': 1,
@@ -619,26 +619,26 @@ def test_returns_summary_ignore2():
 
 
 def test_returns_str():
-    result = qp.diff(df_new, df_old, returns='str')
+    result = qp.diff(df_new, df_old, output='str')
     expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     b    a\ny  nan  0.0\nz  3.0  nan\n\ndifferent values in df_old:\n      b    a\ny   nan  2.0\nz  None  3.0\n".replace('\t','')
     assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
 
 
 def test_returns_str_ignore():
-    result = qp.diff(df_new, df_old, ignore='a', returns='str')
+    result = qp.diff(df_new, df_old, ignore='a', output='str')
     expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     b\ny  nan\nz  3.0\n\ndifferent values in df_old:\n      b\ny   nan\nz  None\n".replace('\t','')
     assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
 
 def test_returns_str_ignore1():
-    result = qp.diff(df_new, df_old, ignore=['b'], returns='str')
+    result = qp.diff(df_new, df_old, ignore=['b'], output='str')
     expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     a\ny  0.0\nz  nan\n\ndifferent values in df_old:\n      a\ny   2.0\nz  3.0\n".replace('\t','')
     assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
 
 def test_returns_str_ignore2():
-    result = qp.diff(df_new, df_old, ignore=['a','b'], returns='str')
+    result = qp.diff(df_new, df_old, ignore=['a','b'], output='str')
     expected = "only in df_new:\ndtypes: {}\nindices: ['x2']\nheaders: ['d']\nonly in df_old:\ndtypes: {}\nindices: ['x']\nheaders: ['c']\n\ndifferent values in df_new:\n     Empty DataFrame\nColumns: []\nIndex: [y, z]\n\ndifferent values in df_old:\n      Empty DataFrame\nColumns: []\nIndex: [y, z]\n".replace('\t','')
     assert result.replace(' ','') == expected.replace(' ',''), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -646,7 +646,7 @@ def test_returns_str_ignore2():
 
 
 def test_returns_all():
-    result_df_styler, result_summary, result_str = qp.diff(df_new, df_old, returns='all')
+    result_df_styler, result_summary, result_str = qp.diff(df_new, df_old, output='all')
     result_df = result_df_styler.data
 
     expected_df = pd.DataFrame(columns=['meta', 'd', 'b', 'a', 'c'], index=['y', 'x2', 'z', 'x'])
@@ -693,7 +693,7 @@ def test_returns_all():
     
 
 def test_returns_print():
-    result = qp.diff(df_new, df_old, returns='print')
+    result = qp.diff(df_new, df_old, output='print')
     expected = None
     assert result == expected, f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
