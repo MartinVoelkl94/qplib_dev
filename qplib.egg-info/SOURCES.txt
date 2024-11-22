@@ -2,9 +2,6 @@ LICENSE
 README.md
 pyproject.toml
 qplib/__init__.py
-qplib/_diff.py
-qplib/deprecated_qlang_no_mask.py
-qplib/deprecated_qlang_old.py
 qplib/pd_util.py
 qplib/qlang.py
 qplib/types.py
