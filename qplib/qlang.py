@@ -154,6 +154,8 @@ _OPERATORS = _Symbols('OPERATORS',
     _Symbol('r~', 'EXTRACT_REGEX', 'extract a value using a regex with capture group. returns the first capture group'),
     
     _Symbol('sort', 'SORT', 'sort values based on the selected column(s)', unary=True),
+    _Symbol('!sort', 'SORT_REVERSE', 'sort values based on the selected column(s) in reverse order', unary=True),
+
 
     _Symbol('to str', 'TO_STR', 'convert to string', unary=True, func=str, dtype=str),
     _Symbol('to int', 'TO_INT', 'convert to integer', unary=True, func=_int, dtype='Int64'),
@@ -315,6 +317,9 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
     
     elif operator == _OPERATORS.SORT:
         df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
+
+    elif operator == _OPERATORS.SORT_REVERSE:
+        df_new.sort_values(by=list(df_new.columns[cols]), axis=0, ascending=False, inplace=True)
 
     elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
         #data modification
@@ -645,7 +650,7 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
             _OPERATORS.ADD_VAL,
             _OPERATORS.SET_EVAL, _OPERATORS.SET_COL_EVAL,
             _OPERATORS.EXTRACT_REGEX,
-            _OPERATORS.SORT,
+            _OPERATORS.SORT, _OPERATORS.SORT_REVERSE,
             _OPERATORS.TO_STR, _OPERATORS.TO_INT, _OPERATORS.TO_FLOAT, _OPERATORS.TO_NUM, _OPERATORS.TO_BOOL,
             _OPERATORS.TO_DATETIME, _OPERATORS.TO_DATE, _OPERATORS.TO_NA, _OPERATORS.TO_NK, _OPERATORS.TO_YN,
             ],

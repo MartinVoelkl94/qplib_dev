@@ -35,7 +35,7 @@ def get_df(size='small'):
 
 def get_dfs():
     """
-    Returns 2 small, slightly similar sample dataframes. Mostly for testing qp.diff().
+    Returns 2 small, somewhat similar sample dataframes. Mostly for testing qp.diff().
     """
 
     df_old = pd.DataFrame(columns=['a', 'b', 'c'], index=['x','y','z'])
