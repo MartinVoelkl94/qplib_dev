@@ -102,8 +102,8 @@ _NEGATIONS = _Symbols('NEGATIONS',
 
 _OPERATORS = _Symbols('OPERATORS',
     #for changing settings
-    _Symbol('verbosity=', 'SET_VERBOSITY', 'change the verbosity/logging level'),
-    _Symbol('diff=', 'SET_DIFF', 'change if and how the difference between the old and new dataframe is shown'),
+    _Symbol('verbosity', 'SET_VERBOSITY', 'change the verbosity/logging level'),
+    _Symbol('diff', 'SET_DIFF', 'change if and how the difference between the old and new dataframe is shown'),
 
 
     #for filtering
@@ -565,6 +565,20 @@ def _modify_settings(instruction, df_new, masks, cols, diff, verbosity):
 
 
 _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
+                         
+    _Symbol('´s', 'MODIFY_SETTINGS', 'change query settings',
+        connectors=[
+            _CONNECTORS.RESET,#default
+            _CONNECTORS.AND,
+            _CONNECTORS.OR,
+            ],
+        operators=[
+            _OPERATORS.SET_VERBOSITY, #default
+            _OPERATORS.SET_DIFF,
+            ],
+        copy_df= False,
+        apply=_modify_settings,
+        ),
                        
     _Symbol('´c', 'SELECT_COLS', 'select columns fulfilling a condition',
         connectors=[
@@ -705,19 +719,6 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
         apply=_miscellaneous,
         ),
 
-    _Symbol('´s', 'MODIFY_SETTINGS', 'change query settings',
-        connectors=[
-            _CONNECTORS.RESET,#default
-            _CONNECTORS.AND,
-            _CONNECTORS.OR,
-            ],
-        operators=[
-            _OPERATORS.SET_VERBOSITY, #default
-            _OPERATORS.SET_DIFF,
-            ],
-        copy_df= False,
-        apply=_modify_settings,
-        ),
     )
 
 
@@ -1188,7 +1189,7 @@ class DataFrameQueryInteractiveMode:
 
         #code input
         ui_code = widgets.Textarea(
-            value='´s verbosity=3\n´s diff=None\n\n#Enter query code here\n\n',
+            value='´s verbosity 3\n´s diff None\n\n#Enter query code here\n\n',
             layout=Layout(width='99%', height='97%')
             )
 
