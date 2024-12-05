@@ -11,9 +11,15 @@ from .util import log
 from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
 from .pd_util import _diff
 
+
+
+#####################     settings     #####################
+
 VERBOSITY = 3
 DIFF = None
 INPLACE = False
+
+##################     syntax symbols     ##################
 
 
 class _Symbol:
@@ -75,7 +81,6 @@ class _Symbols:
     
     def __str__(self):
         return f'{self.name}:\n' + '\n\t'.join([str(val) for key,val in self.by_name.items()])
-    
 
 
 COMMENT = _Symbol('#', 'COMMENT', 'comments out the rest of the line')
@@ -87,11 +92,19 @@ _CONNECTORS = _Symbols('CONNECTORS',
     _Symbol('/', 'OR', 'this condition or the previous condition/s must be fulfilled'),
     )
 
+
 _SCOPES = _Symbols('SCOPES',
+                   
+    #for selecting rows/values
     _Symbol('any', 'ANY', 'select whole row if any value in the selected columns fulfills the condition'),
     _Symbol('all', 'ALL', 'select whole row if all values in the selected columns fulfill the condition'),
     _Symbol('idx', 'IDX', 'select whole row if the index of the row fulfills the condition'),
     _Symbol('val', 'VAL', 'select only values (not the whole row) that fulfill the condition'),
+
+    #for changing settings
+    _Symbol('verbosity', 'VERBOSITY', 'change the verbosity/logging level'),
+    _Symbol('diff', 'DIFF', 'change if and how the difference between the old and new dataframe is shown'),
+
     )
 
 
@@ -100,11 +113,8 @@ _NEGATIONS = _Symbols('NEGATIONS',
     _Symbol('!', 'TRUE', 'negate the condition'),
     )
 
-_OPERATORS = _Symbols('OPERATORS',
-    #for changing settings
-    _Symbol('verbosity', 'SET_VERBOSITY', 'change the verbosity/logging level'),
-    _Symbol('diff', 'SET_DIFF', 'change if and how the difference between the old and new dataframe is shown'),
 
+_OPERATORS = _Symbols('OPERATORS',
 
     #for filtering
     _Symbol('>=', 'BIGGER_EQUAL', 'bigger or equal', binary=True),
@@ -184,6 +194,9 @@ _OPERATORS = _Symbols('OPERATORS',
     
     )
 
+
+
+#################     instruction logic     #################
 
 
 def _select_cols(instruction, df_new, masks, cols, diff, verbosity):
@@ -542,17 +555,17 @@ def _modify_settings(instruction, df_new, masks, cols, diff, verbosity):
     An instruction to change the query settings.
     """
 
-    operator = instruction.operator
+    scope = instruction.scope
     value = instruction.value
     
-    if operator == _OPERATORS.SET_VERBOSITY:
+    if scope == _SCOPES.VERBOSITY:
         if value in ['0', '1', '2', '3', '4', '5']:
             verbosity = int(value)
         else:
             log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
                 'qp.qlang._modify_settings', verbosity)
     
-    elif operator == _OPERATORS.SET_DIFF:
+    elif scope == _SCOPES.DIFF:
         if value.lower() in ['none', '0', 'false']:
             diff = None
         elif value.lower() in ['mix', 'new', 'old', 'new+']:
@@ -564,6 +577,10 @@ def _modify_settings(instruction, df_new, masks, cols, diff, verbosity):
     return df_new, masks, cols, diff, verbosity
 
 
+
+##############     instruction definition     ##############
+
+
 _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
                          
     _Symbol('´s', 'MODIFY_SETTINGS', 'change query settings',
@@ -572,9 +589,12 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
             _CONNECTORS.AND,
             _CONNECTORS.OR,
             ],
+        scopes=[
+            _SCOPES.VERBOSITY, #default
+            _SCOPES.DIFF,
+            ],
         operators=[
-            _OPERATORS.SET_VERBOSITY, #default
-            _OPERATORS.SET_DIFF,
+            _OPERATORS.SET_VAL, #default
             ],
         copy_df= False,
         apply=_modify_settings,
@@ -723,6 +743,9 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
 
 
 
+#################     main query logic     #################
+
+
 def query(df_old, code=''):
     """
     Used by the dataframe accessors df.q() (DataFrameQuery) and df.qi() (DataFrameQueryInteractive).
@@ -748,7 +771,6 @@ def query(df_old, code=''):
     cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
     masks = {0: mask}  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
-
 
 
 
@@ -948,10 +970,18 @@ def _extract_symbol(string, symbols, verbosity):
     string = string.strip()
 
     if len(symbols) == 0:
+        log(f'error: no symbols to look for in string "{string}"', 'qp.qlang._extract_symbol', verbosity)
         return None, string
+    
     elif len(symbols) == 1:
-        symbol = symbols[0]
-        return symbol, string[len(symbol.symbol):].strip()
+        default = symbols[0]
+        if string.startswith(default.symbol):
+            log(f'trace: found symbol in string "{string}":\n{default}', 'qp.qlang._extract_symbol', verbosity)
+            return default, string[len(default.symbol):].strip()
+        else:
+            log(f'trace: no symbol found in string "{string}". using default:\n{default}', 'qp.qlang._extract_symbol', verbosity)
+            return default, string
+        
     else:
         default = symbols[0]
         symbols = symbols[1:]
@@ -962,6 +992,7 @@ def _extract_symbol(string, symbols, verbosity):
             return symbol, string[len(symbol.symbol):].strip()
     
     if string.startswith(default.symbol):
+        log(f'trace: found symbol in string "{string}":\n{default}', 'qp.qlang._extract_symbol', verbosity)
         return default, string[len(default.symbol):].strip()
     else:
         log(f'trace: no symbol found in string "{string}". using default:\n{default}', 'qp.qlang._extract_symbol', verbosity)
@@ -1123,6 +1154,10 @@ def _update_selected_cols(values, values_new, connector, verbosity):
     return values
 
 
+
+###################     df accessors     ###################
+
+
 @pd.api.extensions.register_dataframe_accessor('check')
 class DataFrameCheck:
     def __init__(self, df: pd.DataFrame):
@@ -1173,7 +1208,6 @@ class DataFrameQuery:
     
     def __call__(self, code=''):
         return query(self.df, code)
-
 
 
 @pd.api.extensions.register_dataframe_accessor('qi')
