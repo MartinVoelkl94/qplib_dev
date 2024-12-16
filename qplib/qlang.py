@@ -182,6 +182,7 @@ _OPERATORS = _Symbols('OPERATORS',
     #for modifying format
     _Symbol('=', 'SET_COLOR', 'set the color of the selected values', binary=True),
     _Symbol('bg', 'SET_BACKGROUND', 'set the background color of the selected values', binary=True),
+    _Symbol('align', 'ALIGN', 'set the alignment of the selected values', binary=True),
 
 
     #for adding new columns
@@ -400,6 +401,15 @@ def _modify_format(instruction, df_new, masks, cols, style, diff, verbosity):
         style[mask_temp] = f'color: {value}'
     elif operator == _OPERATORS.SET_BACKGROUND:
         style[mask_temp] = f'background-color: {value}'
+    elif operator == _OPERATORS.ALIGN:
+        value = value.lower()
+        if value in ['left', 'right', 'center', 'justify']:
+            style[mask_temp] = f'text-align: {value}'
+        elif value in ['top', 'middle', 'bottom']:
+            style[mask_temp] = f'vertical-align: {value}'
+        else:
+            log(f'warning: alignment "{value}" is not valid. must be one of [left, right, center, justify, top, middle, bottom]',
+                'qp.qlang._modify_format', verbosity)
 
     return df_new, masks, cols, style, diff, verbosity
 
@@ -729,6 +739,7 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
         operators=[
             _OPERATORS.SET_COLOR, #default
             _OPERATORS.SET_BACKGROUND,
+            _OPERATORS.ALIGN,
             ],
         copy_df=False,
         apply=_modify_format,
