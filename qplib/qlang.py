@@ -101,7 +101,7 @@ _SCOPES = _Symbols('SCOPES',
     _Symbol('idx', 'IDX', 'select whole row if the index of the row fulfills the condition'),
     _Symbol('val', 'VAL', 'select only values (not the whole row) that fulfill the condition'),
 
-    #for changing settings
+    #for modifying settings
     _Symbol('verbosity', 'VERBOSITY', 'change the verbosity/logging level'),
     _Symbol('diff', 'DIFF', 'change if and how the difference between the old and new dataframe is shown'),
 
@@ -181,6 +181,7 @@ _OPERATORS = _Symbols('OPERATORS',
 
     #for modifying format
     _Symbol('=', 'SET_COLOR', 'set the color of the selected values', binary=True),
+    _Symbol('bg', 'SET_BACKGROUND', 'set the background color of the selected values', binary=True),
 
 
     #for adding new columns
@@ -390,11 +391,15 @@ def _modify_format(instruction, df_new, masks, cols, style, diff, verbosity):
     mask_temp = masks[0].copy()
     mask_temp.loc[:, ~cols] = False
 
+    for col in df_new.columns[cols]:
+        if col not in style.columns:
+            style[col] = ''
+
+
     if operator == _OPERATORS.SET_COLOR:
-        for col in df_new.columns[cols]:
-            if col not in style.columns:
-                style[col] = ''
         style[mask_temp] = f'color: {value}'
+    elif operator == _OPERATORS.SET_BACKGROUND:
+        style[mask_temp] = f'background-color: {value}'
 
     return df_new, masks, cols, style, diff, verbosity
 
@@ -723,6 +728,7 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
             ],
         operators=[
             _OPERATORS.SET_COLOR, #default
+            _OPERATORS.SET_BACKGROUND,
             ],
         copy_df=False,
         apply=_modify_format,
@@ -822,9 +828,12 @@ def query(df_old, code=''):
     rows = masks[0].any(axis=1)
     df_filtered = df_new.loc[rows, cols]
 
-    if diff is None:
-        result = df_filtered 
-    else:
+    if diff is not None and style is not None:
+        log('warning: diff and style formatting are not compatible. formatting will be ignored',
+            'qp.qlang.query', verbosity)
+        style = None
+
+    if diff is not None:
         #show difference before and after filtering
         if 'meta' in df_old.columns and 'meta' not in df_filtered.columns:
             df_filtered.insert(0, 'meta', df_old.loc[rows, 'meta'])
@@ -834,14 +843,15 @@ def query(df_old, code=''):
             mode=diff,
             verbosity=verbosity
             )
-    
-    if style is not None:
+    elif style is not None:
         rows_shared = df_filtered.index.intersection(style.index)
         cols_shared = df_filtered.columns.intersection(style.columns)
         def f(x, style):
             return style
-        result = result.style.apply(lambda x: f(x, style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
-        
+        result = df_filtered.style.apply(lambda x: f(x, style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
+    else:
+        result = df_filtered
+           
     return result
 
 
