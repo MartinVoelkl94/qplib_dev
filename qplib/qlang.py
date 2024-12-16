@@ -179,6 +179,10 @@ _OPERATORS = _Symbols('OPERATORS',
     _Symbol('to yn', 'TO_YN', 'convert to yes or no value', unary=True, func=_yn, dtype='object'),
 
 
+    #for modifying format
+    _Symbol('=', 'SET_COLOR', 'set the color of the selected values', binary=True),
+
+
     #for adding new columns
     _Symbol('=', 'STR_COL', 'add new column, fill it with the given string and select it', binary=True),
     _Symbol('~', 'EVAL_COL', 'add new column, fill it by evaluating a python expression and select it', binary=True),
@@ -199,7 +203,7 @@ _OPERATORS = _Symbols('OPERATORS',
 #################     instruction logic     #################
 
 
-def _select_cols(instruction, df_new, masks, cols, diff, verbosity):
+def _select_cols(instruction, df_new, masks, cols, style, diff, verbosity):
     """
     An Instruction to select columns fulfilling a condition.
     """
@@ -223,11 +227,11 @@ def _select_cols(instruction, df_new, masks, cols, diff, verbosity):
         log(f'warning: no columns fulfill the condition in "{instruction.str}" and the previous condition(s)',
             'qp.qlang._select_cols', verbosity)
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, masks, cols, style, diff, verbosity
 
 
 
-def _select_rows(instruction, df_new, masks, cols, diff, verbosity):
+def _select_rows(instruction, df_new, masks, cols, style, diff, verbosity):
     """
     An Instruction to select rows/values fulfilling a condition.
     """
@@ -243,7 +247,7 @@ def _select_rows(instruction, df_new, masks, cols, diff, verbosity):
     if cols.any() == False:
         log(f'warning: row filter cannot be applied when no columns where selected', 'qp.qlang._select_rows', verbosity)
         masks[0] = mask
-        return df_new, masks, cols, diff, verbosity
+        return df_new, masks, cols, style, diff, verbosity
  
 
     if value.startswith('@'):
@@ -285,18 +289,18 @@ def _select_rows(instruction, df_new, masks, cols, diff, verbosity):
     elif connector == _CONNECTORS.OR:
         masks[0] = masks[0] | mask
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, masks, cols, style, diff, verbosity
 
 
 
-def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
+def _modify_vals(instruction, df_new, masks, cols, style, diff, verbosity):
     """
     An Instruction to modify the selected values.
     """
 
     if masks[0].any().any() == False or cols.any() == False:
         log(f'warning: value modification cannot be applied when no values where selected', 'qp.qlang._modify_vals', verbosity)
-        return df_new, masks, cols, diff, verbosity
+        return df_new, masks, cols, style, diff, verbosity
 
 
     mask_temp = masks[0].copy()
@@ -374,17 +378,35 @@ def _modify_vals(instruction, df_new, masks, cols, diff, verbosity):
                 for col in df_new.columns[cols]:
                     df_new[col] = df_new[col].astype(operator.dtype)
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, masks, cols, style, diff, verbosity
 
 
-def _modify_headers(instruction, df_new, masks, cols, diff, verbosity):
+def _modify_format(instruction, df_new, masks, cols, style, diff, verbosity):
+    if not isinstance(style, pd.DataFrame):
+        style = pd.DataFrame('', columns=df_new.columns, index=df_new.index)
+    
+    operator = instruction.operator
+    value = instruction.value
+    mask_temp = masks[0].copy()
+    mask_temp.loc[:, ~cols] = False
+
+    if operator == _OPERATORS.SET_COLOR:
+        for col in df_new.columns[cols]:
+            if col not in style.columns:
+                style[col] = ''
+        style[mask_temp] = f'color: {value}'
+
+    return df_new, masks, cols, style, diff, verbosity
+
+
+def _modify_headers(instruction, df_new, masks, cols, style, diff, verbosity):
     """
     An Instruction to modify the headers of the selected column(s).
     """
 
     if cols.any() == False:
         log(f'warning: header modification cannot be applied when no columns where selected', 'qp.qlang._modify_headers', verbosity)
-        return df_new, masks, cols, diff, verbosity
+        return df_new, masks, cols, style, diff, verbosity
 
     operator = instruction.operator
     value = instruction.value
@@ -421,10 +443,10 @@ def _modify_headers(instruction, df_new, masks, cols, diff, verbosity):
                 inplace=True
                 )
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, masks, cols, style, diff, verbosity
 
 
-def _new_col(instruction, df_new, masks, cols, diff, verbosity):
+def _new_col(instruction, df_new, masks, cols, style, diff, verbosity):
     """
     An Instruction to add a new column.
     """
@@ -482,10 +504,10 @@ def _new_col(instruction, df_new, masks, cols, diff, verbosity):
                 break
     
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, masks, cols, style, diff, verbosity
 
 
-def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
+def _miscellaneous(instruction, df_new, masks, cols, style, diff, verbosity):
     """
     An Instruction for miscellaneous tasks:
     - modifying metadata
@@ -547,10 +569,10 @@ def _miscellaneous(instruction, df_new, masks, cols, diff, verbosity):
                 'qp.qlang._miscellaneous', verbosity)
         masks[value] = masks[0].copy()
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, masks, cols, style, diff, verbosity
 
 
-def _modify_settings(instruction, df_new, masks, cols, diff, verbosity):
+def _modify_settings(instruction, df_new, masks, cols, style, diff, verbosity):
     """
     An instruction to change the query settings.
     """
@@ -574,7 +596,7 @@ def _modify_settings(instruction, df_new, masks, cols, diff, verbosity):
             log(f'warning: diff must be one of [None, mix, old, new, new+]. "{value}" is not valid',
                 'qp.qlang._modify_settings', verbosity)
 
-    return df_new, masks, cols, diff, verbosity
+    return df_new, masks, cols, style, diff, verbosity
 
 
 
@@ -692,6 +714,21 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
         apply=_modify_vals,
         ),
 
+
+    _Symbol('´f', 'MODIFY_FORMAT', 'modify the format of the selected values',
+        connectors=[
+            _CONNECTORS.RESET,#default
+            _CONNECTORS.AND,
+            _CONNECTORS.OR,
+            ],
+        operators=[
+            _OPERATORS.SET_COLOR, #default
+            ],
+        copy_df=False,
+        apply=_modify_format,
+        ),
+
+
     _Symbol('´h', 'MODIFY_HEADERS', 'modify headers of the selected columns',
         connectors=[
             _CONNECTORS.RESET,#default
@@ -771,12 +808,13 @@ def query(df_old, code=''):
     cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
     masks = {0: mask}  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
+    style = None
 
 
 
     for instruction_str in instruction_strs:
         instruction = _parse_instruction(instruction_str, verbosity)
-        df_new, masks, cols, diff, verbosity  = instruction.apply(instruction, df_new, masks, cols, diff, verbosity)
+        df_new, masks, cols, style, diff, verbosity  = instruction.apply(instruction, df_new, masks, cols, style, diff, verbosity)
 
 
     #results
@@ -785,7 +823,7 @@ def query(df_old, code=''):
     df_filtered = df_new.loc[rows, cols]
 
     if diff is None:
-        return df_filtered 
+        result = df_filtered 
     else:
         #show difference before and after filtering
         if 'meta' in df_old.columns and 'meta' not in df_filtered.columns:
@@ -795,8 +833,16 @@ def query(df_old, code=''):
             df_filtered, df_old,
             mode=diff,
             verbosity=verbosity
-            )  
-        return result
+            )
+    
+    if style is not None:
+        rows_shared = df_filtered.index.intersection(style.index)
+        cols_shared = df_filtered.columns.intersection(style.columns)
+        def f(x, style):
+            return style
+        result = result.style.apply(lambda x: f(x, style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
+        
+    return result
 
 
 
