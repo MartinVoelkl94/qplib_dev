@@ -398,15 +398,15 @@ def _modify_format(instruction, df_new, masks, cols, style, diff, verbosity):
 
 
     if operator == _OPERATORS.SET_COLOR:
-        style[mask_temp] = f'color: {value}'
+        style[mask_temp] += f'color: {value};'
     elif operator == _OPERATORS.SET_BACKGROUND:
-        style[mask_temp] = f'background-color: {value}'
+        style[mask_temp] += f'background-color: {value};'
     elif operator == _OPERATORS.ALIGN:
         value = value.lower()
         if value in ['left', 'right', 'center', 'justify']:
-            style[mask_temp] = f'text-align: {value}'
+            style[mask_temp] += f'text-align: {value};'
         elif value in ['top', 'middle', 'bottom']:
-            style[mask_temp] = f'vertical-align: {value}'
+            style[mask_temp] += f'vertical-align: {value};'
         else:
             log(f'warning: alignment "{value}" is not valid. must be one of [left, right, center, justify, top, middle, bottom]',
                 'qp.qlang._modify_format', verbosity)
