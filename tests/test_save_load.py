@@ -142,17 +142,41 @@ def test_before_date():
 
 def test_before_this_year():
     setup()
-    assert qp.load('archive/df', sheet='Sheet1', before='this year', index_col=False).loc[0, 'a'] == last_year, 'failed test for loading most recent file from before this year'
+
+    if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
+        date_correct = yesterday
+    elif qp.date(last_week).year < qp.date(today).year and qp.date(last_week) > qp.date(last_year):
+        date_correct = last_week
+    elif qp.date(last_month).year < qp.date(today).year and qp.date(last_month) > qp.date(last_year):
+        date_correct = last_month
+    else:
+        date_correct = qp.date(last_year)
+    
+    assert qp.load('archive/df', sheet='Sheet1', before='this year', index_col=False).loc[0, 'a'] == date_correct, 'failed test for loading most recent file from before this year'
 
 
 def test_before_this_month():
     setup()
-    assert qp.load('archive/df', sheet='Sheet1', before='this month', index_col=False).loc[0, 'a'] == last_month, 'failed test for loading most recent file from before this month'
+    
+    if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
+        date_correct = yesterday
+    elif qp.date(last_week).year < qp.date(today).year and qp.date(last_week) > qp.date(last_year):
+        date_correct = last_week
+    else:
+        date_correct = last_month
+
+    assert qp.load('archive/df', sheet='Sheet1', before='this month', index_col=False).loc[0, 'a'] == date_correct, 'failed test for loading most recent file from before this month'
 
 
 def test_before_this_week():
     setup()
-    assert qp.load('archive/df', sheet='Sheet1', before='this week', index_col=False).loc[0, 'a'] == last_week, 'failed test for loading most recent file from before this week'
+    
+    if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
+        date_correct = yesterday
+    else:
+        date_correct = last_week
+
+    assert qp.load('archive/df', sheet='Sheet1', before='this week', index_col=False).loc[0, 'a'] == date_correct, 'failed test for loading most recent file from before this week'
 
 
 def test_before_this_day():
