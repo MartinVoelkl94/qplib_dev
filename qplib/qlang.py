@@ -183,6 +183,9 @@ _OPERATORS = _Symbols('OPERATORS',
     _Symbol('=', 'SET_COLOR', 'set the color of the selected values', binary=True),
     _Symbol('bg', 'SET_BACKGROUND', 'set the background color of the selected values', binary=True),
     _Symbol('align', 'ALIGN', 'set the alignment of the selected values', binary=True),
+    _Symbol('width', 'SET_WIDTH', 'set the width of the selected values, eg.: ´f width 100px', binary=True),
+    _Symbol('css', 'SET_CSS', 'use css to format the selected values. please note that pandas only supports a small subset of CSS properties', binary=True),
+
 
 
     #for adding new columns
@@ -399,10 +402,11 @@ def _modify_format(instruction, df_new, masks, cols, style, diff, verbosity):
 
     if operator == _OPERATORS.SET_COLOR:
         style[mask_temp] += f'color: {value};'
+    
     elif operator == _OPERATORS.SET_BACKGROUND:
         style[mask_temp] += f'background-color: {value};'
+    
     elif operator == _OPERATORS.ALIGN:
-        value = value.lower()
         if value in ['left', 'right', 'center', 'justify']:
             style[mask_temp] += f'text-align: {value};'
         elif value in ['top', 'middle', 'bottom']:
@@ -410,6 +414,19 @@ def _modify_format(instruction, df_new, masks, cols, style, diff, verbosity):
         else:
             log(f'warning: alignment "{value}" is not valid. must be one of [left, right, center, justify, top, middle, bottom]',
                 'qp.qlang._modify_format', verbosity)
+    
+    elif operator == _OPERATORS.SET_WIDTH:
+        if not value.endswith(('px', 'cm', 'mm', 'in', 'pt', 'pc', 'em', 'ex', 'ch', 'rem', 'vw', 'vh', 'vmin', 'vmax', '%')):
+            log(f'warning: no unit for column width was used. defaulting to "px". other options: [cm, mm, in, pt, pc, em, ex, ch, rem, vw, vh, vmin, vmax, %]',
+                'qp.qlang._modify_format', verbosity)
+            value += 'px'
+        style[mask_temp] += f'width: {value};'
+    
+    
+    elif operator == _OPERATORS.SET_CSS:
+        if not value.endswith(';'):
+            value += ';'
+        style[mask_temp] += value
 
     return df_new, masks, cols, style, diff, verbosity
 
@@ -740,6 +757,8 @@ _INSTRUCTIONS = _Symbols('INSTRUCTIONS',
             _OPERATORS.SET_COLOR, #default
             _OPERATORS.SET_BACKGROUND,
             _OPERATORS.ALIGN,
+            _OPERATORS.SET_WIDTH,
+            _OPERATORS.SET_CSS,
             ],
         copy_df=False,
         apply=_modify_format,
