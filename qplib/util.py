@@ -118,21 +118,21 @@ def log(text=None, context='', verbosity=None, clear=False):
 
 
 class Args:
-    def __init__(self, verbosity=3, overwrite=True, **kwargs):
-        self.verbosity = verbosity
-        self.overwrite = overwrite
+    def __init__(self, _verbosity=3, _overwrite=True, **kwargs):
+        self._verbosity = _verbosity
+        self._overwrite = _overwrite
         for k, v in kwargs.items():
             setattr(self, k, v)
     
     def __setattr__(self, name, value):
         if hasattr(self, name):
-            if self.overwrite:
+            if self._overwrite:
                 log(f'warning: {name} already exists and will be overwritten',
-                    'qp.util.Args.__setattr__', self.verbosity)
+                    'qp.util.Args.__setattr__', self._verbosity)
                 super().__setattr__(name, value)
             else:
                 log(f'error: {name} already exists and cannot be overwritten',
-                    'qp.util.Args.__setattr__', self.verbosity)
+                    'qp.util.Args.__setattr__', self._verbosity)
         else:
             super().__setattr__(name, value)
 

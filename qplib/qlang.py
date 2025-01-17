@@ -367,7 +367,7 @@ operators_binary = set([
 #################     main query logic     #################
 
 
-def query(df_old, code='', verbosity=None):
+def query(df_old, code=''):
     """
     Used by the dataframe accessors df.q() (DataFrameQuery) and df.qi() (DataFrameQueryInteractive).
     """
@@ -375,19 +375,22 @@ def query(df_old, code='', verbosity=None):
     #setup
 
     df_new = df_old  #df_old will be copied later, only if any modifications are applied
-    args = Args(verbosity=0, overwrite=True)
-
-    if verbosity is None:
-        args.verbosity = VERBOSITY
     # _check_df(df_old, verbosity=agrs.verbosity)  #wip: update check function
-    args.diff = DIFF
-    args.cols = pd.Series([True for col in df_new.columns])
-    args.cols.index = df_new.columns
+    cols = pd.Series([True for col in df_new.columns])
+    cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
-    args.masks = {0: mask}  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
-    args.style = None
-    args.copy_df = False
-    args.df_copied = False
+
+    args = Args(
+        _verbosity=0,  #internal to Args
+        _overwrite=True,  #internal to Args
+        verbosity = VERBOSITY,
+        diff = DIFF,
+        cols = cols,
+        masks = {0: mask},  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
+        style = None,
+        copy_df = False,
+        df_copied = False,
+        )
 
 
 
@@ -405,6 +408,7 @@ def query(df_old, code='', verbosity=None):
                 df_new = df_old.copy()
                 args.df_copied = True
             df_new, args  = instruction.function(instruction, df_new, args)
+
 
 
     #results
@@ -1070,8 +1074,6 @@ def _modify_metadata(instruction, df_new, args):
 
 def _modify_format(instruction, df_new, args):
 
-    if not isinstance(style, pd.DataFrame):
-        style = pd.DataFrame('', columns=df_new.columns, index=df_new.index)
     
     verbosity = args.verbosity
     masks = args.masks
@@ -1081,6 +1083,10 @@ def _modify_format(instruction, df_new, args):
     value = instruction.value
     mask_temp = masks[0].copy()
     mask_temp.loc[:, ~cols] = False
+
+
+    if not isinstance(style, pd.DataFrame):
+        style = pd.DataFrame('', columns=df_new.columns, index=df_new.index)
 
     for col in df_new.columns[cols]:
         if col not in style.columns:
