@@ -24,7 +24,7 @@ ORANGE_LIGHT = '#f7d67c'
 RED_LIGHT = '#f7746a'
 
 
-logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
+logs = pd.DataFrame(columns=['level', 'text', 'context', 'time'])
 def log(text=None, context='', verbosity=None, clear=False):
     """
     A very basic "logger" meant to be used in place of print() statements in jupyter notebooks. 
@@ -115,6 +115,26 @@ def log(text=None, context='', verbosity=None, clear=False):
         else:
             print(last)
 
+
+
+class Args:
+    def __init__(self, verbosity=3, overwrite=True, **kwargs):
+        self.verbosity = verbosity
+        self.overwrite = overwrite
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+    
+    def __setattr__(self, name, value):
+        if hasattr(self, name):
+            if self.overwrite:
+                log(f'warning: {name} already exists and will be overwritten',
+                    'qp.util.Args.__setattr__', self.verbosity)
+                super().__setattr__(name, value)
+            else:
+                log(f'error: {name} already exists and cannot be overwritten',
+                    'qp.util.Args.__setattr__', self.verbosity)
+        else:
+            super().__setattr__(name, value)
 
 
 
