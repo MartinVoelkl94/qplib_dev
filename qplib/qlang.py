@@ -380,6 +380,8 @@ def query(df_old, code=''):
     cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
 
+ 
+
     args = Args(
         _verbosity=0,  #internal to Args
         _overwrite=True,  #internal to Args
@@ -392,14 +394,20 @@ def query(df_old, code=''):
         df_copied = False,
         )
 
-
+ 
 
     #apply instructions
 
     instructions_raw, args = scan(code, args)
+
+
+
     for instruction_raw in instructions_raw:
+
         instruction_tokenized, args = tokenize(instruction_raw, args)
         instruction, args = parse(instruction_tokenized, args)
+
+
         if instruction is None:
             log(f'error: instruction "{instruction}" is not valid and will be ignored',
                 'qp.qlang.query', args.verbosity)
@@ -665,7 +673,6 @@ def parse(instruction_tokenized, args):
         else:
             instruction.function = _modify_vals
         
-
 
 
     #general checks

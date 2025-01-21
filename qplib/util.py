@@ -17,14 +17,14 @@ GREEN = '#6dae51'
 ORANGE = 'orange'
 RED = '#f73434'
 
-GREY_LIGHT = 'lightgrey'
-BLUE_LIGHT = 'skyblue'
+GREY_LIGHT = '#d3d3d3'
+BLUE_LIGHT = '#87ceeb'
 GREEN_LIGHT = '#c0e7b0'
 ORANGE_LIGHT = '#f7d67c'
 RED_LIGHT = '#f7746a'
 
 
-logs = pd.DataFrame(columns=['level', 'text', 'context', 'time'])
+logs = []
 def log(text=None, context='', verbosity=None, clear=False):
     """
     A very basic "logger" meant to be used in place of print() statements in jupyter notebooks. 
@@ -46,75 +46,58 @@ def log(text=None, context='', verbosity=None, clear=False):
     qplib.util.logs  #location of dataframe containing log entries
 
     """
+    if verbosity == 0:
+        return
 
     time = pd.Timestamp.now()
     global logs
-    idx = len(logs)
     
     if clear:
-        logs = pd.DataFrame(columns=['text', 'context', 'level', 'time'])
+        logs.clear()
         if verbosity in (None, 3, 4, 5):
-            print('cleared all logs in qp.util.logs.')
+            print(f'cleared all logs in qp.util.logs.')
         return
     
     if text is None:
-        return logs
+        return pd.DataFrame(logs)
 
     
-    levels = {'trace': 5, 'debug': 4, 'info': 3, 'warning': 2, 'error': 1}
-    level = 'info'
+    levels = {'TRACE': 5, 'DEBUG': 4, 'INFO': 3, 'WARNING': 2, 'ERROR': 1}
+    colors = {'TRACE': GREY_LIGHT, 'DEBUG': BLUE_LIGHT, 'INFO': GREEN_LIGHT, 'WARNING': ORANGE_LIGHT, 'ERROR': RED_LIGHT}
+    level = 'INFO'
     level_int = 3
+    text_temp = text.upper()
 
     for level_temp in levels.keys():
-        if text.lower().startswith(level_temp):
+        if text_temp.startswith(level_temp):
             level = level_temp
             level_int = levels[level]
+            color = colors[level]
             text = text[len(level_temp):].strip()
             if text[0] in [':', '-', ' ']:
                 text = text[1:].strip()
+            break
 
     if verbosity is None:
         verbosity = level_int
-    elif verbosity < 1:
-        return
     
-
-    if level == 'trace':
-        logs.loc[idx, 'level'] = 'trace'
-        color = GREY_LIGHT
-    elif level == 'debug':
-        logs.loc[idx, 'level'] = 'debug'
-        color = BLUE_LIGHT
-    elif level == 'info':
-        logs.loc[idx, 'level'] = 'info'
-        color = GREEN_LIGHT
-    elif level == 'warning':
-        logs.loc[idx, 'level'] = 'Warning'
-        color = ORANGE_LIGHT
-    elif level == 'error':
-        logs.loc[idx, 'level'] = 'ERROR'
-        color = RED_LIGHT
-
-    logs.loc[idx, 'text'] = text
-    logs.loc[idx, 'context'] = context
-    logs.loc[idx, 'time'] = time
+    message = {
+        'level': level,
+        'text': text,
+        'context': context,
+        'time': time
+        }
+    logs.append(message)
 
     if level_int <= verbosity:
-        last = logs.tail(1)
-
+        message_df = pd.DataFrame(message, index=[len(logs)])
         if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':
-            last.loc[:, 'text'] = last.loc[:, 'text'].str.replace('\n', '<br>')
-            last.loc[:, 'text'] = last.loc[:, 'text'].str.replace('\t', '&emsp;')
-            last.loc[:, 'context'] = last.loc[:, 'context'].str.replace('\n', '<br>')
-            last.loc[:, 'context'] = last.loc[:, 'context'].str.replace('\t', '&emsp;')
-
-            display(last.style.hide(axis=1).apply(
+            display(message_df.style.hide(axis=1).apply(
                     lambda x: [f'background-color: {color}' for i in x], axis=1
                     ).set_properties(**{'text-align': 'left'})
                 )
         else:
-            print(last)
-
+            print(message_df)
 
 
 class Args:
