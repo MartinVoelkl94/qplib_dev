@@ -374,8 +374,8 @@ def query(df_old, code=''):
 
     #setup
 
+    check_df(df_old, VERBOSITY)
     df_new = df_old  #df_old will be copied later, only if any modifications are applied
-    # _check_df(df_old, verbosity=agrs.verbosity)  #wip: update check function
     cols = pd.Series([True for col in df_new.columns])
     cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
@@ -452,65 +452,74 @@ def query(df_old, code=''):
 
 
 
-# def _check_df(df, verbosity=3):
-#     """
-#     Checks dataframe for issues which could interfere with the query language used by df.q().
-#     df.q() uses '&', '/' and '´' for expression syntax.
-#     """
-#     problems_found = False
+def check_df(df, verbosity=3):
+    """
+    Checks dataframe for issues which could interfere with the query language used by df.q().
+    df.q() uses '%', &', '/' and '$' for expression syntax.
+    """
+    problems_found = False
 
-#     if len(df.index) != len(df.index.unique()):
-#         log('error: index is not unique', 'qp.qlang._check_df', verbosity)
-#         problems_found = True
+    if len(df.index) != len(df.index.unique()):
+        log('error: index is not unique', 'qp.qlang.check_df', verbosity)
+        problems_found = True
 
-#     if len(df.columns) != len(df.columns.unique()):
-#         log('error: columns are not unique', 'qp.qlang._check_df', verbosity)
-#         problems_found = True
+    if len(df.columns) != len(df.columns.unique()):
+        log('error: columns are not unique', 'qp.qlang.check_df', verbosity)
+        problems_found = True
 
-#     problems = {
-#         '"&"': [],
-#         '"/"': [],
-#         '"´"': [],
-#         'leading whitespace': [],
-#         'trailing whitespace': [],
-#         }
+    syntax_conflicts = {
+        '"%"': [],
+        '"&"': [],
+        '"/"': [],
+        '"$"': [],
+        }
+    whitespace = {
+        'leading whitespace': [],
+        'trailing whitespace': [],
+        }
 
-#     for col in df.columns:
-#         if isinstance(col, str):
-#             if '&' in col:
-#                 problems['"&"'].append(col)
-#             if '/' in col:
-#                 problems['"/"'].append(col)
-#             if '´' in col:
-#                 problems['"´"'].append(col)
-#             if col.startswith(' '):
-#                 problems['leading whitespace'].append(col)
-#             if col.endswith(' '):
-#                 problems['trailing whitespace'].append(col)
+    for col in df.columns:
+        if isinstance(col, str):
+            if '%' in col:
+                syntax_conflicts['"%"'].append(col)
+            if '&' in col:
+                syntax_conflicts['"&"'].append(col)
+            if '/' in col:
+                syntax_conflicts['"/"'].append(col)
+            if '$' in col:
+                syntax_conflicts['"$"'].append(col)
+            if col.startswith(' '):
+                whitespace['leading whitespace'].append(col)
+            if col.endswith(' '):
+                whitespace['trailing whitespace'].append(col)
 
-#     for problem, cols in problems.items():
-#         if len(cols) > 0:
-#             log(f'warning: the following column headers contain {problem}, use a tick (`) to escape such characters: {cols}',
-#                 'qp.qlang._check_df', verbosity)
-#             problems_found = True
+    for problem, cols in syntax_conflicts.items():
+        if len(cols) > 0:
+            log(f'warning: the following column headers contain {problem} which is used by the query syntax, use a tick (´) to escape such characters:\n\t{cols}',
+                'qp.qlang.check_df', verbosity)
+            problems_found = True
+    
+    for problem, cols in whitespace.items():
+        if len(cols) > 0:
+            log(f'warning: the following column headers contain {problem} which should be removed:\n\t{cols}',
+                'qp.qlang.check_df', verbosity)
+            problems_found = True
     
 
-#     symbol_conflicts = []
-#     symbols = tuple(_SCOPES.by_symbol.keys()) + tuple(_NEGATIONS.by_symbol.keys()) + tuple(OPERATORS.by_symbol.keys())
-#     symbols = tuple(symbol for symbol in symbols if symbol != '')
+    symbol_conflicts = []
 
-#     for col in df.columns:
-#         if str(col).startswith(tuple(symbols)):
-#             symbol_conflicts.append(col)
+    for col in df.columns:
+        if str(col).startswith(tuple(OPERATORS.by_symbol.keys())):
+            symbol_conflicts.append(col)
 
-#     if len(symbol_conflicts) > 0:
-#         log(f'warning: the following column headers start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:\n{symbol_conflicts}\nexplicitely use a valid operator to avoid conflicts.',
-#             'qp.qlang._check_df', verbosity)
-#         problems_found = True
+    if len(symbol_conflicts) > 0:
+        log(f'warning: the following column headers start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:\n{symbol_conflicts}\nexplicitely use a valid operator to avoid conflicts.',
+            'qp.qlang.check_df', verbosity)
+        problems_found = True
 
 
-#     if problems_found is False:
-#         log('info: df was checked. no problems found', 'qp.qlang._check_df', verbosity)
+    if problems_found is False:
+        log('debug: df was checked. no problems found', 'qp.qlang.check_df', verbosity)
 
 
 
@@ -1380,7 +1389,7 @@ class DataFrameCheck:
         self.df = df 
 
     def __call__(self, verbosity=3):
-        # _check_df(self.df, verbosity=verbosity)
+        check_df(self.df, verbosity=verbosity)
         return self.df
 
 
