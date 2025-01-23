@@ -90,6 +90,8 @@ def log(text=None, context='', verbosity=None, clear=False):
     logs.append(message)
 
     if level_int <= verbosity:
+        message['text'] = message['text'].replace('\n', '<br>').replace('\t', '&emsp;')
+        message['context'] = message['context'].replace('\n', '<br>').replace('\t', '&emsp;')
         message_df = pd.DataFrame(message, index=[len(logs)])
         if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':
             display(message_df.style.hide(axis=1).apply(
