@@ -22,7 +22,6 @@ dependencies = [
     "numpy",
     "IPython",
     "ipywidgets",
-    "rich",
     "jinja2",
     "openpyxl",
     "jedi>=0.16",

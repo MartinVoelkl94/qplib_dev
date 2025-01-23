@@ -1,6 +1,6 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.2
 Name: qplib
-Version: 0.5.9
+Version: 0.6.0
 Summary: query language for pandas
 Author-email: martin v <martinv16248@gmail.com>
 License: MIT License
