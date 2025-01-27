@@ -411,7 +411,7 @@ def _diff(
                 df_new = pd.read_excel(df_old)
 
         if df_new.equals(df_old):
-            df = pd.DataFrame()
+            df = df_new
             summary = {}
             string = 'both dataframes are identical'
         else:
@@ -619,7 +619,9 @@ def _diff_df(
 
     df_added = df_old_isna & ~df_new_isna
     df_removed = df_new_isna & ~df_old_isna
-    df_changed = ~df_new_isna & ~df_old_isna & ~df_new_equals_old
+    df_changed = (~df_new_isna & ~df_old_isna & ~df_new_equals_old).astype(bool)
+    #the previous comparison can result in dtype "boolean" instead of "bool"
+    #"boolean" masks cannot be used to set values as str, which is needed for the style df
 
     df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_added.mask(df_added, f'background-color: {GREEN_LIGHT}').where(df_added, '')
     df_diff_style.loc[rows_shared, cols_shared_no_metadata] += df_removed.mask(df_removed, f'background-color: {RED_LIGHT}').where(df_removed, '')

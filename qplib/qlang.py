@@ -439,12 +439,14 @@ def query(df_old, code=''):
             mode=args.diff,
             verbosity=args.verbosity
             )
+        
     elif args.style is not None:
         rows_shared = df_filtered.index.intersection(args.style.index)
         cols_shared = df_filtered.columns.intersection(args.style.columns)
         def f(x, style):
             return style
         result = df_filtered.style.apply(lambda x: f(x, args.style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
+    
     else:
         result = df_filtered
            
