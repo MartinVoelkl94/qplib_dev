@@ -214,6 +214,10 @@ flags_select_rows_scope = set([
     FLAGS.IDX,
     FLAGS.EACH,
     ])
+flags_load = set([
+    FLAGS.LOAD_SELECTION,
+    FLAGS.NEGATE,
+    ])
 flags_settings = set([
     FLAGS.VERBOSITY,
     FLAGS.DIFF,
@@ -622,7 +626,7 @@ def parse(instruction_tokenized, args):
         log(f'trace: no operator found in "{code}". using default "{OPERATORS.SET}"', 'qp.qlang.parse', verbosity)
         instruction.operator = OPERATORS.SET
     if instruction.connector in connectors_select_rows:
-        if flags.intersection(flags_select_rows_scope) == set():
+        if flags.intersection(flags_select_rows_scope) == set() and set([FLAGS.SAVE_SELECTION, FLAGS.LOAD_SELECTION]).intersection(flags) == set():
             log(f'trace: no row selection flag found in "{code}". using default "{FLAGS.ANY}"', 'qp.qlang.parse', verbosity)
             instruction.flags.add(FLAGS.ANY)
     elif instruction.connector == CONNECTORS.MODIFY:
@@ -683,7 +687,17 @@ def parse(instruction_tokenized, args):
 
         else:
             instruction.function = _modify_vals
-        
+
+
+    #check for other incompatible symbols
+    if FLAGS.SAVE_SELECTION in flags and len(flags)>1:
+        log(f'warning: flags "{flags - {FLAGS.SAVE_SELECTION}}" are not compatible with "{FLAGS.SAVE_SELECTION}" and will be ignored',
+            'qp.qlang.parse', verbosity)
+    elif FLAGS.LOAD_SELECTION in flags and flags - flags_load != set():
+        log(f'warning: flags "{flags - flags_load}" are not compatible with "{FLAGS.LOAD_SELECTION}" and will be ignored',
+            'qp.qlang.parse', verbosity)
+    
+
 
 
     #general checks
@@ -972,14 +986,9 @@ def _load_selection(instruction, df_new, args):
         log(f'error: selection "{value}" not found in saved selections', 'qp.qlang._select_rows', verbosity)
         masks[0] = mask
 
-    if FLAGS.ANY in instruction.flags:
-        rows = mask.any(axis=1)
-        mask.loc[rows, :] = True  
-    elif FLAGS.ALL in instruction.flags:
-        rows = mask.loc[:, cols].all(axis=1)
-        mask.loc[rows, :] = True
-        mask.loc[~rows, :] = False
-    
+    if FLAGS.NEGATE in instruction.flags:
+        mask.loc[:, cols] = ~mask.loc[:, cols]
+  
     if connector == CONNECTORS.NEW_SELECT_ROWS:
         masks[0] = mask
     elif connector == CONNECTORS.AND_SELECT_ROWS:
