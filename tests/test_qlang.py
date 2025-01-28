@@ -466,6 +466,57 @@ def test_metadata(code, metadata):
     assert df.equals(df1), qp.diff(df, df1, output='str')
 
 
+@pytest.mark.parametrize("code, expected", [
+    ('id %%?1  %%save1   %%is any;  %%load1',                   df.loc[[0,1,2,3,6],['ID']]),
+    ('id %%?1  %%save=1   %%is any;  %%load=1',                 df.loc[[0,1,2,3,6],['ID']]),
+    ('id %%any?1  %%save1   %%is any;  %%load1',                df.loc[[0,1,2,3,6],['ID']]),
+    ('id %%all?1  %%save1   %%is any;  %%load1',                df.loc[[0,1,2,3,6],['ID']]),
+    ('id %%each?1  %%save1   %%is any;  %%load1',               df.loc[[0,1,2,3,6],['ID']]),
+    ('id %%?1  %%save1   %is any;  %%is any;   %id  %%load1',   df.loc[[0,1,2,3,6],['ID']]),
+    ('id %%?2  %%save1  %%?1  %%save1  %%is any;  %%load1',     df.loc[[0,1,2,3,6],['ID']]),
+    
+    (
+        """
+        id   %%?1   %%save1
+        id   %%?2   %%save2
+        id   %%load1   &&load2
+        """,
+        df.loc[[1,3],['ID']]
+    ),
+
+    (
+        """
+        id   %%?1   %%save1
+        id   %%?2   %%save2
+        id   %%load1   //load2
+        """,
+        df.loc[[0,1,2,3,4,5,6,7],['ID']]
+    ),
+    
+    (
+        """
+        id   %%!?1   %%save1
+        id   %%?2   %%save2
+        id   %%load1   &&load2
+        """,
+        df.loc[[4,5,7],['ID']]
+    ),
+    
+    (
+        """
+        id   %%!?1   %%save1
+        id   %%!?2   %%save2
+        id   %%load1   &&load2
+        """,
+        df.loc[[8,9,10],['ID']]
+    ),
+    ])
+def test_save_load(code, expected):
+    result = get_df().q(code)
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+
 def test_scope1():
     df1 = qp.get_df()
     result = df1.q('%%is na; $')

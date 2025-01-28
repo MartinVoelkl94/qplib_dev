@@ -214,10 +214,6 @@ flags_select_rows_scope = set([
     FLAGS.IDX,
     FLAGS.EACH,
     ])
-flags_load = set([
-    FLAGS.LOAD_SELECTION,
-    FLAGS.NEGATE,
-    ])
 flags_settings = set([
     FLAGS.VERBOSITY,
     FLAGS.DIFF,
@@ -693,11 +689,10 @@ def parse(instruction_tokenized, args):
     if FLAGS.SAVE_SELECTION in flags and len(flags)>1:
         log(f'warning: flags "{flags - {FLAGS.SAVE_SELECTION}}" are not compatible with "{FLAGS.SAVE_SELECTION}" and will be ignored',
             'qp.qlang.parse', verbosity)
-    elif FLAGS.LOAD_SELECTION in flags and flags - flags_load != set():
-        log(f'warning: flags "{flags - flags_load}" are not compatible with "{FLAGS.LOAD_SELECTION}" and will be ignored',
+    elif FLAGS.LOAD_SELECTION in flags and len(flags)>1:
+        log(f'warning: flags "{flags - {FLAGS.LOAD_SELECTION}}" are not compatible with "{FLAGS.LOAD_SELECTION}" and will be ignored',
             'qp.qlang.parse', verbosity)
     
-
 
 
     #general checks
