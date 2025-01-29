@@ -1450,143 +1450,105 @@ class DataFrameQueryInteractiveMode:
     def __init__(self, df: pd.DataFrame):
         self.df = df
 
-    def __call__(self):  #wip: not updated to v0.6
-        pass
-#         kwargs = {'df': fixed(self.df), 'code': ''}
+    def __call__(self):
+        pass  #wip
+        # kwargs = {'df': fixed(self.df), 'code': ''}
 
-#         #code input
-#         ui_code = widgets.Textarea(
-#             value='´s verbosity 3\n´s diff None\n\n#Enter query code here\n\n',
-#             layout=Layout(width='99%', height='97%')
-#             )
-
-
-#         #query builder
-
-#         instruction = _INSTRUCTIONS.SELECT_COLS
-
-#         i_type = widgets.Dropdown(
-#             options=[(f'{s.symbol}: {s.description}', s.symbol) for s in _INSTRUCTIONS],
-#             value=instruction.symbol,
-#             )
-        
-#         i_scope = widgets.Dropdown(
-#             disabled=True,
-#             options=[''],
-#             value='',
-#             )
-
-#         i_negate = widgets.ToggleButtons(
-#             options=[('dont negate condition', ''), ('negate condition', '!')],
-#             value='',
-#             )
-
-#         i_operator = widgets.Dropdown(
-#             options=[(f'{s.symbol}: {s.description}', s.symbol) for s in instruction.operators],
-#             value=instruction.operators[0].symbol,
-#             )
-        
-#         i_value = widgets.Text(
-#             value='',
-#             )
-        
-
-#         i_text = widgets.Text(
-#             value=f'\n{i_type.value} {i_scope.value} {i_negate.value}{i_operator.value} {i_value.value}',
-#             disabled=True,
-#             )
-        
-
-#         def update_options(*args):
-#             instruction = _INSTRUCTIONS[i_type.value]
-
-#             if hasattr(instruction, 'scopes'):
-#                 i_scope.disabled = False
-#                 i_scope.options = [(f'{s.symbol}: {s.description}', s.symbol) for s in instruction.scopes]
-#             else:
-#                 i_scope.disabled = True
-#                 i_scope.options = ['']
-
-#             if hasattr(instruction, 'negations'):
-#                 i_negate.disabled = False
-#                 i_negate.options = [('dont negate condition', ''), ('negate condition', '!')]
-#             else:
-#                 i_negate.disabled = True
-#                 i_negate.options = ['', '']
-
-#             i_operator.options = [(f'{s.symbol}: {s.description}', s.symbol) for s in instruction.operators]
-#             i_operator.value = instruction.operators[0].symbol
-
-#         def update_text(*args):
-#             i_text.value = f'{i_type.value} {i_scope.value} {i_negate.value}{i_operator.value} {i_value.value}\n'
-
-#         i_type.observe(update_options, 'value')
-#         i_type.observe(update_text, 'value')
-#         i_scope.observe(update_text, 'value')
-#         i_negate.observe(update_text, 'value')
-#         i_operator.observe(update_text, 'value')
-#         i_value.observe(update_text, 'value')
+        # #code input
+        # ui_code = widgets.Textarea(
+        #     value='$verbosity=3\n$diff=None\n\n#Enter query code here\n\n',
+        #     layout=Layout(width='99%', height='97%')
+        #     )
+        # def update_code(text):
+        #     ui_code.value += text
+        #     if text in CONNECTORS.by_symbol:
+        #         if CONNECTORS[text] == CONNECTORS.MODIFY:
+        #             ui_flags.children = get_buttons(flags_modify)
+        #         elif CONNECTORS[text] in connectors_select_cols:
+        #             ui_flags.children = get_buttons(flags_select - flags_select_rows_scope)
+        #         elif CONNECTORS[text] in connectors_select_rows:
+        #             ui_flags.children = get_buttons(flags_select)
+                
 
         
-#         ui_add_instruction = widgets.Button(
-#             button_style='success',
-#             tooltip='adds the selected instruction to the query code',
-#             icon='check'
-#             )
+        # #some general info and statistics about the df
+        # mem_usage = self.df.memory_usage().sum() / 1024
+        # ui_details = widgets.HTML(
+        #     value=f"""
+        #     <b>rows:</b> {len(self.df.index)}<br>
+        #     <b>columns:</b> {len(self.df.columns)}<br>
+        #     <b>memory usage:</b> {mem_usage:,.3f}kb<br>
+        #     <b>unique values:</b> {self.df.nunique().sum()}<br>
+        #     <b>missing values:</b> {self.df.isna().sum().sum()}<br>
+        #     <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
+        #     """
+        #     ) 
 
-#         def add_instruction(ui_code, i_text):
-#             if i_text.value.startswith('´c'):
-#                 ui_code.value += f'\n{i_text.value}'
-#             else:
-#                 ui_code.value += f'   {i_text.value}'
 
-#         ui_add_instruction.on_click(lambda b: add_instruction(ui_code, i_text))
+        # #query builder
 
-#         ui_input = VBox([
-#             widgets.HTML(value='<b>query builder:</b>'),
-#             i_text,
-#             i_type,
-#             i_scope,
-#             i_negate,
-#             i_operator,
-#             i_value,
-#             ui_add_instruction,
-#             ])
-
-        
-#         #some general info and statistics about the df
-#         mem_usage = self.df.memory_usage().sum() / 1024
-#         ui_details = widgets.HTML(
-#             value=f"""
-#             <b>rows:</b> {len(self.df.index)}<br>
-#             <b>columns:</b> {len(self.df.columns)}<br>
-#             <b>memory usage:</b> {mem_usage:,.3f}kb<br>
-#             <b>unique values:</b> {self.df.nunique().sum()}<br>
-#             <b>missing values:</b> {self.df.isna().sum().sum()}<br>
-#             <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
-#             """
-#             ) 
-
-#         ui_tabs = widgets.Tab(
-#             children=[
-#                 ui_code,
-#                 ui_details,
-#                 widgets.HTML(value=DataFrameQuery.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
-#                 ],
-#             titles=['code', 'details', 'readme'],
-#             layout=Layout(width='50%', height='95%')
-#             )
+        # connector_symbols = [
+        #     CONNECTORS.NEW_SELECT_COLS,
+        #     CONNECTORS.AND_SELECT_COLS,
+        #     CONNECTORS.OR_SELECT_COLS,
+        #     CONNECTORS.NEW_SELECT_ROWS,
+        #     CONNECTORS.AND_SELECT_ROWS,
+        #     CONNECTORS.OR_SELECT_ROWS,
+        #     CONNECTORS.MODIFY,
+        #     ]
+        # ui_connectors = widgets.HBox([])
+        # for connector in connector_symbols:
+        #     button = widgets.Button(
+        #         description=connector.symbol,
+        #         tooltip=connector.description,
+        #         layout=Layout(width='auto')  
+        #         )
+        #     button.on_click(lambda x: update_code(x.description))
+        #     ui_connectors.children += (button,)
         
 
+        # def get_buttons(symbols):
+        #     buttons = []
+        #     for symbol in symbols:
+        #         button = widgets.Button(
+        #             description=symbol.symbol,
+        #             tooltip=symbol.description,
+        #             layout=Layout(width='auto')  
+        #             )
+        #         button.on_click(lambda x: update_code(x.description))
+        #         buttons.append(button)
+        #     buttons = widgets.GridBox(buttons, layout=Layout(grid_template_columns='repeat(8, auto)'))
+        #     return buttons
+
+
+        # ui_flags = get_buttons(FLAGS)
+        # ui_operators = get_buttons(OPERATORS)
+        # ui_query_builder = widgets.VBox([
+        #     widgets.HTML(value='<b>query builder</b>'),
+        #     widgets.HTML(value='connectors:'),
+        #     ui_connectors,
+        #     widgets.HTML(value='flags:'),
+        #     ui_flags,
+        #     widgets.HTML(value='operators:'),
+        #     ui_operators,
+        #     ])
         
-#         ui = HBox([ui_tabs, ui_input], layout=Layout(width='100%', height='300px'))
 
-#         kwargs['code'] = ui_code
+        # ui_tabs = widgets.Tab(
+        #     children=[
+        #         ui_code,
+        #         ui_details,
+        #         widgets.HTML(value=DataFrameQuery.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
+        #         ],
+        #     titles=['code', 'details', 'readme'],
+        #     layout=Layout(width='50%', height='95%')
+        #     )
+        # ui = HBox([ui_tabs, ui_query_builder], layout=Layout(width='100%', height='300px'))
 
-#         display(ui)
-#         out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
-#         display(out)
-
+        # kwargs['code'] = ui_code
+        # display(ui)
+        # out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
+        # display(out)
 
 def _interactive_mode(**kwargs):
     df = kwargs.pop('df')
