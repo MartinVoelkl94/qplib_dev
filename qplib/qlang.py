@@ -233,6 +233,8 @@ flags_copy_df = set([
     FLAGS.VAL,
     FLAGS.HEADER,
     FLAGS.NEW_COL,
+    FLAGS.METADATA,
+    FLAGS.TAG_METADATA,
     ])
 flags_modify = flags_settings | flags_metadata | flags_format | flags_copy_df | set([FLAGS.COL_EVAL])
 
@@ -359,6 +361,10 @@ operators_binary = set([
     OPERATORS.SET,
     OPERATORS.CONTAINS,
     OPERATORS.EVAL,
+    OPERATORS.ADD,
+    ])
+operators_metadata = set([
+    OPERATORS.SET,
     OPERATORS.ADD,
     ])
 
@@ -619,8 +625,12 @@ def parse(instruction_tokenized, args):
 
     #set defaults
     if instruction.operator is None:
-        log(f'trace: no operator found in "{code}". using default "{OPERATORS.SET}"', 'qp.qlang.parse', verbosity)
-        instruction.operator = OPERATORS.SET
+        if FLAGS.TAG_METADATA in flags:
+            log(f'trace: no operator found in "{code}". using default "{OPERATORS.ADD}" for tagging metadata', 'qp.qlang.parse', verbosity)
+            instruction.operator = OPERATORS.ADD
+        else:
+            log(f'trace: no operator found in "{code}". using default "{OPERATORS.SET}"', 'qp.qlang.parse', verbosity)
+            instruction.operator = OPERATORS.SET
     if instruction.connector in connectors_select_rows:
         if flags.intersection(flags_select_rows_scope) == set() and set([FLAGS.SAVE_SELECTION, FLAGS.LOAD_SELECTION]).intersection(flags) == set():
             log(f'trace: no row selection flag found in "{code}". using default "{FLAGS.ANY}"', 'qp.qlang.parse', verbosity)
@@ -692,6 +702,7 @@ def parse(instruction_tokenized, args):
     elif FLAGS.LOAD_SELECTION in flags and len(flags)>1:
         log(f'warning: flags "{flags - {FLAGS.LOAD_SELECTION}}" are not compatible with "{FLAGS.LOAD_SELECTION}" and will be ignored',
             'qp.qlang.parse', verbosity)
+    
     
 
 

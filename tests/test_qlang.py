@@ -466,6 +466,70 @@ def test_metadata(code, metadata):
     assert df.equals(df1), qp.diff(df, df1, output='str')
 
 
+def test_metadata_continous():
+
+    df = get_df_simple_tagged()
+    df1 = get_df_simple_tagged()
+    df1['meta'] = [ '', '', '>0']
+    df = df.q('=a  %%>0   $meta +=>0   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+    df1['meta'] = [ '', '', '>0>0']
+    df = df.q('=a   %%>0  $meta+=>0   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+    df1['meta'] = [ '', '0', '>0>0']
+    df = df.q('=a   %%==0    $meta += 0   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+    df1['meta'] = [ '', '', '>0>0']
+    df = df.q('a   %%==0    $meta ~ x.replace("0", "")   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+    df1['meta'] = [ '', '', '>>']
+    df = df.q('=a   %%>0    $meta~x.replace("0", "")   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+    df1['meta'] = [ '', '', '']
+    df = df.q('=a     $meta=   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+
+
+def test_tagging():
+
+    df = get_df_simple_tagged()
+    df1 = get_df_simple_tagged()
+    df1['meta'] = [ '', '', '\n@a: 1']
+    df = df.q('=a  %%>0   $tag1   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+    df1['meta'] = [ '', '', '\n@a: 1\n@a: 1']
+    df = df.q('=a   %%>0  $tag1   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+    
+    df1['meta'] = [ '', '', '\n@a: 1\n@a: 1\n@a: 1']
+    df = df.q('=a   %%>0  $tag+=1   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+    
+    df1['meta'] = [ '', '', '\n@a: 1']
+    df = df.q('=a   %%>0  $tag=1   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+    #no inplace modification should take place
+    df1['meta'] = [ '', '', '\n@a: 1']
+    df = get_df_simple_tagged()
+    df = df.q('=a  %%>0   $tag1   %is any;  %%is any;')
+    df2 = df.q('=a  %%>0   $tag2   %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+    df1['meta'] = [ '', '', '\n@a@b: 1']
+    df = get_df_simple_tagged()
+    df = df.q('a /b  %%all>0  $tag1  %is any;  %%is any;')
+    assert df.equals(df1), qp.diff(df, df1, output='str')
+
+
+
 @pytest.mark.parametrize("code, expected", [
     ('id %%?1  %%save1   %%is any;  %%load1',                   df.loc[[0,1,2,3,6],['ID']]),
     ('id %%?1  %%save=1   %%is any;  %%load=1',                 df.loc[[0,1,2,3,6],['ID']]),
@@ -555,35 +619,6 @@ def test_scope4():
     df2.loc[[1,6,7], 'dose'] = ''
     expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
     assert result.equals(expected), qp.diff(result, expected, output='str')
-
-
-def test_metadata_continous():
-
-    df = get_df_simple_tagged()
-    df1 = get_df_simple_tagged()
-    df1['meta'] = [ '', '', '>0']
-    df = df.q('=a  %%>0   $meta +=>0   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
-
-    df1['meta'] = [ '', '', '>0>0']
-    df = df.q('=a   %%>0  $meta+=>0   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
-
-    df1['meta'] = [ '', '0', '>0>0']
-    df = df.q('=a   %%==0    $meta += 0   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
-
-    df1['meta'] = [ '', '', '>0>0']
-    df = df.q('a   %%==0    $meta ~ x.replace("0", "")   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
-
-    df1['meta'] = [ '', '', '>>']
-    df = df.q('=a   %%>0    $meta~x.replace("0", "")   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
-
-    df1['meta'] = [ '', '', '']
-    df = df.q('=a     $meta=   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
 
 
 
