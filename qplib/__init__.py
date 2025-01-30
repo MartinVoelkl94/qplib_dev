@@ -5,6 +5,7 @@ from .qlang import query, DataFrameQuery, DataFrameQueryInteractiveMode
 from .pd_util import \
     save, \
     load, \
+    fetch, \
     get_df, \
     get_dfs, \
     _diff as diff

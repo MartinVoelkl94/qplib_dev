@@ -9,7 +9,7 @@ from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
 
 from .util import log, GREEN, ORANGE, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
-from .types import _date, _na, qpDict
+from .types import _date, _datetime, _na, qpDict
 
 
 
@@ -321,6 +321,78 @@ def load(path='df', sheet='data1', index_col=0, before='now', return_date=False,
         else:
             return df
 
+
+
+def fetch(path='export/', before='now', verbosity=3):
+    """
+    returns the path to the most recent version of a file (based on timestamp in filename)
+
+    
+    before:
+    defines recency of the file
+    - now: most recent version
+    - today: most recent version before today
+    - this day: most recent version before today
+    - this week: ...
+    - this month: ...
+    - this year: ...
+    - '2024_01_01': most recent version before 2024_01_01 (accepts many date formats)
+    """
+
+    if os.path.isfile(path):
+        log(f'info: found file "{path}"', 'qp.fetch()', verbosity)
+        return path
+        
+    today = datetime.date.today()
+
+
+    if before == 'now':
+        cutoff = today + datetime.timedelta(days=1)
+    elif before == 'today':
+        cutoff = today
+    elif before == 'this day':
+        cutoff = today
+    elif before == 'this week':
+        cutoff = today - datetime.timedelta(days=today.weekday())
+    elif before == 'this month':
+        cutoff = today - datetime.timedelta(days=today.day-1)
+    elif before == 'this year':
+        cutoff = pd.to_datetime(f'{today.year}0101').date()
+    else:
+        cutoff = _date(before)
+
+
+    name = os.path.basename(path)
+    folder = os.path.dirname(path)
+
+ 
+    if folder == '':
+        folder = os.getcwd()
+
+    timestamps = pd.Series([])
+    for file in os.listdir(folder):
+        #check if file starts with name and is a file
+        if os.path.isfile(f'{folder}/{file}') and file.startswith(name):
+            try:
+                timestamp_str_full = file.split(name)[-1]
+                extension = timestamp_str_full.split('.')[-1]
+                timestamp_str = timestamp_str_full.replace(f'.{extension}', '')
+                timestamp = _datetime(timestamp_str)
+                if timestamp < _datetime(cutoff):
+                    timestamps[timestamp] = timestamp_str
+            except:
+                pass
+
+    if len(timestamps) == 0:
+        log(f'error: no timestamped files starting with "{name}" found in "{folder}" before {cutoff}',
+            'qp.fetch()', verbosity)
+        return None
+    else:
+        timestamps = timestamps.sort_index()
+        latest = timestamps.iloc[len(timestamps) - 1]
+        path = f'{folder}/{name}{latest}.{extension}'
+        log(f'info: found file "{path}"', 'qp.fetch()', verbosity)
+        return path
 
 
 def _diff(
@@ -688,13 +760,15 @@ def _diff_excel(
     '''
     see _diff() for details
     '''
+    filename_new = os.path.basename(file_new)
+    filename_old = os.path.basename(file_old)
 
     summary = pd.DataFrame(columns=[
         'sheet',
-        f'is in new file',
-        f'is in old file',
-        f'index (first col) is unique in new file',
-        f'index (first col) is unique in old file',
+        f'is in "{filename_new}"',
+        f'is in "{filename_old}"',
+        f'index_col is unique in "{filename_new}"',
+        f'index_col is unique in "{filename_old}"',
         'cols added',
         'cols removed',
         'rows added',
@@ -748,10 +822,10 @@ def _diff_excel(
 
             idx = len(summary)
             summary.loc[idx, 'sheet'] = sheet
-            summary.loc[idx, f'is in new file'] = True
-            summary.loc[idx, f'is in old file'] = True
-            summary.loc[idx, f'index (first col) is unique in new file'] = df_new.index.is_unique
-            summary.loc[idx, f'index (first col) is unique in old file'] = df_old.index.is_unique
+            summary.loc[idx, f'is in "{filename_new}"'] = True
+            summary.loc[idx, f'is in "{filename_old}"'] = True
+            summary.loc[idx, f'index_col is unique in "{filename_new}"'] = df_new.index.is_unique
+            summary.loc[idx, f'index_col is unique in "{filename_old}"'] = df_old.index.is_unique
             for key, val in changes.items():
                 summary.loc[idx, key] = val
             
@@ -763,9 +837,9 @@ def _diff_excel(
                 df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=index_col)
             idx = len(summary)
             summary.loc[idx, 'sheet'] = sheet
-            summary.loc[idx, f'is in new file'] = True
-            summary.loc[idx, f'is in old file'] = False
-            summary.loc[idx, f'index (first col) is unique in new file'] = df_new.index.is_unique
+            summary.loc[idx, f'is in "{filename_new}"'] = True
+            summary.loc[idx, f'is in "{filename_old}"'] = False
+            summary.loc[idx, f'index_col is unique in "{filename_new}"'] = df_new.index.is_unique
     
     #wip
     string = 'no string version of differences available when comparing excel files'
