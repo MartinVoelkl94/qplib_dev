@@ -356,11 +356,32 @@ def cp(src, dest, verbosity=3):
     """
     copy file or directory
     """
+    if os.path.exists(dest):
+        log(f'warning: "{dest}" already exists and will be overwritten',
+            f'qp.cp({src=}, {dest=})', verbosity)
+        
     if os.path.isdir(src):
         shutil.copytree(src, dest)
     else:
         shutil.copy(src, dest)
-    log(f'info: copied<br>{src}<br>to<br>{dest}', f'qp.cp({src=}, {dest=})', verbosity)
+
+    log(f'info: copied<br>{src}<br>to<br>{dest}',
+        f'qp.cp({src=}, {dest=})', verbosity)
+    return
+
+
+def mv(src, dest, verbosity=3):
+    """
+    move file or directory
+    """
+    if os.path.exists(dest):
+        log(f'warning: "{dest}" already exists and will be overwritten',
+            f'qp.mv({src=}, {dest=})', verbosity)
+        
+    shutil.move(src, dest)
+
+    log(f'info: moved<br>"{src}"<br>to<br>"{dest}"',
+        f'qp.cp({src=}, {dest=})', verbosity)
     return
 
 

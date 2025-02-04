@@ -22,6 +22,7 @@ from .util import \
     pwd, \
     cd, \
     cp, \
+    mv, \
     mkdir, \
     isdir, \
     isfile, \
