@@ -519,19 +519,19 @@ def _diff(
             summary.to_excel(writer, sheet_name='diff_summary', index=False)
             for sheet, df in df.items():
                 if sheet == 'diff_summary':
-                    log(f'warning: comparison for sheet "diff_summary" will not be written to file since this name is reserved', 'qp._diff.diff()', verbosity)
+                    log(f'warning: comparison for sheet "diff_summary" will not be written to file since this name is reserved', 'qp.diff()', verbosity)
                     continue
                 if hasattr(df, 'data'):
                     df.data['meta'] = df.data['meta'].str.replace('<br>', '\n')
                     df.to_excel(writer, sheet_name=sheet, index=True)
-        log(f'info: differences saved to "{output}"', 'qp._diff.diff()', verbosity)
+        log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
         return df, summary, string
     elif output.endswith('.xlsx'):
         df.to_excel(output, index=index_col)
-        log(f'info: differences saved to "{output}"', 'qp._diff.diff()', verbosity)
+        log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
         return df, summary, string
     else:
-        log(f'error: unknown return value: {output}', 'qp._diff.diff()', verbosity)
+        log(f'error: unknown return value: {output}', 'qp.diff()', verbosity)
         return None
    
 
@@ -765,10 +765,6 @@ def _diff_excel(
 
     summary = pd.DataFrame(columns=[
         'sheet',
-        f'is in "{filename_new}"',
-        f'is in "{filename_old}"',
-        f'index_col is unique in "{filename_new}"',
-        f'index_col is unique in "{filename_old}"',
         'cols added',
         'cols removed',
         'rows added',
@@ -776,6 +772,10 @@ def _diff_excel(
         'vals added',
         'vals removed',
         'vals changed',
+        f'is in "{filename_new}"',
+        f'is in "{filename_old}"',
+        f'index_col is unique in "{filename_new}"',
+        f'index_col is unique in "{filename_old}"',
         ])
     results = {}
     
@@ -887,7 +887,7 @@ def _diff_str(df_new, df_old, ignore=None, verbosity=3):
     #different values
 
     if len(cols_shared) > 20 or len(idx_shared) > 200:
-        log('warning: too many shared columns or indices to show different values', 'qp._diff.diff()', verbosity)
+        log('warning: too many shared columns or indices to show different values', 'qp.diff()', verbosity)
         result += 'too many shared columns or indices to show different values'
 
     else:

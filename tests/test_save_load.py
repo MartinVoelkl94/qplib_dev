@@ -150,7 +150,7 @@ def test_before_this_year():
     elif qp.date(last_month).year < qp.date(today).year and qp.date(last_month) > qp.date(last_year):
         date_correct = last_month
     else:
-        date_correct = qp.date(last_year)
+        date_correct = last_year
     
     assert qp.load('archive/df', sheet='Sheet1', before='this year', index_col=False).loc[0, 'a'] == date_correct, 'failed test for loading most recent file from before this year'
 
