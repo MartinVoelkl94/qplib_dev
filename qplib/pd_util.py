@@ -4,6 +4,7 @@ import copy
 import os
 import datetime
 
+from typing import Literal
 from IPython.display import display
 from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
@@ -153,14 +154,14 @@ class DataFrameSave:
         self.df = df 
 
     def __repr__(self):
-        return 'docstring of dataframe accessor df.save():' + self.__doc__
+        return 'docstring of dataframe accessor df.save():' + str(self.__doc__)
     
     def __call__(
         self,
         path='df.xlsx',
         sheet='data1',
         index=True,
-        if_sheet_exists='replace',
+        if_sheet_exists: Literal['error', 'new', 'replace', 'overlay'] | None ='replace',
         archive=True,
         datefmt='%Y_%m_%d',
         diff_before=None,
@@ -182,11 +183,11 @@ class DataFrameSave:
 
 
 def save(
-    df,
+    df: pd.DataFrame,
     path='df.xlsx',
     sheet='data1',
     index=True,
-    if_sheet_exists='replace',
+    if_sheet_exists: Literal['error', 'new', 'replace', 'overlay'] | None = 'replace',
     archive=True,
     datefmt='%Y_%m_%d',
     diff_before=None,
@@ -203,7 +204,7 @@ def save(
             df_old,
             mode=diff_mode,
             verbosity=3,
-            )
+            )  #type: ignore  (turns of pylance for this line)
         
 
     if not path.endswith('.xlsx'):
@@ -297,7 +298,7 @@ def load(path='df', sheet='data1', index_col=0, before='now', return_date=False,
             try:
                 timestamp_str = file.split(name)[-1].replace('.xlsx', '')
                 timestamp = _date(timestamp_str)
-                if timestamp < cutoff and file == f'{name}{timestamp_str}.xlsx':
+                if timestamp < cutoff and file == f'{name}{timestamp_str}.xlsx':  #type: ignore  (turns of pylance for this line)
                     timestamps[timestamp] = timestamp_str
             except:
                 pass
@@ -364,6 +365,7 @@ def fetch(path='export/', before='now', verbosity=3):
 
     name = os.path.basename(path)
     folder = os.path.dirname(path)
+    extension = ''
 
  
     if folder == '':
@@ -375,10 +377,10 @@ def fetch(path='export/', before='now', verbosity=3):
         if os.path.isfile(f'{folder}/{file}') and file.startswith(name):
             try:
                 timestamp_str_full = file.split(name)[-1]
-                extension = timestamp_str_full.split('.')[-1]
-                timestamp_str = timestamp_str_full.replace(f'.{extension}', '')
+                extension = '.' + timestamp_str_full.split('.')[-1]
+                timestamp_str = timestamp_str_full.replace(f'{extension}', '')
                 timestamp = _datetime(timestamp_str)
-                if timestamp < _datetime(cutoff):
+                if timestamp < _datetime(cutoff):  #type: ignore  (turns of pylance for this line)
                     timestamps[timestamp] = timestamp_str
             except:
                 pass
@@ -390,14 +392,14 @@ def fetch(path='export/', before='now', verbosity=3):
     else:
         timestamps = timestamps.sort_index()
         latest = timestamps.iloc[len(timestamps) - 1]
-        path = f'{folder}/{name}{latest}.{extension}'
+        path = f'{folder}/{name}{latest}{extension}'
         log(f'info: found file "{path}"', 'qp.fetch()', verbosity)
         return path
 
 
 def _diff(
-    df_new,
-    df_old,
+    df_new: pd.DataFrame | str,
+    df_old: pd.DataFrame | str,
     mode='mix',
     output='df',  #df, summary, str, all, print, <filename.xlsx>
     ignore=None,  #col(s) to ignore for comparison
@@ -473,14 +475,20 @@ def _diff(
         if isinstance(df_new, str):
             if df_new.endswith('.csv'):
                 df_new = pd.read_csv(df_new)
-            if df_new.endswith('.xlsx'):
+            elif df_new.endswith('.xlsx'):
                 df_new = pd.read_excel(df_new)
+            else:
+                log(f'error: unknown file extension: {df_new}', 'qp.diff()', verbosity)
+                return None
 
         if isinstance(df_old, str):
             if df_old.endswith('.csv'):
-                df_new = pd.read_csv(df_old)
-            if df_old.endswith('.xlsx'):
-                df_new = pd.read_excel(df_old)
+                df_old = pd.read_csv(df_old)
+            elif df_old.endswith('.xlsx'):
+                df_old = pd.read_excel(df_old)
+            else:
+                log(f'error: unknown file extension: {df_old}', 'qp.diff()', verbosity)
+                return None
 
         if df_new.equals(df_old):
             df = df_new

@@ -225,9 +225,9 @@ def _type(x):
 
     if isinstance(x, bool):
         return 'bool'
-    elif isinstance(x, types_int):
+    elif isinstance(x, types_int):  #type: ignore  (turns of pylance for this line)
         return 'int'
-    elif isinstance(x, types_float):
+    elif isinstance(x, types_float):  #type: ignore  (turns of pylance for this line)
         return 'float'
     
 

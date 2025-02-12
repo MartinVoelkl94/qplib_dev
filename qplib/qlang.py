@@ -1,4 +1,5 @@
 
+from typing import Any
 import numpy as np
 import pandas as pd
 import re
@@ -53,10 +54,19 @@ class Symbols:
         self.name = name
         self.by_name = {symbol.name: symbol for symbol in symbols}
         self.by_symbol = {symbol.symbol: symbol for symbol in symbols}
+    
+    def __getattribute__(self, value):
+        if value == 'by_name':
+            return super().__getattribute__(value)
+        elif value == 'by_symbol':
+            return super().__getattribute__(value)
+        elif value in self.by_symbol:
+            return self.by_symbol[value]
+        elif value in self.by_name:
+            return self.by_name[value]
+        else:
+            return super().__getattribute__(value)
 
-        for symbol in symbols:
-            setattr(self, symbol.name, symbol)
-                
     def __getitem__(self, key):
         if key in self.by_symbol:
             return self.by_symbol[key]
@@ -825,6 +835,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
     flags = instruction.flags
     operator = instruction.operator
     value = instruction.value
+    filtered = None
 
 
     #regex comparisone
@@ -879,9 +890,9 @@ def _filter_series(series, instruction, verbosity, df_new=None):
     elif operator == OPERATORS.IS_YN:
         filtered = series.apply(lambda x: _yn(x, errors='ERROR')) != 'ERROR'
     elif operator == OPERATORS.IS_YES:
-        filtered = series.apply(lambda x: _yn(x, errors='ERROR', yes=1)) == 1
+        filtered = series.apply(lambda x: _yn(x, errors='ERROR', yes='yes')) == 'yes'
     elif operator == OPERATORS.IS_NO:
-        filtered = series.apply(lambda x: _yn(x, errors='ERROR', no=0)) == 0
+        filtered = series.apply(lambda x: _yn(x, errors='ERROR', no='no')) == 'no'
         
     elif operator == OPERATORS.IS_UNIQUE:
         filtered = series.duplicated(keep=False) == False
@@ -955,7 +966,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
         filtered = None
 
 
-    if FLAGS.NEGATE in flags:
+    if FLAGS.NEGATE in flags and isinstance(filtered, pd.Series):
         filtered = ~filtered
 
     return filtered
@@ -990,7 +1001,7 @@ def _load_selection(instruction, df_new, args):
         mask = masks[value]
     else:
         log(f'error: selection "{value}" not found in saved selections', 'qp.qlang._select_rows', verbosity)
-        masks[0] = mask
+        return None
 
     if FLAGS.NEGATE in instruction.flags:
         mask.loc[:, cols] = ~mask.loc[:, cols]
@@ -1447,7 +1458,7 @@ class DataFrameQuery:
         self.df = df
 
     def __repr__(self):
-        return 'docstring of dataframe accessor pd_object.q():\n' + self.__doc__
+        return 'docstring of dataframe accessor pd_object.q():\n' + str(self.__doc__)
     
     def __call__(self, code=''):
         return query(self.df, code)
