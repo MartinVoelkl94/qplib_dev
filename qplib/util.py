@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import copy
+import re
 import os
 import sys
 import shutil
@@ -100,6 +101,20 @@ def log(text=None, context='', verbosity=None, clear=False):
                 )
         else:
             print(message_df)
+
+
+def match(value, matches, regex=True):
+        
+    if not isinstance(matches, list):
+        matches = [matches]
+    
+    if regex:
+        for match in matches:
+            if re.match(match, value):
+                return True
+        return False
+    else:
+        return value in matches
 
 
 class Args:

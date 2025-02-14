@@ -10,9 +10,11 @@ from .pandas import \
     get_dfs, \
     _diff as diff
 
+from .xlsx import hide
 
 from .util import \
     log, \
+    match, \
     Args, \
     header, \
     now, \
