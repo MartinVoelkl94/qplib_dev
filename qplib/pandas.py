@@ -4,7 +4,6 @@ import copy
 import os
 import datetime
 
-from typing import Literal
 from IPython.display import display
 from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
@@ -161,7 +160,7 @@ class DataFrameSave:
         path='df.xlsx',
         sheet='data1',
         index=True,
-        if_sheet_exists: Literal['error', 'new', 'replace', 'overlay'] | None ='replace',
+        if_sheet_exists='replace',
         archive=True,
         datefmt='%Y_%m_%d',
         diff_before=None,
@@ -187,7 +186,7 @@ def save(
     path='df.xlsx',
     sheet='data1',
     index=True,
-    if_sheet_exists: Literal['error', 'new', 'replace', 'overlay'] | None = 'replace',
+    if_sheet_exists='replace',
     archive=True,
     datefmt='%Y_%m_%d',
     diff_before=None,
