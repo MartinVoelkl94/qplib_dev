@@ -2,7 +2,7 @@
 from .qlang import query, DataFrameQuery, DataFrameQueryInteractiveMode
 
 
-from .pd_util import \
+from .pandas import \
     save, \
     load, \
     fetch, \
