@@ -2,10 +2,11 @@ LICENSE
 README.md
 pyproject.toml
 qplib/__init__.py
-qplib/pd_util.py
+qplib/pandas.py
 qplib/qlang.py
 qplib/types.py
 qplib/util.py
+qplib/xlsx.py
 qplib.egg-info/PKG-INFO
 qplib.egg-info/SOURCES.txt
 qplib.egg-info/dependency_links.txt

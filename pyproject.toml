@@ -27,7 +27,7 @@ dependencies = [
     "jedi>=0.16",
     "tomli",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 
 [project.optional-dependencies]
