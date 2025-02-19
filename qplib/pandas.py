@@ -10,6 +10,7 @@ from pandas.api.extensions import register_dataframe_accessor
 
 from .util import log, GREEN, ORANGE, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
 from .types import _date, _datetime, _na, qpDict
+from .xlsx import hide
 
 
 
@@ -415,7 +416,7 @@ def _diff(
     mode:
     not needed for output="summary" or "str" or "print"
     - 'new': creates new dataframe with highlighted value additions, removals and changes
-    - 'new+': also shows old values in columns next to new values
+    - 'new+': also shows old values in columns next to new values (old values are hidden when saved to excel)
     - 'old': creates old dataframe with highlighted value additions, removals and changes
     - 'mix': creates mixture of new and old dataframe with highlighted value additions, removals and changes
     
@@ -531,10 +532,14 @@ def _diff(
                 if hasattr(df, 'data'):
                     df.data['meta'] = df.data['meta'].str.replace('<br>', '\n')
                     df.to_excel(writer, sheet_name=sheet, index=True)
+        if mode=='new+':
+            hide(output, axis='col', patterns=f'{prefix_old}.*', hide=True, verbosity=verbosity)
         log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
         return df, summary, string
     elif output.endswith('.xlsx'):
         df.to_excel(output, index=index_col)
+        if mode=='new+':
+            hide(output, axis='col', patterns=f'{prefix_old}.*', hide=True, verbosity=verbosity)
         log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
         return df, summary, string
     else:

@@ -103,18 +103,18 @@ def log(text=None, context='', verbosity=None, clear=False):
             print(message_df)
 
 
-def match(value, matches, regex=True):
+def match(patterns, value, regex=True):
         
-    if not isinstance(matches, list):
-        matches = [matches]
+    if not isinstance(patterns, list):
+        patterns = [patterns]
     
-    if regex:
-        for match in matches:
-            if re.match(match, value):
+    if regex and isinstance(value, str):
+        for pattern in patterns:
+            if re.fullmatch(pattern, value):
                 return True
         return False
     else:
-        return value in matches
+        return value in patterns
 
 
 class Args:

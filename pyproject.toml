@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qplib"
-version = "0.6.0"
+version = "0.6.1"
 description = "query language for pandas"
 readme = "README.md"
 authors = [{ name = "martin v", email = "martinv16248@gmail.com" }]
@@ -32,6 +32,8 @@ requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = [
+    "build",
+    "twine",
     "pytest",
     "ipykernel",
 ]

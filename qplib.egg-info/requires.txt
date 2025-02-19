@@ -8,5 +8,7 @@ jedi>=0.16
 tomli
 
 [dev]
+build
+twine
 pytest
 ipykernel

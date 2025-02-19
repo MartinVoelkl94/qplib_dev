@@ -6,7 +6,7 @@ from .util import log, match
 def hide(
     filename,
     axis='col',  #'row', 'col', 'sheet'
-    matches=None,
+    patterns=None,
     regex=True,
     hide=True,  #True=hide, False=unhide
     verbosity=3,
@@ -23,7 +23,7 @@ def hide(
         for ws in wb.worksheets:
             hidden = []
             for col in ws.columns:
-                if match(col[0].value, matches, regex):
+                if match(patterns, col[0].value, regex):
                     ws.column_dimensions[col[0].column_letter].hidden = hide
                     hidden.append(col[0].value)
             if hidden:
@@ -35,7 +35,7 @@ def hide(
         for ws in wb.worksheets:
             hidden = []
             for row in ws.rows:
-                if match(row[0].value, matches, regex):
+                if match(patterns, row[0].value, regex):
                     ws.row_dimensions[row[0].row].hidden = hide
                     hidden.append(row[0].value)
             if hidden:
@@ -46,7 +46,7 @@ def hide(
     elif axis in ['sheet', 'worksheet', 'tab', 2]:
         hidden = []
         for ws in wb.worksheets:
-            if match(ws.title, matches, regex):
+            if match(patterns, ws.title, regex):
                 if hide:
                     ws.sheet_state = mode
                 else:
