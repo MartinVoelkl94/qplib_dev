@@ -39,5 +39,5 @@ from .types import \
     _nk as nk, \
     _yn as yn, \
     _type as type, \
-    qpDict as dict
+    _dict as dict
 

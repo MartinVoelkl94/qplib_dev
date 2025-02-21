@@ -9,7 +9,7 @@ from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
 
 from .util import log, GREEN, ORANGE, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
-from .types import qpDict
+from .types import _dict
 from .xlsx import hide
 
 
@@ -73,7 +73,7 @@ def get_dfs():
 
 
 @pd.api.extensions.register_index_accessor('qp')
-class indexQpExtension(qpDict):
+class indexQpExtension(_dict):
     """
     stores parameters and data for custom extensions.
     """
@@ -82,7 +82,7 @@ class indexQpExtension(qpDict):
 
 
 @pd.api.extensions.register_series_accessor('qp')
-class seriesQpExtension(qpDict):
+class seriesQpExtension(_dict):
     """
     stores parameters and data for custom extensions.
     """
@@ -91,7 +91,7 @@ class seriesQpExtension(qpDict):
 
 
 @pd.api.extensions.register_dataframe_accessor('qp')
-class dfQpExtension(qpDict):
+class dfQpExtension(_dict):
     """
     stores parameters and data for custom extensions.
     """

@@ -324,7 +324,7 @@ def _type(x):
 
 
 
-class qpDict(dict):
+class _dict(dict):
     """
     qp.dict().values_flat() will unpack nested iterables
     qp.dict().invert() will invert the key:value pairs to value:key pairs
@@ -335,7 +335,7 @@ class qpDict(dict):
         for val in self.values():
             if isinstance(val, dict):
                 values_flat.extend(val.values())
-            elif isinstance(val, qpDict):
+            elif isinstance(val, _dict):
                 values_flat.extend(val.values_flat())
             elif hasattr(val, '__iter__') and not isinstance(val, str):
                 values_flat.extend(val)
@@ -344,6 +344,6 @@ class qpDict(dict):
         return values_flat
     
     def invert(self):
-        return qpDict({val:key for key,val in self.items()})
+        return _dict({val:key for key,val in self.items()})
 
 
