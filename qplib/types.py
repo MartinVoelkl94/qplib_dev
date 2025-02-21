@@ -323,12 +323,20 @@ def _type(x):
 
 
 
-
 class _dict(dict):
     """
-    qp.dict().values_flat() will unpack nested iterables
-    qp.dict().invert() will invert the key:value pairs to value:key pairs
+    Dictionary with some extra features:
+    - attributes can be set (if not needed to preserve regular dict functionality)
+    - qp.dict().values_flat() will unpack nested iterables
+    - qp.dict().invert() will invert the key:value pairs to value:key pairs
     """
+
+    def __setattr__(self, name, value):
+        if name in dict().__dir__():
+            msg = f'Attribute "{name}" is needed for regular dict functionality and cannot be modified'
+            raise AttributeError(msg)
+        else:
+            super().__setattr__(name, value)
 
     def values_flat(self):
         values_flat = []
@@ -345,5 +353,4 @@ class _dict(dict):
     
     def invert(self):
         return _dict({val:key for key,val in self.items()})
-
 

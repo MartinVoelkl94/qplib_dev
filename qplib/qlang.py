@@ -8,8 +8,8 @@ import qplib as qp
 from IPython.display import display
 from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 
-from .util import log, Args
-from .types import _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
+from .util import log
+from .types import _dict, _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
 from .pandas import _diff
 
 
@@ -396,19 +396,14 @@ def query(df_old, code=''):
     cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
 
- 
-
-    args = Args(
-        _verbosity=0,  #internal to Args
-        _overwrite=True,  #internal to Args
-        verbosity = VERBOSITY,
-        diff = DIFF,
-        cols = cols,
-        masks = {0: mask},  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
-        style = None,
-        copy_df = False,
-        df_copied = False,
-        )
+    args = _dict()
+    args.verbosity = VERBOSITY
+    args.diff = DIFF
+    args.cols = cols
+    args.masks = {0: mask}  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
+    args.style = None
+    args.copy_df = False
+    args.df_copied = False
 
  
 

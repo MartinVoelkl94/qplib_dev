@@ -189,26 +189,6 @@ def match(patterns, value, regex=True):
         return value in patterns
 
 
-class Args:
-    def __init__(self, _verbosity=3, _overwrite=True, **kwargs):
-        self._verbosity = _verbosity
-        self._overwrite = _overwrite
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-    
-    def __setattr__(self, name, value):
-        if hasattr(self, name):
-            if self._overwrite:
-                log(f'warning: {name} already exists and will be overwritten',
-                    'qp.util.Args.__setattr__', self._verbosity)
-                super().__setattr__(name, value)
-            else:
-                log(f'error: {name} already exists and cannot be overwritten',
-                    'qp.util.Args.__setattr__', self._verbosity)
-        else:
-            super().__setattr__(name, value)
-
-
 
 def header(word='header', slim=True, width=None, filler=' '):
     """
