@@ -9,10 +9,7 @@ import shutil
 import datetime
 from IPython.display import display
 from IPython import get_ipython
-from .types import _num
-from .types import _na
-from .types import _nk
-
+from .types import _num, _na, _nk, _date, _datetime
 
 GREEN = '#6dae51'
 ORANGE = 'orange'
@@ -101,6 +98,81 @@ def log(text=None, context='', verbosity=None, clear=False):
                 )
         else:
             print(message_df)
+
+
+
+
+def fetch(path, before='now', verbosity=3):
+    """
+    returns the path to the most recent version of a file (based on timestamp in filename)
+
+    
+    before:
+    defines recency of the file
+    - now: most recent version
+    - today: most recent version before today
+    - this day: most recent version before today
+    - this week: ...
+    - this month: ...
+    - this year: ...
+    - '2024_01_01': most recent version before 2024_01_01 (accepts many date formats)
+    """
+
+    if os.path.isfile(path):
+        log(f'info: found file "{path}"', 'qp.fetch()', verbosity)
+        return path
+        
+    today = datetime.date.today()
+
+
+    if before == 'now':
+        cutoff = today + datetime.timedelta(days=1)
+    elif before == 'today':
+        cutoff = today
+    elif before == 'this day':
+        cutoff = today
+    elif before == 'this week':
+        cutoff = today - datetime.timedelta(days=today.weekday())
+    elif before == 'this month':
+        cutoff = today - datetime.timedelta(days=today.day-1)
+    elif before == 'this year':
+        cutoff = pd.to_datetime(f'{today.year}0101').date()
+    else:
+        cutoff = _date(before)
+
+
+    name = os.path.basename(path)
+    folder = os.path.dirname(path)
+    extension = ''
+
+ 
+    if folder == '':
+        folder = os.getcwd()
+
+    timestamps = pd.Series([])
+    for file in os.listdir(folder):
+        #check if file starts with name and is a file
+        if os.path.isfile(f'{folder}/{file}') and file.startswith(name):
+            try:
+                timestamp_str_full = file.split(name)[-1]
+                extension = '.' + timestamp_str_full.split('.')[-1]
+                timestamp_str = timestamp_str_full.replace(f'{extension}', '')
+                timestamp = _datetime(timestamp_str)
+                if timestamp < _datetime(cutoff):  #type: ignore  (turns of pylance for this line)
+                    timestamps[timestamp] = timestamp_str
+            except:
+                pass
+
+    if len(timestamps) == 0:
+        log(f'error: no timestamped files starting with "{name}" found in "{folder}" before {cutoff}',
+            'qp.fetch()', verbosity)
+        return None
+    else:
+        timestamps = timestamps.sort_index()
+        latest = timestamps.iloc[len(timestamps) - 1]
+        path = f'{folder}/{name}{latest}{extension}'
+        log(f'info: found file "{path}"', 'qp.fetch()', verbosity)
+        return path
 
 
 def match(patterns, value, regex=True):
