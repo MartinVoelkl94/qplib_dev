@@ -200,7 +200,7 @@ FLAGS = Symbols('FLAGS',
     #multipurpose flags
 
     #evaluate a python expression
-    Symbol('col', 'COL_EVAL', 'when used with the eval operator, evaluates on the hove column'),
+    Symbol('col', 'COL_EVAL', 'when used with the eval operator, evaluates on the whole column'),
 
     #use regex for matching and contains operations
     Symbol('regex', 'REGEX', 'use regex for equality and contains operator'),
@@ -243,10 +243,11 @@ flags_copy_df = set([
     FLAGS.VAL,
     FLAGS.HEADER,
     FLAGS.NEW_COL,
+    FLAGS.COL_EVAL,
     FLAGS.METADATA,
     FLAGS.TAG_METADATA,
     ])
-flags_modify = flags_settings | flags_metadata | flags_format | flags_copy_df | set([FLAGS.COL_EVAL])
+flags_modify = flags_settings | flags_metadata | flags_format | flags_copy_df
 
 
 
