@@ -82,10 +82,10 @@ class Symbol:
         return f'name:{self.name}\n\tsymbol:{self.symbol}\n\tdescription{self.description}'
 
     def __repr__(self):
-        return self.name
+        return f'"{self.symbol}": {self.name}'
  
     def __str__(self):
-        return self.name
+        return f'"{self.symbol}": {self.name}'
 
 
 class Symbols:
@@ -96,7 +96,7 @@ class Symbols:
         self.name = name
         self.by_name = {symbol.name: symbol for symbol in symbols}
         self.by_symbol = {symbol.symbol: symbol for symbol in symbols}
-    
+
     def __getattribute__(self, value):
         if value == 'by_name':
             return super().__getattribute__(value)
@@ -123,7 +123,7 @@ class Symbols:
 
     def __repr__(self):
         return f'{self.name}:\n\t' + '\n\t'.join([str(val) for key,val in self.by_name.items()])
-    
+
     def __str__(self):
         return self.__repr__()
 
@@ -153,9 +153,9 @@ class Instruction:
         string += f'\n\toperator: {self.operator}\n\tvalue: {self.value}'
         if self.function:
             string += f'\n\tfunction: {self.function.__name__}'
-        
+
         return string
-    
+
     def __str__(self):
         return self.__repr__()
 
@@ -196,7 +196,7 @@ connectors_select = connectors_select_cols | connectors_select_rows
 FLAGS = Symbols('FLAGS',
 
     #selection flags
-             
+
     #select rows/values
     Symbol('any', 'ANY', 'select whole row if ANY value in the selected columns fulfills the condition'),
     Symbol('all', 'ALL', 'select whole row if ALL values in the selected columns fulfill the condition'),
@@ -224,7 +224,7 @@ FLAGS = Symbols('FLAGS',
     #set/modify metadata
     Symbol('meta', 'METADATA', 'modify the metadata of the selected rows/values'),
     Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "\\n@<selected col>: <value>" to the column named "meta"',),
-    
+
     #modify format
     Symbol('color', 'COLOR', 'change the color of the selected values'),
     Symbol('bg', 'BACKGROUND_COLOR', 'change the background color of the selected values'),
@@ -338,7 +338,7 @@ OPERATORS = Symbols('OPERATORS',
     Symbol('to nk;', 'TO_NK', 'convert to not known value', type_func=_nk, dtype='object'),
     Symbol('to yn;', 'TO_YN', 'convert to yes or no value', type_func=_yn, dtype='object'),
 
-    
+
     #multipurpose operators
     Symbol('=', 'SET', 'set values'),  #default. gets interpreted as EQUALS when used in selection instructions
     Symbol('~', 'EVAL', 'evaluate a python expression'),  #can be used for selection and modification
@@ -459,7 +459,7 @@ def query(df_old, code=''):
     args.copy_df = False
     args.df_copied = False
 
- 
+
 
     #apply instructions
 
@@ -504,17 +504,17 @@ def query(df_old, code=''):
             mode=args.diff,
             verbosity=args.verbosity
             )
-        
+
     elif args.style is not None:
         rows_shared = df_filtered.index.intersection(args.style.index)
         cols_shared = df_filtered.columns.intersection(args.style.columns)
         def f(x, style):
             return style
         result = df_filtered.style.apply(lambda x: f(x, args.style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
-    
+
     else:
         result = df_filtered
-           
+
     return result
 
 
@@ -565,13 +565,13 @@ def check_df(df, verbosity=3):
             log(f'warning: the following column headers contain {problem} which is used by the query syntax, use a tick (´) to escape such characters:\n\t{cols}',
                 'qp.qlang.check_df', verbosity)
             problems_found = True
-    
+
     for problem, cols in whitespace.items():
         if len(cols) > 0:
             log(f'warning: the following column headers contain {problem} which should be removed:\n\t{cols}',
                 'qp.qlang.check_df', verbosity)
             problems_found = True
-    
+
 
     symbol_conflicts = []
 
@@ -630,16 +630,16 @@ def scan(code, args):
             elif line[0] in CONNECTORS.by_symbol:
                 instructions_raw.append(Instruction(line[0], line_num))
                 line = line[1:]
-            
+
             else:
                 instructions_raw[-1].code += line[0]
                 line = line[1:]
 
-        
+
 
     log('trace: transformed code into raw instructions:\n' + '\n'.join([str(instruction) for instruction in instructions_raw]),
         'qp.qlang.tokenize', verbosity)
-    
+
     return instructions_raw, args
 
 
@@ -670,7 +670,7 @@ def extract_symbol(string, symbols, verbosity=3):
             log(f'trace: found "{symbols.name}.{symbol.name}" in "{string}"',
                 'qp.qlang.extract_symbol', verbosity)
             return symbol, string[len(symbol.symbol):].strip()
-      
+
     return None, string
 
 
@@ -707,7 +707,7 @@ def parse(instruction_tokenized, args):
             log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
                 'qp.qlang.parse', verbosity)
             return None, args
-        
+
         if instruction.operator == OPERATORS.SET:
             log(f'trace:"{OPERATORS.SET}" is interpreted as "{OPERATORS.EQUALS}" for selection instruction',
                 'qp.qlang.parse', verbosity)
@@ -729,12 +729,12 @@ def parse(instruction_tokenized, args):
             log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
                 'qp.qlang.parse', verbosity)
             return None, args
-        
+
         elif not flags.issubset(flags_modify):
             log(f'error: flags "{flags - flags_modify}" are not compatible with "{instruction.connector}"',
                 'qp.qlang.parse', verbosity)
             return None, args
-            
+
         if flags.intersection(flags_settings):
             instruction.function = _modify_settings
 
@@ -743,7 +743,7 @@ def parse(instruction_tokenized, args):
 
         elif flags.intersection(flags_format):
             instruction.function = _modify_format
-  
+
         elif FLAGS.HEADER in flags:
             instruction.function = _modify_headers
 
@@ -761,8 +761,8 @@ def parse(instruction_tokenized, args):
     elif FLAGS.LOAD_SELECTION in flags and len(flags)>1:
         log(f'warning: flags "{flags - {FLAGS.LOAD_SELECTION}}" are not compatible with "{FLAGS.LOAD_SELECTION}" and will be ignored',
             'qp.qlang.parse', verbosity)
-    
-    
+
+
 
 
     #general checks
@@ -774,7 +774,7 @@ def parse(instruction_tokenized, args):
         log(f'debug: df will be copied since instruction "{instruction.code}" modifies data',
             'qp.qlang.parse', verbosity)
         args.copy_df = True
-    
+
 
     log(f'debug: parsed:\n{instruction}',
         'qp.qlang.parse', verbosity)
@@ -808,7 +808,7 @@ def _select_cols(instruction, df_new, args):
         cols &= cols_new
     elif instruction.connector == CONNECTORS.OR_SELECT_COLS:
         cols |= cols_new
-    
+
     if cols.any() == False and instruction.connector == CONNECTORS.AND_SELECT_COLS:
         log(f'warning: no columns fulfill the condition in "{instruction.code}" and the previous condition(s)',
             'qp.qlang._select_cols', verbosity)
@@ -835,7 +835,7 @@ def _select_rows(instruction, df_new, args):
         log(f'warning: row filter cannot be applied when no columns where selected', 'qp.qlang._select_rows', verbosity)
         masks[0] = mask
         return df_new, args
- 
+
 
     if value.startswith('@'):
         column = value[1:]
@@ -846,7 +846,7 @@ def _select_rows(instruction, df_new, args):
                 'qp.qlang._select_rows', verbosity)
             return df_new, args
 
-    
+
     if FLAGS.IDX in flags:
         rows = _filter_series(rows_all, instruction, verbosity, df_new)
         mask.loc[rows, :] = True
@@ -862,7 +862,7 @@ def _select_rows(instruction, df_new, args):
         rows = mask.loc[:, cols].all(axis=1)
         mask.loc[rows, :] = True
         mask.loc[~rows, :] = False
-    
+
     if instruction.connector == CONNECTORS.AND_SELECT_ROWS:
         masks[0] = masks[0] & mask
     elif instruction.connector == CONNECTORS.OR_SELECT_ROWS:
@@ -904,7 +904,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
         else:
             filtered = series.apply(lambda x: eval(value, {'x': x, 'col': series, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp}))
 
-                
+
     #substring comparison
     elif operator == OPERATORS.CONTAINS:
         if FLAGS.STRICT in flags:
@@ -973,7 +973,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
         filtered = series.apply(lambda x: _yn(x, errors='ERROR', yes='yes')) == 'yes'
     elif operator == OPERATORS.IS_NO:
         filtered = series.apply(lambda x: _yn(x, errors='ERROR', no='no')) == 'no'
-        
+
     elif operator == OPERATORS.IS_UNIQUE:
         filtered = series.duplicated(keep=False) == False
     elif operator == OPERATORS.IS_FIRST:
@@ -1011,7 +1011,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
         elif value_type in ('date', 'datetime'):
             value = _datetime(value, errors='ignore')
             if series.dtype not in datetime_dtypes:
-                log(f'warning: series "{series.name}" is not a datetime series, consider converting it with "´v to datetime"',
+                log(f'warning: series "{series.name}" is not a datetime series, consider converting it with "$to datetime;"',
                     'qp.qlang._filter_series', verbosity)
                 series = pd.to_datetime(series, errors='coerce')
 
@@ -1027,7 +1027,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
                 if series.dtype in string_dtypes or value.dtype in string_dtypes:
                     series = series.str.lower()
                     value = value.str.lower()
-                
+
 
         if operator == OPERATORS.BIGGER_EQUAL:
             filtered = series >= value
@@ -1085,14 +1085,14 @@ def _load_selection(instruction, df_new, args):
 
     if FLAGS.NEGATE in instruction.flags:
         mask.loc[:, cols] = ~mask.loc[:, cols]
-  
+
     if connector == CONNECTORS.NEW_SELECT_ROWS:
         masks[0] = mask
     elif connector == CONNECTORS.AND_SELECT_ROWS:
         masks[0] = masks[0] & mask
     elif connector == CONNECTORS.OR_SELECT_ROWS:
         masks[0] = masks[0] | mask
-    
+
     args.masks = masks
     return df_new, args
 
@@ -1108,14 +1108,14 @@ def _modify_settings(instruction, df_new, args):
     verbosity = args.verbosity
     diff = args.diff
     value = instruction.value
-    
+
     if FLAGS.VERBOSITY in instruction.flags:
         if value in ['0', '1', '2', '3', '4', '5']:
             verbosity = int(value)
         else:
             log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
                 'qp.qlang._modify_settings', verbosity)
-    
+
     elif FLAGS.DIFF in instruction.flags:
         if value.lower() in ['none', '0', 'false']:
             diff = None
@@ -1137,14 +1137,14 @@ def _modify_metadata(instruction, df_new, args):
     """
     An Instruction for metadata modification.
     """
-    
+
     verbosity = args.verbosity
     masks = args.masks
     rows = masks[0].any(axis=1)
     cols = args.cols
     operator = instruction.operator
     value = instruction.value
-    
+
 
     if 'meta' not in df_new.columns:
         log(f'info: no metadata column found in dataframe. creating new column named "meta"',
@@ -1152,7 +1152,7 @@ def _modify_metadata(instruction, df_new, args):
         df_new['meta'] = ''
         cols = pd.concat([cols, pd.Series([False])])
         cols.index = df_new.columns
-    
+
 
     if FLAGS.TAG_METADATA in instruction.flags:
         tag = ''
@@ -1170,7 +1170,7 @@ def _modify_metadata(instruction, df_new, args):
 
     elif operator == OPERATORS.ADD:
         df_new.loc[rows, 'meta'] += value
- 
+
     elif operator == OPERATORS.EVAL:
         if FLAGS.COL_EVAL in instruction.flags:
             df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
@@ -1186,7 +1186,7 @@ def _modify_metadata(instruction, df_new, args):
             else:
                 eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
                 df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].applymap(lambda x: eval_result)
-            
+
     else:
         log(f'error: operator "{operator}" is not compatible with metadata modification',
             'qp.qlang._modify_metadata', verbosity)
@@ -1198,7 +1198,7 @@ def _modify_metadata(instruction, df_new, args):
 
 def _modify_format(instruction, df_new, args):
 
-    
+
     verbosity = args.verbosity
     masks = args.masks
     cols = args.cols
@@ -1219,10 +1219,10 @@ def _modify_format(instruction, df_new, args):
 
     if FLAGS.COLOR in flags:
         style[mask_temp] += f'color: {value};'
-    
+
     elif FLAGS.BACKGROUND_COLOR in flags:
         style[mask_temp] += f'background-color: {value};'
-    
+
     elif FLAGS.ALIGN in flags:
         if value in ['left', 'right', 'center', 'justify']:
             style[mask_temp] += f'text-align: {value};'
@@ -1231,15 +1231,15 @@ def _modify_format(instruction, df_new, args):
         else:
             log(f'warning: alignment "{value}" is not valid. must be one of [left, right, center, justify, top, middle, bottom]',
                 'qp.qlang._modify_format', verbosity)
-    
+
     elif FLAGS.WIDTH in flags:
         if not value.endswith(('px', 'cm', 'mm', 'in', 'pt', 'pc', 'em', 'ex', 'ch', 'rem', 'vw', 'vh', 'vmin', 'vmax', '%')):
             log(f'warning: no unit for column width was used. defaulting to "px". other options: [cm, mm, in, pt, pc, em, ex, ch, rem, vw, vh, vmin, vmax, %]',
                 'qp.qlang._modify_format', verbosity)
             value += 'px'
         style[mask_temp] += f'width: {value};'
-    
-    
+
+
     elif FLAGS.CSS in flags:
         if not value.endswith(';'):
             value += ';'
@@ -1341,7 +1341,7 @@ def _modify_vals(instruction, df_new, args):
         OPERATORS.TO_NK,
         OPERATORS.TO_YN,
         ]
-    
+
 
     #data modification  
     if operator == OPERATORS.SET:
@@ -1357,7 +1357,7 @@ def _modify_vals(instruction, df_new, args):
             df_new = df_new.mask(mask_temp, changed)
         else:
             log(f'error: operator "{operator}" is not compatible with COL_EVAL flag', 'qp.qlang._modify_vals', verbosity)
-    
+
     elif FLAGS.REGEX in instruction.flags:
         if operator == OPERATORS.SET:
             rows = mask_temp.any(axis=1)
@@ -1365,7 +1365,7 @@ def _modify_vals(instruction, df_new, args):
                 df_new.loc[rows, col] = df_new.loc[rows, col].str.extract(value).loc[rows, 0]
         else:
             log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._modify_vals', verbosity)
-    
+
     elif operator == OPERATORS.SORT:
         if FLAGS.NEGATE in instruction.flags:
             df_new.sort_values(by=list(df_new.columns[cols]), axis=0, ascending=False, inplace=True)
@@ -1459,7 +1459,7 @@ def _new_col(instruction, df_new, args):
                 cols = pd.Series([True if col == header else False for col in df_new.columns])
                 cols.index = df_new.columns
                 break
-    
+
     elif operator == OPERATORS.EVAL:
         for i in range(1, 1001):
             if i == 1000:
@@ -1479,7 +1479,7 @@ def _new_col(instruction, df_new, args):
                 cols = pd.Series([True if col == header else False for col in df_new.columns])
                 cols.index = df_new.columns
                 break
-    
+
     args.masks = masks
     args.cols = cols
     return df_new, args
@@ -1507,7 +1507,7 @@ class DataFrameQuery:
     A query language for pandas data exploration/analysis/modification.
     df.qi() without any args can be used to interactively build a query in Jupyter notebooks.
 
-    
+
     examples:
 
     #select col
@@ -1539,7 +1539,7 @@ class DataFrameQuery:
 
     def __repr__(self):
         return 'docstring of dataframe accessor pd_object.q():\n' + str(self.__doc__)
-    
+
     def __call__(self, code=''):
         return query(self.df, code)
 
@@ -1570,9 +1570,9 @@ class DataFrameQueryInteractiveMode:
         #             ui_flags.children = get_buttons(flags_select - flags_select_rows_scope)
         #         elif CONNECTORS[text] in connectors_select_rows:
         #             ui_flags.children = get_buttons(flags_select)
-                
 
-        
+
+
         # #some general info and statistics about the df
         # mem_usage = self.df.memory_usage().sum() / 1024
         # ui_details = widgets.HTML(
@@ -1607,7 +1607,7 @@ class DataFrameQueryInteractiveMode:
         #         )
         #     button.on_click(lambda x: update_code(x.description))
         #     ui_connectors.children += (button,)
-        
+
 
         # def get_buttons(symbols):
         #     buttons = []
@@ -1634,7 +1634,7 @@ class DataFrameQueryInteractiveMode:
         #     widgets.HTML(value='operators:'),
         #     ui_operators,
         #     ])
-        
+
 
         # ui_tabs = widgets.Tab(
         #     children=[
