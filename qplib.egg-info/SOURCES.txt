@@ -13,9 +13,9 @@ qplib.egg-info/dependency_links.txt
 qplib.egg-info/requires.txt
 qplib.egg-info/top_level.txt
 tests/test_diff.py
+tests/test_fetch.py
 tests/test_format.py
 tests/test_log.py
 tests/test_qlang.py
-tests/test_save_load.py
 tests/test_shell_wrappers.py
 tests/test_types.py

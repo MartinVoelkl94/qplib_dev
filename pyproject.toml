@@ -5,13 +5,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qplib"
-version = "0.6.1"
+version = "0.6.2"
 description = "query language for pandas"
 readme = "README.md"
 authors = [{ name = "martin v", email = "martinv16248@gmail.com" }]
-license = { file = "LICENSE" }
+license = "MIT"
 classifiers = [
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
