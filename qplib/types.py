@@ -3,7 +3,7 @@ import numpy as np
 import datetime
 import re
 
-#these are mostly wrappers type conversions with extra features for dealing with errors
+#these are mostly wrappers for type conversions with extra features for dealing with errors
 
 def _int(x, errors='coerce', na=np.nan):
     try:

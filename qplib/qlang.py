@@ -20,6 +20,48 @@ VERBOSITY = 3
 DIFF = None
 INPLACE = False
 
+TYPES_INT = (
+    int,
+    np.int64,
+    np.int32,
+    np.int16,
+    np.int8,
+    pd.Int64Dtype,
+    pd.Int32Dtype,
+    pd.Int16Dtype,
+    pd.Int8Dtype,
+    )
+TYPES_FLOAT = (
+    float,
+    np.float64,
+    np.float32,
+    np.float16,
+    pd.Float64Dtype,
+    pd.Float32Dtype,
+    )
+TYPES_NUM = (
+    int,
+    float,
+    np.int64,
+    np.float64,
+    np.int32,
+    np.float32,
+    np.int16,
+    np.float16,
+    np.int8,
+    np.number,
+    pd.Int64Dtype,
+    pd.Float64Dtype,
+    pd.Int32Dtype,
+    pd.Float32Dtype,
+    pd.Int16Dtype,
+    pd.Int8Dtype,
+    )
+TYPES_BOOL = (
+    bool,
+    np.bool_,
+    pd.BooleanDtype,
+    )
 
 
 
@@ -165,7 +207,7 @@ FLAGS = Symbols('FLAGS',
     Symbol('!', 'NEGATE', 'negate/invert the selection condition'),
 
     #strict comparison
-    Symbol('strict', 'STRICT', 'use strict comparison for selection condition (case sensitive)'),
+    Symbol('strict', 'STRICT', 'use strict comparison for selection condition (eg: case sensitive, strict typing)'),
 
     #save and load selections
     Symbol('save', 'SAVE_SELECTION', 'save current selection with given <name>. load using: "$load = <name>'),
@@ -378,6 +420,17 @@ operators_metadata = set([
     OPERATORS.SET,
     OPERATORS.ADD,
     ])
+operators_is_type = set([
+    OPERATORS.IS_STR,
+    OPERATORS.IS_INT,
+    OPERATORS.IS_FLOAT,
+    OPERATORS.IS_NUM,
+    OPERATORS.IS_BOOL,
+    OPERATORS.IS_DATETIME,
+    OPERATORS.IS_DATE,
+    OPERATORS.IS_NA,
+    ])
+
 
 
 
@@ -861,26 +914,57 @@ def _filter_series(series, instruction, verbosity, df_new=None):
 
 
     #type checks
-    elif operator == OPERATORS.IS_STR:
-        filtered = series.apply(lambda x: isinstance(x, str))
-    elif operator == OPERATORS.IS_INT:
-        filtered = series.apply(lambda x: isinstance(x, int))
-    elif operator == OPERATORS.IS_FLOAT:
-        filtered = series.apply(lambda x: isinstance(x, float))
-    elif operator == OPERATORS.IS_NUM:
-        filtered = series.apply(lambda x: _num(x, errors='ERROR')) != 'ERROR'
-    elif operator == OPERATORS.IS_BOOL:
-        filtered = series.apply(lambda x: isinstance(x, bool))
+    elif operator in operators_is_type:
+        if FLAGS.STRICT in flags:
+            if operator == OPERATORS.IS_STR:
+                filtered = series.apply(lambda x: isinstance(x, str))
+            elif operator == OPERATORS.IS_INT:
+                filtered = series.apply(lambda x: isinstance(x, TYPES_INT))
+            elif operator == OPERATORS.IS_FLOAT:
+                filtered = series.apply(lambda x: isinstance(x, TYPES_FLOAT))
+            elif operator == OPERATORS.IS_NUM:
+                filtered = series.apply(lambda x: isinstance(x, TYPES_NUM))
+            elif operator == OPERATORS.IS_BOOL:
+                filtered = series.apply(lambda x: isinstance(x, TYPES_BOOL))
 
-    elif operator == OPERATORS.IS_DATETIME:
-        filtered = series.apply(lambda x: _datetime(x, errors='ERROR')) != 'ERROR'
-    elif operator == OPERATORS.IS_DATE:
-        filtered = series.apply(lambda x: _date(x, errors='ERROR')) != 'ERROR'
+            elif operator == OPERATORS.IS_DATETIME:
+                log(f'warning: operator "is datetime" does not support strict type checking. flag "strict" will be ignored',
+                    'qp.qlang._filter_series', verbosity)
+                filtered = series.apply(lambda x: _datetime(x, errors='ERROR')) != 'ERROR'
+            elif operator == OPERATORS.IS_DATE:
+                log(f'warning: operator "is date" does not support strict type checking. flag "strict" will be ignored',
+                    'qp.qlang._filter_series', verbosity)
+                filtered = series.apply(lambda x: _date(x, errors='ERROR')) != 'ERROR'
 
+            elif operator == OPERATORS.IS_NA:
+                filtered = series.isna()
+
+        else:
+            if operator == OPERATORS.IS_STR:
+                filtered = series.apply(lambda x: isinstance(x, str))
+            elif operator == OPERATORS.IS_INT:
+                unrounded = series.apply(lambda x: pd.to_numeric(x, errors='coerce'))
+                rounded = unrounded.round(0)
+                filtered = rounded == unrounded
+            elif operator == OPERATORS.IS_FLOAT:
+                filtered = series.apply(lambda x: _float(x, errors='ERROR')) != 'ERROR'
+            elif operator == OPERATORS.IS_NUM:
+                filtered = series.apply(lambda x: _num(x, errors='ERROR')) != 'ERROR'
+            elif operator == OPERATORS.IS_BOOL:
+                filtered = series.apply(lambda x: _bool(x, errors='ERROR')) != 'ERROR'
+
+            elif operator == OPERATORS.IS_DATETIME:
+                filtered = series.apply(lambda x: _datetime(x, errors='ERROR')) != 'ERROR'
+            elif operator == OPERATORS.IS_DATE:
+                filtered = series.apply(lambda x: _date(x, errors='ERROR')) != 'ERROR'
+
+            elif operator == OPERATORS.IS_NA:
+                filtered = series.apply(lambda x: _na(x, errors='ERROR')) != 'ERROR'
+
+
+    #categorical checks
     elif operator == OPERATORS.IS_ANY:
         filtered = series.apply(lambda x: True)
-    elif operator == OPERATORS.IS_NA:
-        filtered = series.apply(lambda x: _na(x, errors='ERROR')) != 'ERROR'
     elif operator == OPERATORS.IS_NK:
         filtered = series.apply(lambda x: _nk(x, errors='ERROR')) != 'ERROR'
     elif operator == OPERATORS.IS_YN:

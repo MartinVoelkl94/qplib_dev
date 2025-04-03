@@ -218,6 +218,7 @@ df = get_df()
     (r'date of birth  $to datetime;  %%>1990-01-01',                 df.loc[[0,1,4], ['date of birth']]),
     (r'date of birth  $to datetime;  %%>1990-01-01  &&<2000-01-01',  df.loc[[0,1], ['date of birth']]),
 
+
     #using type operators
     (r'name  %%is str;',                 df.loc[:, ['name']]),
     (r'name  %%!is str;',                df.loc[[], ['name']]),
@@ -225,14 +226,34 @@ df = get_df()
     (r'name  %%!is num;',                df.loc[:, ['name']]),
     (r'name  %%is na;',                  df.loc[[], ['name']]),
     (r'name  %%!is na;',                 df.loc[:, ['name']]),
-    (r'age   %%is na;',                   df.loc[[2,3,6,8], ['age']]),
+
+    (r'age   %%is int;',                 df.loc[[0,1,4,10], ['age']]),
+    (r'age   %%strict is int;',          df.loc[[0,10], ['age']]),
+    (r'age   %%is float;',               df.loc[[0,1,2,4,6,10], ['age']]),
+    (r'age   %%strict is float;',        df.loc[[2], ['age']]),
+    (r'age   %%is na;',                  df.loc[[2,3,6,8], ['age']]),
+
+    (r'weight  %%is int;',               df.loc[[1,9,10], ['weight']]),
+    (r'weight  %%strict is int;',        df.loc[[10], ['weight']]),
+    (r'weight  %%is float;',             df.loc[[0,1,7,9,10], ['weight']]),
+    (r'weight  %%strict is float;',      df.loc[[0], ['weight']]),
     (r'weight  %%is num;',               df.loc[[0,1,4,6,7,9,10], ['weight']]),
+    (r'weight  %%strict is num;',        df.loc[[0,10], ['weight']]),
     (r'weight  %%is num;  &&!is na;',    df.loc[[0,1,7,9,10], ['weight']]),
+
+    (r'height       %%is bool;',         df.loc[[6], ['height']]),
+    (r'bp diastole  %%is bool;',         df.loc[[9], ['bp diastole']]),
+    (r'diabetes     %%is bool;',         df.loc[[0,1,3,4,5,6,9,10], ['diabetes']]),
+    (r'diabetes     %%strict is bool;',  df.loc[[], ['diabetes']]),
+
     (r'diabetes  %%is yn;',              df.loc[[0,1,3,4,5,6,9,10], ['diabetes']]),
     (r'diabetes  %%is na;  //is yn;',    df.loc[:, ['diabetes']]),
     (r'diabetes  %%is yes;',             df.loc[[1,4,5,10], ['diabetes']]),
     (r'diabetes  %%is no;',              df.loc[[0,3,6,9], ['diabetes']]),
+
     (r'cholesterol  %%is na;',           df.loc[[2,4,7,9], ['cholesterol']]),
+    (r'age          %%is na;',           df.loc[[2,3,6,8], ['age']]),
+    (r'age          %%strict is na;',           df.loc[[2,3], ['age']]),
 
 
     #using regex equality
