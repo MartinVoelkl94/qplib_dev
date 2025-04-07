@@ -528,3 +528,104 @@ def test_type(input, expected):
     assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
+@pytest.mark.parametrize("input, expected", [
+    (1, 1),
+    (np.int8(1), 1),
+    (np.int16(1), 1),
+    (np.int32(1), 1),
+    (np.int64(1), 1),
+
+    (1.0, 1.0),
+    (np.float16(1.0), 1.0),
+    (np.float32(1.0), 1.0),
+    (np.float64(1.0), 1.0),
+
+    (True, True),
+
+    ('1', 1),
+    ('1.0', 1.0),
+    ('True', True),
+    ('text', 'text'),
+    ('20240411', 20240411),
+
+    ('2024-04-11', datetime.datetime(2024, 4, 11).date()),
+    ('2024.04.11', datetime.datetime(2024, 4, 11).date()),
+    ('2024/04/11', datetime.datetime(2024, 4, 11).date()),
+    ('2024\\04\\11', datetime.datetime(2024, 4, 11).date()),
+    ('2024_04_11', datetime.datetime(2024, 4, 11).date()),
+
+    ('11-04-2024', datetime.datetime(2024, 4, 11).date()),
+    ('11.04.2024', datetime.datetime(2024, 4, 11).date()),
+    ('11/04/2024', datetime.datetime(2024, 4, 11).date()),
+    # ('11\\04\\2024', datetime.datetime(2024, 4, 11).date()), #wip: not yet recognized by qp.date()
+    ('11_04_2024', datetime.datetime(2024, 4, 11).date()),
+
+    ('Apr-11-2024', datetime.datetime(2024, 4, 11).date()),
+    ('Apr-11-2024', datetime.datetime(2024, 4, 11).date()),
+    ('Apr.11.2024', datetime.datetime(2024, 4, 11).date()),
+    ('Apr/11/2024', datetime.datetime(2024, 4, 11).date()),
+    # ('Apr\\11\\2024', datetime.datetime(2024, 4, 11).date()), #wip: not yet recognized by qp.date()
+    ('Apr_11_2024', datetime.datetime(2024, 4, 11).date()),
+    # ('Apr112024', datetime.datetime(2024, 4, 11).date()), #wip: not yet recognized by qp.date()
+    ('11Apr2024', datetime.datetime(2024, 4, 11).date()),
+    # ('2024Apr11', datetime.datetime(2024, 4, 11).date()), #wip: not yet recognized by qp.date()
+
+    #wip: not yet recognized by qp.date()
+    # ('November-11-2024', datetime.datetime(2024, 11, 1).date()),
+    # ('November.11.2024', datetime.datetime(2024, 11, 1).date()),
+    # ('November/11/2024', datetime.datetime(2024, 11, 1).date()),
+    # ('November\\11\\2024', datetime.datetime(2024, 11, 1).date()),
+    # ('November_11_2024', datetime.datetime(2024, 11, 1).date()),
+    # ('November112024', datetime.datetime(2024, 11, 1).date()),
+    # ('11November2024', datetime.datetime(2024, 11, 1).date()),
+    # ('2024November11', datetime.datetime(2024, 11, 1).date()),
+
+    #wip: implement:
+    # ('20240411 00:00:001',),
+    # ('2024-04-11 00:00:0', ),
+    # ('2024-04-11 00:00:00', ),
+    # ('2024-04-11 00:00:001', ),
+    # ('2024-04-11 00:00:001.001', ),
+    # ('2024-04-11 00:00:001.001.001', ),
+    # ('11-04-2024 00:00:001', ),
+    # ('11-04-2024 00:00:001.001', ),
+    # ('11-04-2024 00:00:001.001.001', ),
+    # ('Apr-11-2024 00:00:001', ),
+    # ('Apr-11-2024 00:00:001.001', ),
+    # ('Apr-11-2024 00:00:001.001.001', ),
+
+    # ('2024-04-11 00:00:00', ),
+    # ('2024.04.11 00:00:00', ),
+    # ('2024/04/11 00:00:00', ),
+    # ('2024\\04\\11 00:00:00', ),
+    # ('2024_04_11 00:00:00', ),
+
+    # ('11-04-2024 00:00:00', ),
+    # ('11.04.2024 00:00:00', ),
+    # ('11/04/2024 00:00:00', ),
+    # ('11\\04\\2024 00:00:00', ),
+    # ('11_04_2024 00:00:00', ),
+
+    # ('Apr-11-2024 00:00:00', ),
+    # ('Apr-11-2024 00:00:00', ),
+    # ('Apr.11.2024 00:00:00', ),
+    # ('Apr/11/2024 00:00:00', ),
+    # ('Apr\\11\\2024 00:00:00', ),
+    # ('Apr_11_2024 00:00:00', ),
+    # ('Apr112024 00:00:00', ),
+    # ('11Apr2024 00:00:00', ),
+    # ('2024Apr11 00:00:00', ),
+
+    # ('November-11-2024 00:00:00', ),
+    # ('November.11.2024 00:00:00', ),
+    # ('November/11/2024 00:00:00', ),
+    # ('November\\11\\2024 00:00:00', ),
+    # ('November_11_2024 00:00:00', ),
+    # ('November112024 00:00:00', ),
+    # ('11November2024 00:00:00', ),
+    # ('2024November11 00:00:00', ),
+    ])
+def test_convert(input, expected):
+    result = qp.convert(input)
+    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+

@@ -38,5 +38,6 @@ from .types import \
     _nk as nk, \
     _yn as yn, \
     _type as type, \
+    _convert as convert, \
     _dict as dict
 

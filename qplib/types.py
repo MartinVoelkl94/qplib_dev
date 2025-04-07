@@ -322,6 +322,25 @@ def _type(x):
         return type(x).__name__.lower()
 
 
+def _convert(value, errors='coerce', na=None):
+    mapping = {
+        'int': _int,
+        'float': _float,
+        'num': _num,
+        'bool': _bool,
+        'date': _date,
+        'datetime': _datetime,
+        'na': _na,
+        'nk': _nk,
+        'yn': _yn,
+        }
+    type_qp_str = _type(value)
+    if type_qp_str == 'str':
+        type_qp = str(value)
+    else:
+        type_qp = mapping[type_qp_str](value, errors, na)
+    return type_qp
+    
 
 class _dict(dict):
     """
