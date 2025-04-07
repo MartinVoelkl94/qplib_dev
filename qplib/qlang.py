@@ -1,5 +1,4 @@
 
-from typing import Any
 import numpy as np
 import pandas as pd
 import re
@@ -991,6 +990,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
         OPERATORS.EQUALS,
         ]:
         value_type = _type(value)
+        log(f'debug: value "{value}" is treated as type "{value_type}" for comparison', 'qp.qlang._filter_series', verbosity)
         numeric_dtypes = [
             'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64',
             'float32', 'float64',

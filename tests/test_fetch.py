@@ -20,24 +20,9 @@ dates = [today1, today2, yesterday, last_week, last_month, last_year, old_date]
 
 #prepare testing environment
 
-def setup():
-
-    current_folder = os.path.basename(os.getcwd())
-    
-    if current_folder != 'tests_temp_pn75Nv9H9p81Xul':
-        if os.path.exists('tests_temp_pn75Nv9H9p81Xul'):
-            shutil.rmtree('tests_temp_pn75Nv9H9p81Xul')
-        
-        os.mkdir('tests_temp_pn75Nv9H9p81Xul')
-        os.chdir('tests_temp_pn75Nv9H9p81Xul')
-
-    if os.path.exists('archive'):
-        shutil.rmtree('archive')
-    if os.path.exists('temp'):
-        shutil.rmtree('temp')
-    if os.path.exists('df.xlsx'):
-        os.remove('df.xlsx')
-    
+def setup(tmpdir):
+ 
+    os.chdir(tmpdir)  
     os.mkdir('archive')
     os.mkdir('temp')
     os.mkdir('temp/archive')
@@ -46,12 +31,11 @@ def setup():
         with open(f'archive/date_{date}.txt', 'w') as f:
             f.write(date)
 
-setup()
 
 
 
-def test_most_recent():
-    setup()
+def test_most_recent(tmpdir):
+    setup(tmpdir)
     file = qp.fetch(f'archive/date_')
     with open(file, 'r') as f:
         result = qp.date(f.read())
@@ -61,8 +45,8 @@ def test_most_recent():
 
 
 
-def test_most_recent_datefmt():
-    setup()
+def test_most_recent_datefmt(tmpdir):
+    setup(tmpdir)
     file = qp.fetch(f'archive/date_')
     with open(file, 'r') as f:
         result = qp.date(f.read())
@@ -70,8 +54,8 @@ def test_most_recent_datefmt():
     assert result == expected, f'failed test for loading most recent file with different date format.\nResult: {result}\nexpected: {expected}'
 
 
-def test_before_date():
-    setup()
+def test_before_date(tmpdir):
+    setup(tmpdir)
     file = qp.fetch(f'archive/date_', before='2000_01_02')
     with open(file, 'r') as f:
         result = qp.date(f.read())
@@ -79,8 +63,8 @@ def test_before_date():
     assert result == expected, f'failed test for loading most recent file from before 2000_01_02.\nResult: {result}\nexpected: {expected}'
 
 
-def test_before_this_year():
-    setup()
+def test_before_this_year(tmpdir):
+    setup(tmpdir)
 
     if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
         date_correct = yesterday
@@ -98,8 +82,8 @@ def test_before_this_year():
     assert result == expected, f'failed test for loading most recent file from before this year.\nResult: {result}\nexpected: {expected}'
 
 
-def test_before_this_month():
-    setup()
+def test_before_this_month(tmpdir):
+    setup(tmpdir)
     
     if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
         date_correct = yesterday
@@ -115,8 +99,8 @@ def test_before_this_month():
     assert result == expected, f'failed test for loading most recent file from before this month.\nResult: {result}\nexpected: {expected}'
 
 
-def test_before_this_week():
-    setup()
+def test_before_this_week(tmpdir):
+    setup(tmpdir)
     
     if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
         date_correct = yesterday
@@ -131,8 +115,8 @@ def test_before_this_week():
 
  
 
-def test_before_this_day():
-    setup()    
+def test_before_this_day(tmpdir):
+    setup(tmpdir)    
 
     file = qp.fetch(f'archive/date_', before='this day')
     with open(file, 'r') as f:
@@ -141,8 +125,8 @@ def test_before_this_day():
     assert result == expected, f'failed test for loading most recent file from before this day.\nResult: {result}\nexpected: {expected}'
 
 
-def test_before_today():
-    setup()     
+def test_before_today(tmpdir):
+    setup(tmpdir)     
 
     file = qp.fetch(f'archive/date_', before='today')
     with open(file, 'r') as f:

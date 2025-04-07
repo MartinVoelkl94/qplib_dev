@@ -4,37 +4,19 @@ import qplib as qp
 
 
 
-#prepare testing environment
-
-def setup():
-
-    current_folder = os.path.basename(os.getcwd())
-    
-    if current_folder != 'tests_temp_pn75Nv9H9p81Xul':
-        if os.path.exists('tests_temp_pn75Nv9H9p81Xul'):
-            shutil.rmtree('tests_temp_pn75Nv9H9p81Xul')
-        
-        os.mkdir('tests_temp_pn75Nv9H9p81Xul')
-        os.chdir('tests_temp_pn75Nv9H9p81Xul')
-
-setup()
-
-
-
-
-def test_isdir():
-    setup()
+def test_isdir(tmpdir):
+    os.chdir(tmpdir)
     assert qp.isdir('dir1') == False, 'failed test checking existence of non existing directory'
 
 
-def test_mkdir_isdir():
-    setup()
+def test_mkdir_isdir(tmpdir):
+    os.chdir(tmpdir)
     qp.mkdir('dir1')
     assert qp.isdir('dir1') == True, 'failed test checking existence of existing directory'
 
 
-def test_cd_pwd():
-    setup()
+def test_cd_pwd(tmpdir):
+    os.chdir(tmpdir)
     qp.mkdir('dir1')
     qp.cd('dir1')
     path = qp.pwd()
@@ -45,8 +27,8 @@ def test_cd_pwd():
     assert path == 'dir1', 'failed test for changing directory and finding path to current directory'
 
 
-def test_cd_return():
-    setup()
+def test_cd_return(tmpdir):
+    os.chdir(tmpdir)
     qp.mkdir('dir1')
     qp.mkdir('dir1/dir2')
     qp.cd('dir1/dir2')
