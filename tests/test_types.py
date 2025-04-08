@@ -16,6 +16,31 @@ qp_types = [
     qp.yn,
     ]
 
+invalid_values = [
+        None,
+        np.nan,
+        pd.NaT,
+        pd.NA,
+        '',
+        ' ',
+        'nan',
+        'NaN',
+        'NAN',
+        'na',
+        'NA',
+        'n/a',
+        'N/A',
+        'none',
+        'None',
+        'NONE',
+        'null',
+        'Null',
+        'NULL',
+        'nil',
+        'Nil',
+        'NIL',
+        ]
+
 def test_error_raising():
     for func in qp_types:
         with pytest.raises(ValueError):
@@ -26,15 +51,16 @@ def test_error_ignoring():
         assert func('abc', errors='ignore') == 'abc'
 
 def test_error_coercing():
-    assert qp.int('abc', errors='coerce') is np.nan
-    assert qp.float('abc', errors='coerce') is np.nan
-    assert qp.num('abc', errors='coerce') is np.nan
-    assert qp.date('abc', errors='coerce') is pd.NaT
-    assert qp.datetime('abc', errors='coerce') is pd.NaT
-    assert qp.bool('abc', errors='coerce') is None
-    assert qp.na('abc', errors='coerce') is None
-    assert qp.nk('abc', errors='coerce') is None
-    assert qp.yn('abc', errors='coerce') is None
+    for invalid in invalid_values:
+        assert qp.int('abc', errors='coerce') is np.nan
+        assert qp.float('abc', errors='coerce') is np.nan
+        assert qp.num('abc', errors='coerce') is np.nan
+        assert qp.date('abc', errors='coerce') is pd.NaT
+        assert qp.datetime('abc', errors='coerce') is pd.NaT
+        assert qp.bool('abc', errors='coerce') is None
+        assert qp.na('abc', errors='coerce') is None
+        assert qp.nk('abc', errors='coerce') is None
+        assert qp.yn('abc', errors='coerce') is None
 
 def test_error_coercing_none():
     for func in qp_types:
@@ -42,7 +68,7 @@ def test_error_coercing_none():
 
 def test_error_custom():
     for func in qp_types:
-        assert func('abc', errors='custom') == 'custom'
+        assert func('abc', errors='custom') == 'custom', f'Failed using custom error message for {func.__name__}'
 
 
 
@@ -213,8 +239,11 @@ def test_bool(input, expected):
     ('2020-01-01', (2020, 1, 1)),
     ('2020-01-01 00:00:00', (2020, 1, 1)),
 
+    ('2020-01-01', (2020, 1, 1)),
     ('2020.01.01', (2020, 1, 1)),
     ('2020/01/01', (2020, 1, 1)),
+    ('2020\\01\\01', (2020, 1, 1)),
+    ('2020_01_01', (2020, 1, 1)),
     ('2020 01 01', (2020, 1, 1)),
     ('20200101', (2020, 1, 1)),
 
@@ -247,12 +276,40 @@ def test_bool(input, expected):
     ('2020.01.02', (2020, 1, 2)),
     ('2020/01/02', (2020, 1, 2)),
     ('2020 01 02', (2020, 1, 2)),
+
+    ('2020-12-32', pd.NaT),
+    ('2020.12.32', pd.NaT),
+    ('2020/12/32', pd.NaT),
+    ('2020\\12\\32', pd.NaT),
+    ('2020_12_32', pd.NaT),
+    ('2020 12 32', pd.NaT),
+    ('20201232', pd.NaT),
+
+    ('2020-13-30', pd.NaT),
+    ('2020.13.30', pd.NaT),
+    ('2020/13/30', pd.NaT),
+    ('2020\\13\\30', pd.NaT),
+    ('2020_13_30', pd.NaT),
+    ('2020 13 30', pd.NaT),
+    ('20201330', pd.NaT),
+
+    ('3000-12-30', pd.NaT),
+    ('3000.12.30', pd.NaT),
+    ('3000/12/30', pd.NaT),
+    ('3000\\12\\30', pd.NaT),
+    ('3000_12_30', pd.NaT),
+    ('3000 12 30', pd.NaT),
+    ('30001230', pd.NaT),
+
     ])
 
 def test_date(input, expected):
     result = qp.date(input)
-    expected = datetime.date(*expected)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    if expected is pd.NaT:
+        assert result is expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    else:
+        expected = datetime.date(*expected)
+        assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -441,12 +498,20 @@ def test_yn(input, expected):
     (np.float64(1.0), 'float'),
 
     (True, 'bool'),
+    (False, 'bool'),
 
     ('1', 'int'),
     ('1.0', 'float'),
     ('True', 'bool'),
     ('text', 'str'),
     ('20240411', 'int'),
+
+    (complex(1, 1), 'complex'),
+    (object(), 'object'),
+    (None, 'NoneType'),
+    ('123abc', 'str'),
+    ('2024-13-32', 'str'),
+    ('TrueFalse', 'str'),
 
     ('2024-04-11', 'date'),
     ('2024.04.11', 'date'),
@@ -479,18 +544,11 @@ def test_yn(input, expected):
     ('11November2024', 'date'),
     ('2024November11', 'date'),
 
-    ('20240411 00:00:001', 'str'),
-    ('2024-04-11 00:00:0', 'datetime'),
+    ('20240411 00:00:00', 'datetime'),
     ('2024-04-11 00:00:00', 'datetime'),
-    ('2024-04-11 00:00:001', 'datetime'),
-    ('2024-04-11 00:00:001.001', 'datetime'),
-    ('2024-04-11 00:00:001.001.001', 'datetime'),
-    ('11-04-2024 00:00:001', 'datetime'),
-    ('11-04-2024 00:00:001.001', 'datetime'),
-    ('11-04-2024 00:00:001.001.001', 'datetime'),
-    ('Apr-11-2024 00:00:001', 'datetime'),
-    ('Apr-11-2024 00:00:001.001', 'datetime'),
-    ('Apr-11-2024 00:00:001.001.001', 'datetime'),
+    ('2024-04-11 00:00:00', 'datetime'),
+    ('11-04-2024 00:00:00', 'datetime'),
+    ('Apr-11-2024 00:00:00', 'datetime'),
 
     ('2024-04-11 00:00:00', 'datetime'),
     ('2024.04.11 00:00:00', 'datetime'),
@@ -528,6 +586,8 @@ def test_type(input, expected):
     assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
+
+
 @pytest.mark.parametrize("input, expected", [
     (1, 1),
     (np.int8(1), 1),
@@ -541,12 +601,19 @@ def test_type(input, expected):
     (np.float64(1.0), 1.0),
 
     (True, True),
+    (False, False),
 
     ('1', 1),
     ('1.0', 1.0),
     ('True', True),
     ('text', 'text'),
     ('20240411', 20240411),
+
+    (complex(1, 1), complex(1, 1)),
+    (None, None),
+    ('123abc', '123abc'),
+    ('2024-13-32', '2024-13-32'),
+    ('TrueFalse', 'TrueFalse'),
 
     ('2024-04-11', datetime.datetime(2024, 4, 11).date()),
     ('2024.04.11', datetime.datetime(2024, 4, 11).date()),
@@ -557,73 +624,56 @@ def test_type(input, expected):
     ('11-04-2024', datetime.datetime(2024, 4, 11).date()),
     ('11.04.2024', datetime.datetime(2024, 4, 11).date()),
     ('11/04/2024', datetime.datetime(2024, 4, 11).date()),
-    # ('11\\04\\2024', datetime.datetime(2024, 4, 11).date()), #wip: not yet recognized by qp.date()
+    ('11\\04\\2024', datetime.datetime(2024, 4, 11).date()),
     ('11_04_2024', datetime.datetime(2024, 4, 11).date()),
 
     ('Apr-11-2024', datetime.datetime(2024, 4, 11).date()),
     ('Apr-11-2024', datetime.datetime(2024, 4, 11).date()),
     ('Apr.11.2024', datetime.datetime(2024, 4, 11).date()),
     ('Apr/11/2024', datetime.datetime(2024, 4, 11).date()),
-    # ('Apr\\11\\2024', datetime.datetime(2024, 4, 11).date()), #wip: not yet recognized by qp.date()
+    ('Apr\\11\\2024', datetime.datetime(2024, 4, 11).date()),
     ('Apr_11_2024', datetime.datetime(2024, 4, 11).date()),
-    # ('Apr112024', datetime.datetime(2024, 4, 11).date()), #wip: not yet recognized by qp.date()
+    ('Apr112024', datetime.datetime(2024, 4, 11).date()),
     ('11Apr2024', datetime.datetime(2024, 4, 11).date()),
-    # ('2024Apr11', datetime.datetime(2024, 4, 11).date()), #wip: not yet recognized by qp.date()
+    ('2024Apr11', datetime.datetime(2024, 4, 11).date()),
 
-    #wip: not yet recognized by qp.date()
-    # ('November-11-2024', datetime.datetime(2024, 11, 1).date()),
-    # ('November.11.2024', datetime.datetime(2024, 11, 1).date()),
-    # ('November/11/2024', datetime.datetime(2024, 11, 1).date()),
-    # ('November\\11\\2024', datetime.datetime(2024, 11, 1).date()),
-    # ('November_11_2024', datetime.datetime(2024, 11, 1).date()),
-    # ('November112024', datetime.datetime(2024, 11, 1).date()),
-    # ('11November2024', datetime.datetime(2024, 11, 1).date()),
-    # ('2024November11', datetime.datetime(2024, 11, 1).date()),
+   
+    ('November-11-2024', datetime.datetime(2024, 11, 11).date()),
+    ('November.11.2024', datetime.datetime(2024, 11, 11).date()),
+    ('November/11/2024', datetime.datetime(2024, 11, 11).date()),
+    ('November\\11\\2024', datetime.datetime(2024, 11, 11).date()),
+    ('November_11_2024', datetime.datetime(2024, 11, 11).date()),
+    ('November112024', datetime.datetime(2024, 11, 11).date()),
+    ('11November2024', datetime.datetime(2024, 11, 11).date()),
+    ('2024November11', datetime.datetime(2024, 11, 11).date()),
 
-    #wip: implement:
-    # ('20240411 00:00:001',),
-    # ('2024-04-11 00:00:0', ),
-    # ('2024-04-11 00:00:00', ),
-    # ('2024-04-11 00:00:001', ),
-    # ('2024-04-11 00:00:001.001', ),
-    # ('2024-04-11 00:00:001.001.001', ),
-    # ('11-04-2024 00:00:001', ),
-    # ('11-04-2024 00:00:001.001', ),
-    # ('11-04-2024 00:00:001.001.001', ),
-    # ('Apr-11-2024 00:00:001', ),
-    # ('Apr-11-2024 00:00:001.001', ),
-    # ('Apr-11-2024 00:00:001.001.001', ),
+    ('20240411 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('2024-04-11 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('11-04-2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('Apr-11-2024 00:00:00', datetime.datetime(2024, 4, 11)),
 
-    # ('2024-04-11 00:00:00', ),
-    # ('2024.04.11 00:00:00', ),
-    # ('2024/04/11 00:00:00', ),
-    # ('2024\\04\\11 00:00:00', ),
-    # ('2024_04_11 00:00:00', ),
+    ('2024-04-11 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('2024.04.11 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('2024/04/11 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('2024\\04\\11 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('2024_04_11 00:00:00', datetime.datetime(2024, 4, 11)),
 
-    # ('11-04-2024 00:00:00', ),
-    # ('11.04.2024 00:00:00', ),
-    # ('11/04/2024 00:00:00', ),
-    # ('11\\04\\2024 00:00:00', ),
-    # ('11_04_2024 00:00:00', ),
+    ('11-04-2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('11.04.2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('11/04/2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('11\\04\\2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('11_04_2024 00:00:00', datetime.datetime(2024, 4, 11)),
 
-    # ('Apr-11-2024 00:00:00', ),
-    # ('Apr-11-2024 00:00:00', ),
-    # ('Apr.11.2024 00:00:00', ),
-    # ('Apr/11/2024 00:00:00', ),
-    # ('Apr\\11\\2024 00:00:00', ),
-    # ('Apr_11_2024 00:00:00', ),
-    # ('Apr112024 00:00:00', ),
-    # ('11Apr2024 00:00:00', ),
-    # ('2024Apr11 00:00:00', ),
+    ('Apr-11-2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('Apr-11-2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('Apr.11.2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('Apr/11/2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('Apr\\11\\2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('Apr_11_2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('Apr112024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('11Apr2024 00:00:00', datetime.datetime(2024, 4, 11)),
+    ('2024Apr11 00:00:00', datetime.datetime(2024, 4, 11)),
 
-    # ('November-11-2024 00:00:00', ),
-    # ('November.11.2024 00:00:00', ),
-    # ('November/11/2024 00:00:00', ),
-    # ('November\\11\\2024 00:00:00', ),
-    # ('November_11_2024 00:00:00', ),
-    # ('November112024 00:00:00', ),
-    # ('11November2024 00:00:00', ),
-    # ('2024November11 00:00:00', ),
     ])
 def test_convert(input, expected):
     result = qp.convert(input)
@@ -645,11 +695,17 @@ def test_dict_values_flat():
     d = qp.dict({
         'a': 1,
         'b': [2, 3],
-        'c': qp.dict({'d': 4, 'e': [5, 6]})
+        'c': (4, 5),
+        'd': {6,7},
+        'e': {'e0': 8, 'e1': 9},
+        'f': qp.dict({'f0': 10, 'f1': [11, 12]})
         })
-    assert d.values_flat() == [1, 2, 3, 4, 5, 6]
+    assert d.values_flat() == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "Failed for nested structures"
 
 def test_dict_invert():
     d = qp.dict({'a': 1, 'b': 2, 'c': 3})
     assert d.invert() == qp.dict({1: 'a', 2: 'b', 3: 'c'})
+
+    d = qp.dict({'a': 1, 'b': 1, 'c': 3})
+    assert d.invert() == qp.dict({1: 'b', 3: 'c'})
 

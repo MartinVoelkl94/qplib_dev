@@ -1085,7 +1085,7 @@ def test_to_str():
 def test_to_date():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('date of birth   $ to date;;')
+    result = df1.q('date of birth   $to date;')
     df2['date of birth'] = [
         pd.to_datetime('1995-01-02', dayfirst=False).date(),
         pd.to_datetime('1990/09/14', dayfirst=False).date(),
@@ -1094,7 +1094,7 @@ def test_to_date():
         pd.to_datetime('05-11-2007', dayfirst=True).date(),
         pd.to_datetime('06-30-1983', dayfirst=False).date(),
         pd.to_datetime('28-05-1975', dayfirst=True).date(),
-        pd.NaT,
+        pd.to_datetime('1960 Mar 08', dayfirst=False).date(),
         pd.to_datetime('1955-Jan-09', dayfirst=False).date(),
         pd.to_datetime('1950 Sep 10', dayfirst=False).date(),
         pd.to_datetime('1945 October 11', dayfirst=False).date(),

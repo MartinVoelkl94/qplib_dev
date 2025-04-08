@@ -84,46 +84,69 @@ def _bool(x, errors='coerce', na=None):
             return errors
 
 
+months_txt = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December'
 def _date(x, errors='coerce', na=pd.NaT):
-    if isinstance(x, datetime.date):
+    """
+    recognizes and converts potential dates between 0001-01-01 and 2999-12-31 in various formats.
+    """
+    result = _datetime(x, errors=errors, na=na)
+    if result is na:
+        return na
+    elif isinstance(result, datetime.datetime) or isinstance(result, pd.Timestamp):
+        return result.date()
+    
+    elif errors == 'raise':
+        raise ValueError(f"""could not convert "{x}" to datetime.
+            Error handling:
+            errors='raise': raises a ValueError
+            errors='ignore': returns the original value
+            errors='coerce': returns pd.NaT
+            errors=<any other value>: returns <any other value>
+            """)
+    elif errors == 'ignore':
         return x
-    elif isinstance(x, datetime.datetime):
-        return x.date()
-    elif isinstance(x, str):
-        x = x.replace('_', '-')
-    try:
-        if re.match(r'\D*(1|2)\d\d\d', x):
-            return pd.to_datetime(x, dayfirst=False).date()
-        else:
-            return pd.to_datetime(x, dayfirst=True).date()
-    except:
-        if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to date.
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns pd.NaT
-                errors=<any other value>: returns <any other value>
-                """)
-        elif errors == 'ignore':
-            return x
-        elif errors == 'coerce':
-            return na
-        else:
-            return errors
-       
+    elif errors == 'coerce':
+        return na
+    else:
+        return errors
+
+    
+
+
 def _datetime(x, errors='coerce', na=pd.NaT):
     if isinstance(x, datetime.datetime):
         return x
     elif isinstance(x, datetime.date):
         return pd.to_datetime(x)
     elif isinstance(x, str):
+        x = x.replace('.', '-')
+        x = x.replace('/', '-')
+        x = x.replace('\\', '-')
         x = x.replace('_', '-')
     try:
-        if re.match(r'\D*(1|2\d\d\d)', x):
-            return pd.to_datetime(x, dayfirst=False)
+        
+        if re.fullmatch(r'[012]\d\d\d[-\d\s:]+', x):
+            result = pd.to_datetime(x, dayfirst=False)
+        
+        elif re.match(f'(\\d\\d\\d\\d)({months_txt})(\\d\\d)', x, flags=re.IGNORECASE):
+            x = re.sub(f'(\\d\\d\\d\\d)({months_txt})(\\d\\d)(.*)', r'\1-\2-\3\4', x, flags=re.IGNORECASE)
+            result = pd.to_datetime(x, dayfirst=False)
+        
+        elif re.match(f'(\\d\\d)({months_txt})(\\d\\d\\d\\d)', x, flags=re.IGNORECASE):
+            x = re.sub(f'(\\d\\d)({months_txt})(\\d\\d\\d\\d)(.*)', r'\3-\2-\1\4', x, flags=re.IGNORECASE)
+            result = pd.to_datetime(x, dayfirst=False)
+        
+        elif re.match(f'({months_txt})(\\d\\d)(\\d\\d\\d\\d)', x, flags=re.IGNORECASE):
+            x = re.sub(f'({months_txt})(\\d\\d)(\\d\\d\\d\\d)(.*)', r'\3-\1-\2\4', x, flags=re.IGNORECASE)
+            result = pd.to_datetime(x, dayfirst=False)
+        
         else:
-            return pd.to_datetime(x, dayfirst=True)
+            result = pd.to_datetime(x, dayfirst=True)
+        
+        if result is pd.NaT:
+            raise ValueError(f'could not convert "{x}" to date')
+        else:
+            return result
     except:
         if errors == 'raise':
             raise ValueError(f"""could not convert "{x}" to datetime.
@@ -240,86 +263,21 @@ def _type(x):
             return 'float'
         
 
-        #date formats from most expected to unexpected
-
-        #yyyy-mm-dd with any separator
-        elif re.fullmatch(r'\d{4}[-\._\s\\/]\d{2}[-\._\s\\/]\d{2}', x.strip(), re.IGNORECASE):
-            return 'date'
-        
-        #dd-mm-yyyy with any separator
-        elif re.fullmatch(r'\d{2}[-\._\s\\/]\d{2}[-\._\s\\/]\d{4}', x.strip(), re.IGNORECASE):
-            return 'date'
-
-        #yyyy-mmm-dd with any or no separator
-        elif re.fullmatch(r'\d{4}[-\._\s\\/]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{2}', x.strip(), re.IGNORECASE):
-            return 'date'
-        
-        #dd-mmm-yyyy with any or no separator
-        elif re.fullmatch(r'\d{2}[-\._\s\\/]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{4}', x.strip(), re.IGNORECASE):
-            return 'date'
-        
-        #mmm-dd-yyyy with any or no separator
-        elif re.fullmatch(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{2}[-\._\s\\/]*\d{4}', x.strip(), re.IGNORECASE):
-            return 'date'
-        
-        #yyyy-month-dd with any or no separator
-        elif re.fullmatch(r'\d{4}[-\._\s\\/]*(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{2}', x.strip(), re.IGNORECASE):
-            return 'date'
-        
-        #dd-month-yyyy with any or no separator
-        elif re.fullmatch(r'\d{2}[-\._\s\\/]*(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{4}', x.strip(), re.IGNORECASE):
-            return 'date'
-        
-        #month-dd-yyyy with any or no separator
-        elif re.fullmatch(r'(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{2}[-\._\s\\/]*\d{4}', x.strip(), re.IGNORECASE):
-            return 'date'
-        
-
-        #datetime formats from most expected to unexpected
-
-        #yyyy-mm-dd-hh-mm-s  with any separator and arbitrary number of digits
-        elif re.fullmatch(r'\d{4}[-\._\s\\/]\d{2}[-\._\s\\/]\d{2}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
+        elif re.search(r'\d{2}:\d{2}:\d[\d\.:]', x.strip(), re.IGNORECASE) \
+            and _datetime(x) is not pd.NaT:
             return 'datetime'
-        
-        #dd-mm-yyyy with any separator and arbitrary number of digits
-        elif re.fullmatch(r'\d{2}[-\._\s\\/]\d{2}[-\._\s\\/]\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime'
-
-        #yyyy-mmm-dd with any or no separator and arbitrary number of digits
-        elif re.fullmatch(r'\d{4}[-\._\s\\/]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{2}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime'
-        
-        #dd-mmm-yyyy with any or no separator and arbitrary number of digits
-        elif re.fullmatch(r'\d{2}[-\._\s\\/]*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime'
-        
-        #mmm-dd-yyyy with any or no separator and arbitrary number of digits
-        elif re.fullmatch(r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[-\._\s\\/]*\d{2}[-\._\s\\/]*\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime'
-        
-        #yyyy-month-dd with any or no separator and arbitrary number of digits
-        elif re.fullmatch(r'\d{4}[-\._\s\\/]*(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{2}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime'
-        
-        #dd-month-yyyy with any or no separator and arbitrary number of digits
-        elif re.fullmatch(r'\d{2}[-\._\s\\/]*(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime'
-        
-        #month-dd-yyyy with any or no separator and arbitrary number of digits
-        elif re.fullmatch(r'(January|February|March|April|May|June|July|August|September|October|November|December)[-\._\s\\/]*\d{2}[-\._\s\\/]*\d{4}[-\._\s\\/]\d{2}[-\._\s\\/:]\d{2}[-\._\s\\/:]\d[\d\.:]*', x.strip(), re.IGNORECASE):
-            return 'datetime'
-
-
+        elif _date(x) is not pd.NaT:
+            return 'date'
+     
         else:
             try:
                 x = pd.to_numeric(x)
                 return 'num'
             except:
                 return 'str'
-            
-            
+                     
     else:
-        return type(x).__name__.lower()
+        return type(x).__name__
 
 
 def _convert(value, errors='coerce', na=None):
@@ -333,13 +291,16 @@ def _convert(value, errors='coerce', na=None):
         'na': _na,
         'nk': _nk,
         'yn': _yn,
+        'NoneType': lambda x, errors, na: na,
         }
-    type_qp_str = _type(value)
-    if type_qp_str == 'str':
-        type_qp = str(value)
+    type_qp = _type(value)
+    if type_qp == 'str':
+        result = str(value)
+    elif type_qp in mapping:
+        result = mapping[type_qp](value, errors, na)
     else:
-        type_qp = mapping[type_qp_str](value, errors, na)
-    return type_qp
+        result = value
+    return result
     
 
 class _dict(dict):
