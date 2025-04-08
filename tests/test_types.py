@@ -629,3 +629,27 @@ def test_convert(input, expected):
     result = qp.convert(input)
     assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
+
+def test_dict_setattr():
+    d = qp.dict()
+    d['key'] = 'value'
+    assert d['key'] == 'value'
+
+    d.new_attr = 'new_value'
+    assert d.new_attr == 'new_value'
+
+    with pytest.raises(AttributeError):
+        d.keys = 'should_fail'
+
+def test_dict_values_flat():
+    d = qp.dict({
+        'a': 1,
+        'b': [2, 3],
+        'c': qp.dict({'d': 4, 'e': [5, 6]})
+        })
+    assert d.values_flat() == [1, 2, 3, 4, 5, 6]
+
+def test_dict_invert():
+    d = qp.dict({'a': 1, 'b': 2, 'c': 3})
+    assert d.invert() == qp.dict({1: 'a', 2: 'b', 3: 'c'})
+

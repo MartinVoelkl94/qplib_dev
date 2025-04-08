@@ -361,11 +361,15 @@ class _dict(dict):
         values_flat = []
         for val in self.values():
             if isinstance(val, dict):
-                values_flat.extend(val.values())
+                values_flat.extend(_dict(val).values_flat())
             elif isinstance(val, _dict):
                 values_flat.extend(val.values_flat())
-            elif hasattr(val, '__iter__') and not isinstance(val, str):
-                values_flat.extend(val)
+            elif hasattr(val, '__iter__') and not isinstance(val, (str, bytes)):
+                for item in val:
+                    if isinstance(item, (dict, _dict)):
+                        values_flat.extend(_dict(item).values_flat())
+                    else:
+                        values_flat.append(item)
             else:
                 values_flat.append(val)
         return values_flat
