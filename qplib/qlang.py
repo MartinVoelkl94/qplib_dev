@@ -159,6 +159,7 @@ class Instruction:
         return self.__repr__()
 
 
+
 COMMENT = Symbol('#', 'COMMENT', 'comments out the rest of the line')
 ESCAPE = Symbol('´', 'ESCAPE', 'escape the next character')
 
@@ -463,8 +464,6 @@ def query(df_old, code=''):
     #apply instructions
 
     instructions_raw, args = scan(code, args)
-
-
 
     for instruction_raw in instructions_raw:
 
@@ -990,7 +989,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
         OPERATORS.EQUALS,
         ]:
         value_type = _type(value)
-        log(f'debug: value "{value}" is treated as type "{value_type}" for comparison', 'qp.qlang._filter_series', verbosity)
+        log(f'trace: value "{value}" is treated as type "{value_type}" for comparison', 'qp.qlang._filter_series', verbosity)
         numeric_dtypes = [
             'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64',
             'float32', 'float64',
