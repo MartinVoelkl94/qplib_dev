@@ -70,22 +70,27 @@ class Symbol:
     """
     A Symbol used in the query languages syntax.
     """
-    def __init__(self, symbol, name, description, **kwargs):
-        self.symbol = symbol
+    def __init__(self, glyph, name, description, **kwargs):
+        self.glyph = glyph
         self.name = name
         self.description = description
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     def details(self):
-        return f'name:{self.name}\n\tsymbol:{self.symbol}\n\tdescription{self.description}'
+        return f'name:{self.name}\n\tsymbol:{self.glyph}\n\tdescription{self.description}'
 
     def __repr__(self):
-        return f'"{self.symbol}": {self.name}'
+        return f'"{self.glyph}": {self.name}'
  
     def __str__(self):
-        return f'"{self.symbol}": {self.name}'
-
+        return f'"{self.glyph}": {self.name}'
+    
+    def __lt__(self, value):
+        return self.glyph < value
+    
+    def __gt__(self, value):
+        return self.glyph > value
 
 class Symbols:
     """
@@ -94,23 +99,23 @@ class Symbols:
     def __init__(self, name, *symbols):
         self.name = name
         self.by_name = {symbol.name: symbol for symbol in symbols}
-        self.by_symbol = {symbol.symbol: symbol for symbol in symbols}
+        self.by_glyph = {symbol.glyph: symbol for symbol in symbols}
 
     def __getattribute__(self, value):
         if value == 'by_name':
             return super().__getattribute__(value)
-        elif value == 'by_symbol':
+        elif value == 'by_glyph':
             return super().__getattribute__(value)
-        elif value in self.by_symbol:
-            return self.by_symbol[value]
+        elif value in self.by_glyph:
+            return self.by_glyph[value]
         elif value in self.by_name:
             return self.by_name[value]
         else:
             return super().__getattribute__(value)
 
     def __getitem__(self, key):
-        if key in self.by_symbol:
-            return self.by_symbol[key]
+        if key in self.by_glyph:
+            return self.by_glyph[key]
         elif key in self.by_name:
             return self.by_name[key]
         else:
@@ -574,7 +579,7 @@ def check_df(df, verbosity=3):
     symbol_conflicts = []
 
     for col in df.columns:
-        if str(col).startswith(tuple(OPERATORS.by_symbol.keys())):
+        if str(col).startswith(tuple(OPERATORS.by_glyph.keys())):
             symbol_conflicts.append(col)
 
     if len(symbol_conflicts) > 0:
@@ -602,30 +607,30 @@ def scan(code, args):
         line = line.strip()
         if line == '':
             continue
-        elif line.startswith(COMMENT.symbol):
+        elif line.startswith(COMMENT.glyph):
             continue
-        elif line[0] not in CONNECTORS.by_symbol:
+        elif line[0] not in CONNECTORS.by_glyph:
             log(f'trace: line "{line}" does not start with a connector, adding NEW_SELECT_COLS connector to the beginning of the line',
                 'qp.qlang.tokenize', verbosity)
-            line = CONNECTORS.NEW_SELECT_COLS.symbol + line
+            line = CONNECTORS.NEW_SELECT_COLS.glyph + line
 
         while True:
 
             if line == '':
                 break
 
-            elif line.startswith(ESCAPE.symbol):
+            elif line.startswith(ESCAPE.glyph):
                 instructions_raw[-1].code += line[1]
                 line = line[2:]
 
-            elif line.startswith(COMMENT.symbol):
+            elif line.startswith(COMMENT.glyph):
                 break
 
-            elif len(line) > 1 and line[:2] in CONNECTORS.by_symbol:
+            elif len(line) > 1 and line[:2] in CONNECTORS.by_glyph:
                 instructions_raw.append(Instruction(line[:2], line_num))
                 line = line[2:]
 
-            elif line[0] in CONNECTORS.by_symbol:
+            elif line[0] in CONNECTORS.by_glyph:
                 instructions_raw.append(Instruction(line[0], line_num))
                 line = line[1:]
 
@@ -664,10 +669,10 @@ def tokenize(instruction_raw, args):
 def extract_symbol(string, symbols, verbosity=3):
 
     for symbol in symbols:
-        if string.startswith(symbol.symbol):
+        if string.startswith(symbol.glyph):
             log(f'trace: found "{symbols.name}.{symbol.name}" in "{string}"',
                 'qp.qlang.extract_symbol', verbosity)
-            return symbol, string[len(symbol.symbol):].strip()
+            return symbol, string[len(symbol.glyph):].strip()
 
     return None, string
 
@@ -1562,7 +1567,7 @@ class DataFrameQueryInteractiveMode:
         #     )
         # def update_code(text):
         #     ui_code.value += text
-        #     if text in CONNECTORS.by_symbol:
+        #     if text in CONNECTORS.by_glyph:
         #         if CONNECTORS[text] == CONNECTORS.MODIFY:
         #             ui_flags.children = get_buttons(flags_modify)
         #         elif CONNECTORS[text] in connectors_select_cols:
@@ -1600,7 +1605,7 @@ class DataFrameQueryInteractiveMode:
         # ui_connectors = widgets.HBox([])
         # for connector in connector_symbols:
         #     button = widgets.Button(
-        #         description=connector.symbol,
+        #         description=connector.glyph,
         #         tooltip=connector.description,
         #         layout=Layout(width='auto')  
         #         )
@@ -1612,7 +1617,7 @@ class DataFrameQueryInteractiveMode:
         #     buttons = []
         #     for symbol in symbols:
         #         button = widgets.Button(
-        #             description=symbol.symbol,
+        #             description=symbol.glyph,
         #             tooltip=symbol.description,
         #             layout=Layout(width='auto')  
         #             )
