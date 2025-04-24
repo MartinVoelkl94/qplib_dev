@@ -64,40 +64,7 @@ TYPES_BOOL = (
 
 
 
-##################     syntax elements     #################
-
-class Instruction:
-    """
-    Each query is built from sequential instructions.
-    """
-    def __init__(self, code='', line_num=None):
-        #initial values
-        self.line_num = line_num
-        self.code = code
-
-        #determined by tokenize()
-        self.connector = None
-        self.flags = set()
-        self.operator = None
-        self.value = None
-
-        #determined by parse()
-        self.function = None
-
-
-    def __repr__(self):
-        string = f'Instruction:\n\tline_num: {self.line_num}\n\tcode: {self.code}\n\tconnector: {self.connector}'
-        for flag in self.flags:
-            string += f'\n\tflag: {flag}'
-        string += f'\n\toperator: {self.operator}\n\tvalue: {self.value}'
-        if self.function:
-            string += f'\n\tfunction: {self.function.__name__}'
-
-        return string
-
-    def __str__(self):
-        return self.__repr__()
-
+##################     syntax symbols     ##################
 
 class Symbol:
     """
@@ -111,7 +78,7 @@ class Symbol:
             setattr(self, key, value)
 
     def details(self):
-        return f'symbol:\n\tglyph: "{self.glyph}"\n\tname: "{self.name}"\n\tdescription: "{self.description}"'
+        return f'name:{self.name}\n\tsymbol:{self.glyph}\n\tdescription{self.description}'
 
     def __repr__(self):
         return f'"{self.glyph}": {self.name}'
@@ -164,307 +131,310 @@ class Symbols:
     def __str__(self):
         return self.__repr__()
 
+class Instruction:
+    """
+    Each query is built from sequential instructions.
+    """
+    def __init__(self, code='', line_num=None):
+        #initial values
+        self.line_num = line_num
+        self.code = code
 
-def _get_symbols():
-    df = pd.read_csv('qplib/data/symbols.csv', index_col=0)
-    df.rename(lambda x: x.strip('"'), axis=0, inplace=True)
-    df.rename(lambda x: x.strip('"'), axis=1, inplace=True)
+        #determined by tokenize()
+        self.connector = None
+        self.flags = set()
+        self.operator = None
+        self.value = None
 
-    symbols = df.replace(0, False).replace(1, True).replace(2, True)
-
-    glyphs = symbols.index
-    traits = [x for x in symbols.columns if x not in glyphs]
-
-    definitions = symbols.loc[glyphs, traits]
-    compatible = symbols.loc[glyphs, glyphs]
-
-    connectors = Symbols('CONNECTORS', *_symbols_of_type(definitions, 'connector'))
-    operators = Symbols('OPERATORS', *_symbols_of_type(definitions, 'operator'))
-    flags = Symbols('FLAGS', *_symbols_of_type(definitions, 'flag'))
-
-    return symbols, definitions, compatible, connectors, operators, flags
-
-def _symbols_of_type(definitions, symbol_type):
-    symbols = []
-    for ind in definitions[definitions['type'] == symbol_type].index:
-        kwargs = {col: definitions.loc[ind, col] for col in definitions.columns}
-        symbols.append(Symbol(ind, **kwargs))
-    return symbols
+        #determined by parse()
+        self.function = None
 
 
-SYMBOLS, DEFINITIONS, COMPATIBLE, CONNECTORS, OPERATORS, FLAGS = _get_symbols()
+    def __repr__(self):
+        string = f'Instruction:\n\tline_num: {self.line_num}\n\tcode: {self.code}\n\tconnector: {self.connector}'
+        for flag in self.flags:
+            string += f'\n\tflag: {flag}'
+        string += f'\n\toperator: {self.operator}\n\tvalue: {self.value}'
+        if self.function:
+            string += f'\n\tfunction: {self.function.__name__}'
+
+        return string
+
+    def __str__(self):
+        return self.__repr__()
+
 
 
 COMMENT = Symbol('#', 'COMMENT', 'comments out the rest of the line')
 ESCAPE = Symbol('´', 'ESCAPE', 'escape the next character')
 
 
-# CONNECTORS = Symbols('CONNECTORS',
-#     #select rows
-#     Symbol('%%', 'NEW_SELECT_ROWS', 'select rows. disregard previous row selection'),
-#     Symbol('&&', 'AND_SELECT_ROWS', 'this row selection condition AND the previous condition/s must be fulfilled'),
-#     Symbol('//', 'OR_SELECT_ROWS', 'this row selection condition OR the previous condition/s must be fulfilled'),
+CONNECTORS = Symbols('CONNECTORS',
+    #select rows
+    Symbol('%%', 'NEW_SELECT_ROWS', 'select rows. disregard previous row selection'),
+    Symbol('&&', 'AND_SELECT_ROWS', 'this row selection condition AND the previous condition/s must be fulfilled'),
+    Symbol('//', 'OR_SELECT_ROWS', 'this row selection condition OR the previous condition/s must be fulfilled'),
 
-#     #select cols
-#     Symbol('%', 'NEW_SELECT_COLS', 'select columns. disregard previous column selection'),
-#     Symbol('&', 'AND_SELECT_COLS', 'this column selection condition AND the previous condition/s must be fulfilled'),
-#     Symbol('/', 'OR_SELECT_COLS', 'this column selection condition OR the previous condition/s must be fulfilled'),
+    #select cols
+    Symbol('%', 'NEW_SELECT_COLS', 'select columns. disregard previous column selection'),
+    Symbol('&', 'AND_SELECT_COLS', 'this column selection condition AND the previous condition/s must be fulfilled'),
+    Symbol('/', 'OR_SELECT_COLS', 'this column selection condition OR the previous condition/s must be fulfilled'),
 
-#     #modify values
-#     Symbol('$', 'MODIFY', 'modify settings, metadata, format, headers, values or create new columns'),
-#     )
+    #modify values
+    Symbol('$', 'MODIFY', 'modify settings, metadata, format, headers, values or create new columns'),
+    )
 
-# connectors_select_cols = set([
-#     CONNECTORS.NEW_SELECT_COLS,
-#     CONNECTORS.AND_SELECT_COLS,
-#     CONNECTORS.OR_SELECT_COLS,
-#     ])
-# connectors_select_rows = set([
-#     CONNECTORS.NEW_SELECT_ROWS,
-#     CONNECTORS.AND_SELECT_ROWS,
-#     CONNECTORS.OR_SELECT_ROWS,
-#     ])
-# connectors_select = connectors_select_cols | connectors_select_rows
-
-
-
-# FLAGS = Symbols('FLAGS',
-
-#     #selection flags
-
-#     #select rows/values
-#     Symbol('any', 'ANY', 'select whole row if ANY value in the selected columns fulfills the condition'),
-#     Symbol('all', 'ALL', 'select whole row if ALL values in the selected columns fulfill the condition'),
-#     Symbol('idx', 'IDX', 'select whole row if the index of the row fulfills the condition'),
-#     Symbol('each', 'EACH', 'select each value (not the whole row) that fulfills the condition'),
-
-#     #negate the selection condition 
-#     Symbol('!', 'NEGATE', 'negate/invert the selection condition'),
-
-#     #strict comparison
-#     Symbol('strict', 'STRICT', 'use strict comparison for selection condition (eg: case sensitive, strict typing)'),
-
-#     #save and load selections
-#     Symbol('save', 'SAVE_SELECTION', 'save current selection with given <name>. load using: "$load = <name>'),
-#     Symbol('load', 'LOAD_SELECTION', 'load a saved selection of rows/values (boolean mask). save using: "$save = <name>'),
+connectors_select_cols = set([
+    CONNECTORS.NEW_SELECT_COLS,
+    CONNECTORS.AND_SELECT_COLS,
+    CONNECTORS.OR_SELECT_COLS,
+    ])
+connectors_select_rows = set([
+    CONNECTORS.NEW_SELECT_ROWS,
+    CONNECTORS.AND_SELECT_ROWS,
+    CONNECTORS.OR_SELECT_ROWS,
+    ])
+connectors_select = connectors_select_cols | connectors_select_rows
 
 
 
-#     #modification flags
+FLAGS = Symbols('FLAGS',
 
-#     #modify settings
-#     Symbol('verbosity', 'VERBOSITY', 'change the verbosity/logging level'),
-#     Symbol('diff', 'DIFF', 'change if and how the difference between the old and new dataframe is shown'),
+    #selection flags
 
-#     #set/modify metadata
-#     Symbol('meta', 'METADATA', 'modify the metadata of the selected rows/values'),
-#     Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "\\n@<selected col>: <value>" to the column named "meta"',),
+    #select rows/values
+    Symbol('any', 'ANY', 'select whole row if ANY value in the selected columns fulfills the condition'),
+    Symbol('all', 'ALL', 'select whole row if ALL values in the selected columns fulfill the condition'),
+    Symbol('idx', 'IDX', 'select whole row if the index of the row fulfills the condition'),
+    Symbol('each', 'EACH', 'select each value (not the whole row) that fulfills the condition'),
 
-#     #modify format
-#     Symbol('color', 'COLOR', 'change the color of the selected values'),
-#     Symbol('bg', 'BACKGROUND_COLOR', 'change the background color of the selected values'),
-#     Symbol('align', 'ALIGN', 'change the alignment of the selected values'),
-#     Symbol('width', 'WIDTH', 'change the width of the selected values'),
-#     Symbol('css', 'CSS', 'use css to format the selected values'),
+    #negate the selection condition 
+    Symbol('!', 'NEGATE', 'negate/invert the selection condition'),
 
-#     #modify data
-#     Symbol('val', 'VAL', 'modify selected values'),
-#     Symbol('header', 'HEADER', 'modify the headers of the selected columns'),
-#     Symbol('new', 'NEW_COL', 'create a new column with the selected values'),
+    #strict comparison
+    Symbol('strict', 'STRICT', 'use strict comparison for selection condition (eg: case sensitive, strict typing)'),
+
+    #save and load selections
+    Symbol('save', 'SAVE_SELECTION', 'save current selection with given <name>. load using: "$load = <name>'),
+    Symbol('load', 'LOAD_SELECTION', 'load a saved selection of rows/values (boolean mask). save using: "$save = <name>'),
 
 
 
-#     #multipurpose flags
+    #modification flags
 
-#     #evaluate a python expression
-#     Symbol('col', 'COL_EVAL', 'when used with the eval operator, evaluates on the whole column'),
+    #modify settings
+    Symbol('verbosity', 'VERBOSITY', 'change the verbosity/logging level'),
+    Symbol('diff', 'DIFF', 'change if and how the difference between the old and new dataframe is shown'),
 
-#     #use regex for matching and contains operations
-#     Symbol('regex', 'REGEX', 'use regex for equality and contains operator'),
+    #set/modify metadata
+    Symbol('meta', 'METADATA', 'modify the metadata of the selected rows/values'),
+    Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "\\n@<selected col>: <value>" to the column named "meta"',),
 
-#     )
+    #modify format
+    Symbol('color', 'COLOR', 'change the color of the selected values'),
+    Symbol('bg', 'BACKGROUND_COLOR', 'change the background color of the selected values'),
+    Symbol('align', 'ALIGN', 'change the alignment of the selected values'),
+    Symbol('width', 'WIDTH', 'change the width of the selected values'),
+    Symbol('css', 'CSS', 'use css to format the selected values'),
 
-# flags_select = set([
-#     FLAGS.ANY,
-#     FLAGS.ALL,
-#     FLAGS.IDX,
-#     FLAGS.EACH,
-#     FLAGS.NEGATE,
-#     FLAGS.STRICT,
-#     FLAGS.REGEX,
-#     FLAGS.SAVE_SELECTION,
-#     FLAGS.LOAD_SELECTION,
-#     ])
-# flags_select_rows_scope = set([
-#     FLAGS.ANY,
-#     FLAGS.ALL,
-#     FLAGS.IDX,
-#     FLAGS.EACH,
-#     ])
-# flags_settings = set([
-#     FLAGS.VERBOSITY,
-#     FLAGS.DIFF,
-#     ])
-# flags_metadata = set([
-#     FLAGS.METADATA,
-#     FLAGS.TAG_METADATA,
-#     ])
-# flags_format = set([
-#     FLAGS.COLOR,
-#     FLAGS.BACKGROUND_COLOR,
-#     FLAGS.ALIGN,
-#     FLAGS.WIDTH,
-#     FLAGS.CSS,
-#     ])
-# flags_copy_df = set([
-#     FLAGS.VAL,
-#     FLAGS.HEADER,
-#     FLAGS.NEW_COL,
-#     FLAGS.COL_EVAL,
-#     FLAGS.METADATA,
-#     FLAGS.TAG_METADATA,
-#     ])
-# flags_modify = flags_settings | flags_metadata | flags_format | flags_copy_df
+    #modify data
+    Symbol('val', 'VAL', 'modify selected values'),
+    Symbol('header', 'HEADER', 'modify the headers of the selected columns'),
+    Symbol('new', 'NEW_COL', 'create a new column with the selected values'),
 
 
 
-# OPERATORS = Symbols('OPERATORS',
+    #multipurpose flags
 
-#     #binary selection operators
-#     Symbol('>=', 'BIGGER_EQUAL', 'bigger or equal'),
-#     Symbol('<=', 'SMALLER_EQUAL', 'smaller or equal'),
-#     Symbol('>', 'BIGGER', 'bigger'),
-#     Symbol('<', 'SMALLER', 'smaller'),
-#     Symbol('==', 'EQUALS', 'equal to'),
-#     Symbol('?', 'CONTAINS', 'contains a string (not case sensitive)'),
+    #evaluate a python expression
+    Symbol('col', 'COL_EVAL', 'when used with the eval operator, evaluates on the whole column'),
 
-#     #unary selection operators
-#     Symbol('is any;', 'IS_ANY', 'is any value (use to reset selection)'),
-#     Symbol('is str;', 'IS_STR', 'is a string'),
-#     Symbol('is int;', 'IS_INT', 'is an integer'),
-#     Symbol('is float;', 'IS_FLOAT', 'is a float'),
-#     Symbol('is num;', 'IS_NUM', 'is a number'),
-#     Symbol('is bool;', 'IS_BOOL', 'is a boolean'),
-#     Symbol('is datetime;', 'IS_DATETIME', 'is a datetime'),
-#     Symbol('is date;', 'IS_DATE', 'is a date'),
-#     Symbol('is na;', 'IS_NA', 'is a missing value'),
-#     Symbol('is nk;', 'IS_NK', 'is not a known value'),
-#     Symbol('is yn;', 'IS_YN', 'is a value representing yes or no'),
-#     Symbol('is yes;', 'IS_YES', 'is a value representing yes'),
-#     Symbol('is no;', 'IS_NO', 'is a value representing no'),
-#     Symbol('is unique;', 'IS_UNIQUE', 'is a unique value'),
-#     Symbol('is first;', 'IS_FIRST', 'is the first value (of multiple values)'),
-#     Symbol('is last;', 'IS_LAST', 'is the last value (of multiple values)'),
+    #use regex for matching and contains operations
+    Symbol('regex', 'REGEX', 'use regex for equality and contains operator'),
+
+    )
+
+flags_select = set([
+    FLAGS.ANY,
+    FLAGS.ALL,
+    FLAGS.IDX,
+    FLAGS.EACH,
+    FLAGS.NEGATE,
+    FLAGS.STRICT,
+    FLAGS.REGEX,
+    FLAGS.SAVE_SELECTION,
+    FLAGS.LOAD_SELECTION,
+    ])
+flags_select_rows_scope = set([
+    FLAGS.ANY,
+    FLAGS.ALL,
+    FLAGS.IDX,
+    FLAGS.EACH,
+    ])
+flags_settings = set([
+    FLAGS.VERBOSITY,
+    FLAGS.DIFF,
+    ])
+flags_metadata = set([
+    FLAGS.METADATA,
+    FLAGS.TAG_METADATA,
+    ])
+flags_format = set([
+    FLAGS.COLOR,
+    FLAGS.BACKGROUND_COLOR,
+    FLAGS.ALIGN,
+    FLAGS.WIDTH,
+    FLAGS.CSS,
+    ])
+flags_copy_df = set([
+    FLAGS.VAL,
+    FLAGS.HEADER,
+    FLAGS.NEW_COL,
+    FLAGS.COL_EVAL,
+    FLAGS.METADATA,
+    FLAGS.TAG_METADATA,
+    ])
+flags_modify = flags_settings | flags_metadata | flags_format | flags_copy_df
 
 
-#     #binary modification operators
-#     Symbol('+=', 'ADD', 'append a string to the value (coerce to string if needed)'),
 
-#     #unary modification operators
-#     Symbol('sort;', 'SORT', 'sort values based on the selected column(s)'),
-#     Symbol('to str;', 'TO_STR', 'convert to string', type_func=str, dtype=str),
-#     Symbol('to int;', 'TO_INT', 'convert to integer', type_func=_int, dtype='Int64'),
-#     Symbol('to float;', 'TO_FLOAT', 'convert to float', type_func=_float, dtype='Float64'),
-#     Symbol('to num;', 'TO_NUM', 'convert to number', type_func=_num, dtype='object'),
-#     Symbol('to bool;', 'TO_BOOL', 'convert to boolean', type_func=_bool, dtype='bool'),
-#     Symbol('to datetime;', 'TO_DATETIME', 'convert to datetime', type_func=_datetime, dtype='datetime64[ns]'),
-#     Symbol('to date;', 'TO_DATE', 'convert to date', type_func=_date, dtype='datetime64[ns]'),
-#     Symbol('to na;', 'TO_NA', 'convert to missing value', type_func=_na),
-#     Symbol('to nk;', 'TO_NK', 'convert to not known value', type_func=_nk, dtype='object'),
-#     Symbol('to yn;', 'TO_YN', 'convert to yes or no value', type_func=_yn, dtype='object'),
+OPERATORS = Symbols('OPERATORS',
+
+    #binary selection operators
+    Symbol('>=', 'BIGGER_EQUAL', 'bigger or equal'),
+    Symbol('<=', 'SMALLER_EQUAL', 'smaller or equal'),
+    Symbol('>', 'BIGGER', 'bigger'),
+    Symbol('<', 'SMALLER', 'smaller'),
+    Symbol('==', 'EQUALS', 'equal to'),
+    Symbol('?', 'CONTAINS', 'contains a string (not case sensitive)'),
+
+    #unary selection operators
+    Symbol('is any;', 'IS_ANY', 'is any value (use to reset selection)'),
+    Symbol('is str;', 'IS_STR', 'is a string'),
+    Symbol('is int;', 'IS_INT', 'is an integer'),
+    Symbol('is float;', 'IS_FLOAT', 'is a float'),
+    Symbol('is num;', 'IS_NUM', 'is a number'),
+    Symbol('is bool;', 'IS_BOOL', 'is a boolean'),
+    Symbol('is datetime;', 'IS_DATETIME', 'is a datetime'),
+    Symbol('is date;', 'IS_DATE', 'is a date'),
+    Symbol('is na;', 'IS_NA', 'is a missing value'),
+    Symbol('is nk;', 'IS_NK', 'is not a known value'),
+    Symbol('is yn;', 'IS_YN', 'is a value representing yes or no'),
+    Symbol('is yes;', 'IS_YES', 'is a value representing yes'),
+    Symbol('is no;', 'IS_NO', 'is a value representing no'),
+    Symbol('is unique;', 'IS_UNIQUE', 'is a unique value'),
+    Symbol('is first;', 'IS_FIRST', 'is the first value (of multiple values)'),
+    Symbol('is last;', 'IS_LAST', 'is the last value (of multiple values)'),
 
 
-#     #multipurpose operators
-#     Symbol('=', 'SET', 'set values'),  #default. gets interpreted as EQUALS when used in selection instructions
-#     Symbol('~', 'EVAL', 'evaluate a python expression'),  #can be used for selection and modification
+    #binary modification operators
+    Symbol('+=', 'ADD', 'append a string to the value (coerce to string if needed)'),
 
-#     )
+    #unary modification operators
+    Symbol('sort;', 'SORT', 'sort values based on the selected column(s)'),
+    Symbol('to str;', 'TO_STR', 'convert to string', type_func=str, dtype=str),
+    Symbol('to int;', 'TO_INT', 'convert to integer', type_func=_int, dtype='Int64'),
+    Symbol('to float;', 'TO_FLOAT', 'convert to float', type_func=_float, dtype='Float64'),
+    Symbol('to num;', 'TO_NUM', 'convert to number', type_func=_num, dtype='object'),
+    Symbol('to bool;', 'TO_BOOL', 'convert to boolean', type_func=_bool, dtype='bool'),
+    Symbol('to datetime;', 'TO_DATETIME', 'convert to datetime', type_func=_datetime, dtype='datetime64[ns]'),
+    Symbol('to date;', 'TO_DATE', 'convert to date', type_func=_date, dtype='datetime64[ns]'),
+    Symbol('to na;', 'TO_NA', 'convert to missing value', type_func=_na),
+    Symbol('to nk;', 'TO_NK', 'convert to not known value', type_func=_nk, dtype='object'),
+    Symbol('to yn;', 'TO_YN', 'convert to yes or no value', type_func=_yn, dtype='object'),
 
-# operators_select = set([
-#     OPERATORS.BIGGER_EQUAL,
-#     OPERATORS.SMALLER_EQUAL,
-#     OPERATORS.BIGGER,
-#     OPERATORS.SMALLER,
-#     OPERATORS.EQUALS,
-#     OPERATORS.SET,  #interpreted as EQUALS for selection instructions
-#     OPERATORS.CONTAINS,
-#     OPERATORS.EVAL,
-#     OPERATORS.IS_ANY,
-#     OPERATORS.IS_STR,
-#     OPERATORS.IS_INT,
-#     OPERATORS.IS_FLOAT,
-#     OPERATORS.IS_NUM,
-#     OPERATORS.IS_BOOL,
-#     OPERATORS.IS_DATETIME,
-#     OPERATORS.IS_DATE,
-#     OPERATORS.IS_NA,
-#     OPERATORS.IS_NK,
-#     OPERATORS.IS_YN,
-#     OPERATORS.IS_YES,
-#     OPERATORS.IS_NO,
-#     OPERATORS.IS_UNIQUE,
-#     OPERATORS.IS_FIRST,
-#     OPERATORS.IS_LAST,
-#     ])
-# operators_modify = set([
-#     OPERATORS.SET,
-#     OPERATORS.ADD,
-#     OPERATORS.SORT,
-#     OPERATORS.EVAL,
-#     OPERATORS.TO_STR,
-#     OPERATORS.TO_INT,
-#     OPERATORS.TO_FLOAT,
-#     OPERATORS.TO_NUM,
-#     OPERATORS.TO_BOOL,
-#     OPERATORS.TO_DATETIME,
-#     OPERATORS.TO_DATE,
-#     OPERATORS.TO_NA,
-#     OPERATORS.TO_NK,
-#     OPERATORS.TO_YN,
-#     ])
-# operators_unary = set([
-#     OPERATORS.IS_ANY,
-#     OPERATORS.IS_STR,
-#     OPERATORS.IS_INT,
-#     OPERATORS.IS_FLOAT,
-#     OPERATORS.IS_NUM,
-#     OPERATORS.IS_BOOL,
-#     OPERATORS.IS_DATETIME,
-#     OPERATORS.IS_DATE,
-#     OPERATORS.IS_NA,
-#     OPERATORS.IS_NK,
-#     OPERATORS.IS_YN,
-#     OPERATORS.IS_YES,
-#     OPERATORS.IS_NO,
-#     OPERATORS.IS_UNIQUE,
-#     OPERATORS.IS_FIRST,
-#     OPERATORS.IS_LAST,
-#     ])
-# operators_binary = set([
-#     OPERATORS.BIGGER_EQUAL,
-#     OPERATORS.SMALLER_EQUAL,
-#     OPERATORS.BIGGER,
-#     OPERATORS.SMALLER,
-#     OPERATORS.EQUALS,
-#     OPERATORS.SET,
-#     OPERATORS.CONTAINS,
-#     OPERATORS.EVAL,
-#     OPERATORS.ADD,
-#     ])
-# operators_metadata = set([
-#     OPERATORS.SET,
-#     OPERATORS.ADD,
-#     ])
-# operators_is_type = set([
-#     OPERATORS.IS_STR,
-#     OPERATORS.IS_INT,
-#     OPERATORS.IS_FLOAT,
-#     OPERATORS.IS_NUM,
-#     OPERATORS.IS_BOOL,
-#     OPERATORS.IS_DATETIME,
-#     OPERATORS.IS_DATE,
-#     OPERATORS.IS_NA,
-#     ])
+
+    #multipurpose operators
+    Symbol('=', 'SET', 'set values'),  #default. gets interpreted as EQUALS when used in selection instructions
+    Symbol('~', 'EVAL', 'evaluate a python expression'),  #can be used for selection and modification
+
+    )
+
+operators_select = set([
+    OPERATORS.BIGGER_EQUAL,
+    OPERATORS.SMALLER_EQUAL,
+    OPERATORS.BIGGER,
+    OPERATORS.SMALLER,
+    OPERATORS.EQUALS,
+    OPERATORS.SET,  #interpreted as EQUALS for selection instructions
+    OPERATORS.CONTAINS,
+    OPERATORS.EVAL,
+    OPERATORS.IS_ANY,
+    OPERATORS.IS_STR,
+    OPERATORS.IS_INT,
+    OPERATORS.IS_FLOAT,
+    OPERATORS.IS_NUM,
+    OPERATORS.IS_BOOL,
+    OPERATORS.IS_DATETIME,
+    OPERATORS.IS_DATE,
+    OPERATORS.IS_NA,
+    OPERATORS.IS_NK,
+    OPERATORS.IS_YN,
+    OPERATORS.IS_YES,
+    OPERATORS.IS_NO,
+    OPERATORS.IS_UNIQUE,
+    OPERATORS.IS_FIRST,
+    OPERATORS.IS_LAST,
+    ])
+operators_modify = set([
+    OPERATORS.SET,
+    OPERATORS.ADD,
+    OPERATORS.SORT,
+    OPERATORS.EVAL,
+    OPERATORS.TO_STR,
+    OPERATORS.TO_INT,
+    OPERATORS.TO_FLOAT,
+    OPERATORS.TO_NUM,
+    OPERATORS.TO_BOOL,
+    OPERATORS.TO_DATETIME,
+    OPERATORS.TO_DATE,
+    OPERATORS.TO_NA,
+    OPERATORS.TO_NK,
+    OPERATORS.TO_YN,
+    ])
+operators_unary = set([
+    OPERATORS.IS_ANY,
+    OPERATORS.IS_STR,
+    OPERATORS.IS_INT,
+    OPERATORS.IS_FLOAT,
+    OPERATORS.IS_NUM,
+    OPERATORS.IS_BOOL,
+    OPERATORS.IS_DATETIME,
+    OPERATORS.IS_DATE,
+    OPERATORS.IS_NA,
+    OPERATORS.IS_NK,
+    OPERATORS.IS_YN,
+    OPERATORS.IS_YES,
+    OPERATORS.IS_NO,
+    OPERATORS.IS_UNIQUE,
+    OPERATORS.IS_FIRST,
+    OPERATORS.IS_LAST,
+    ])
+operators_binary = set([
+    OPERATORS.BIGGER_EQUAL,
+    OPERATORS.SMALLER_EQUAL,
+    OPERATORS.BIGGER,
+    OPERATORS.SMALLER,
+    OPERATORS.EQUALS,
+    OPERATORS.SET,
+    OPERATORS.CONTAINS,
+    OPERATORS.EVAL,
+    OPERATORS.ADD,
+    ])
+operators_metadata = set([
+    OPERATORS.SET,
+    OPERATORS.ADD,
+    ])
+operators_is_type = set([
+    OPERATORS.IS_STR,
+    OPERATORS.IS_INT,
+    OPERATORS.IS_FLOAT,
+    OPERATORS.IS_NUM,
+    OPERATORS.IS_BOOL,
+    OPERATORS.IS_DATETIME,
+    OPERATORS.IS_DATE,
+    OPERATORS.IS_NA,
+    ])
 
 
 
@@ -723,7 +693,7 @@ def parse(instruction_tokenized, args):
         else:
             log(f'trace: no operator found in "{code}". using default "{OPERATORS.SET}"', 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.SET
-    if instruction.connector.select_rows:
+    if instruction.connector in connectors_select_rows:
         if flags.intersection(flags_select_rows_scope) == set() and set([FLAGS.SAVE_SELECTION, FLAGS.LOAD_SELECTION]).intersection(flags) == set():
             log(f'trace: no row selection flag found in "{code}". using default "{FLAGS.ANY}"', 'qp.qlang.parse', verbosity)
             instruction.flags.add(FLAGS.ANY)
@@ -733,19 +703,23 @@ def parse(instruction_tokenized, args):
             instruction.flags.add(FLAGS.VAL)
 
 
-    #set function
+    #check compatibility and set function
 
-    if instruction.connector.select:
+    if instruction.connector in connectors_select:
+        if instruction.operator not in operators_select:
+            log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
+                'qp.qlang.parse', verbosity)
+            return None, args
 
         if instruction.operator == OPERATORS.SET:
             log(f'trace:"{OPERATORS.SET}" is interpreted as "{OPERATORS.EQUALS}" for selection instruction',
                 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.EQUALS
 
-        if instruction.connector.select_cols:
+        if instruction.connector in connectors_select_cols:
             instruction.function = _select_cols
 
-        elif instruction.connector.select_rows:   
+        elif instruction.connector in connectors_select_rows:   
             if FLAGS.SAVE_SELECTION in flags:
                 instruction.function = _save_selection
             elif FLAGS.LOAD_SELECTION in flags:
@@ -754,14 +728,23 @@ def parse(instruction_tokenized, args):
                 instruction.function = _select_rows
 
     else:
+        if instruction.operator not in operators_modify:
+            log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
+                'qp.qlang.parse', verbosity)
+            return None, args
 
-        if flags.settings:
+        elif not flags.issubset(flags_modify):
+            log(f'error: flags "{flags - flags_modify}" are not compatible with "{instruction.connector}"',
+                'qp.qlang.parse', verbosity)
+            return None, args
+
+        if flags.intersection(flags_settings):
             instruction.function = _modify_settings
 
-        elif flags.metadata:
+        elif flags.intersection(flags_metadata):
             instruction.function = _modify_metadata
 
-        elif flags.format:
+        elif flags.intersection(flags_format):
             instruction.function = _modify_format
 
         elif FLAGS.HEADER in flags:
@@ -774,12 +757,23 @@ def parse(instruction_tokenized, args):
             instruction.function = _modify_vals
 
 
+    #check for other incompatible symbols
+    if FLAGS.SAVE_SELECTION in flags and len(flags)>1:
+        log(f'warning: flags "{flags - {FLAGS.SAVE_SELECTION}}" are not compatible with "{FLAGS.SAVE_SELECTION}" and will be ignored',
+            'qp.qlang.parse', verbosity)
+    elif FLAGS.LOAD_SELECTION in flags and len(flags)>1:
+        log(f'warning: flags "{flags - {FLAGS.LOAD_SELECTION}}" are not compatible with "{FLAGS.LOAD_SELECTION}" and will be ignored',
+            'qp.qlang.parse', verbosity)
+
+
+
+
     #general checks
-    if instruction.operator.unary and len(instruction.value) > 0:
+    if instruction.operator in operators_unary and len(instruction.value) > 0:
         log(f'warning: value {instruction.value} will be ignored for unary operator "{instruction.operator}"',
             'qp.qlang.parse', verbosity)
         instruction.value = ''
-    if flags.copy_df and not INPLACE:
+    if flags.intersection(flags_copy_df) and not INPLACE:
         log(f'debug: df will be copied since instruction "{instruction.code}" modifies data',
             'qp.qlang.parse', verbosity)
         args.copy_df = True
@@ -1108,7 +1102,7 @@ def _load_selection(instruction, df_new, args):
 
 
 
-#############     modification instructions     ############
+#############     modification instructions     #############
 
 def _modify_settings(instruction, df_new, args):
     """

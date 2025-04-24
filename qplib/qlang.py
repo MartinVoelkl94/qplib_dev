@@ -70,21 +70,22 @@ class Symbol:
     """
     A Symbol used in the query languages syntax.
     """
-    def __init__(self, glyph, name, description, **kwargs):
-        self.glyph = glyph
+    def __init__(self, name, glyph, symbol_type, description, traits):
         self.name = name
+        self.glyph = glyph
+        self.type = symbol_type
         self.description = description
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        self.traits = traits
 
     def details(self):
-        return f'name:{self.name}\n\tsymbol:{self.glyph}\n\tdescription{self.description}'
+        traits = '\n\t'.join(self.traits)
+        return f'name:{self.name}\n\tsymbol:{self.glyph}\n\tdescription{self.description}\n\ttraits:\n\t{traits}'
 
     def __repr__(self):
-        return f'"{self.glyph}": {self.name}'
+        return f'"{self.glyph}: {self.name}"'
  
     def __str__(self):
-        return f'"{self.glyph}": {self.name}'
+        return f'"{self.glyph}: {self.name}"'
     
     def __lt__(self, value):
         return self.glyph < value
@@ -100,16 +101,26 @@ class Symbols:
         self.name = name
         self.by_name = {symbol.name: symbol for symbol in symbols}
         self.by_glyph = {symbol.glyph: symbol for symbol in symbols}
+        self.by_trait = {}
+        for symbol in symbols:
+            for trait in symbol.traits:
+                if trait not in self.by_trait:
+                    self.by_trait[trait] = set()
+                self.by_trait[trait].add(symbol)
 
     def __getattribute__(self, value):
         if value == 'by_name':
             return super().__getattribute__(value)
         elif value == 'by_glyph':
             return super().__getattribute__(value)
+        elif value == 'by_trait':
+            return super().__getattribute__(value)
         elif value in self.by_glyph:
             return self.by_glyph[value]
         elif value in self.by_name:
             return self.by_name[value]
+        elif value in self.by_trait:
+            return self.by_trait[value]
         else:
             return super().__getattribute__(value)
 
@@ -118,6 +129,8 @@ class Symbols:
             return self.by_glyph[key]
         elif key in self.by_name:
             return self.by_name[key]
+        elif key in self.by_trait:
+            return self.by_trait[key]
         else:
             log(f'error: symbol "{key}" not found in "{self.name}"', 'qp.qlang.Symbols.__getitem__', VERBOSITY)
             return None
@@ -164,278 +177,44 @@ class Instruction:
         return self.__repr__()
 
 
+def _get_symbols():
+    symbols = pd.read_csv('qplib/data/symbols.csv', index_col=0)
+    symbols.drop(index=['type', 'glyph', 'description'], inplace=True)
+    symbols['glyph'] = symbols['glyph'].str.strip('"')
+    symbols.iloc[:, 3:] = symbols.iloc[:, 3:].fillna(0).astype('int')
 
-COMMENT = Symbol('#', 'COMMENT', 'comments out the rest of the line')
-ESCAPE = Symbol('´', 'ESCAPE', 'escape the next character')
+    traits_all = symbols.loc[symbols['type'] == 'trait', :].index
+    connectors = []
+    operators = []
+    flags = []
 
+    for ind in symbols.index:
+        name = symbols.loc[ind, :].name
+        glyph = symbols.loc[ind, 'glyph']
+        symbol_type = symbols.loc[ind, 'type']
+        description = symbols.loc[ind, 'description']
+        traits = [trait for trait in traits_all if symbols.loc[ind, trait] == 2]
 
-CONNECTORS = Symbols('CONNECTORS',
-    #select rows
-    Symbol('%%', 'NEW_SELECT_ROWS', 'select rows. disregard previous row selection'),
-    Symbol('&&', 'AND_SELECT_ROWS', 'this row selection condition AND the previous condition/s must be fulfilled'),
-    Symbol('//', 'OR_SELECT_ROWS', 'this row selection condition OR the previous condition/s must be fulfilled'),
+        symbol = Symbol(name, glyph, symbol_type, description, traits)
 
-    #select cols
-    Symbol('%', 'NEW_SELECT_COLS', 'select columns. disregard previous column selection'),
-    Symbol('&', 'AND_SELECT_COLS', 'this column selection condition AND the previous condition/s must be fulfilled'),
-    Symbol('/', 'OR_SELECT_COLS', 'this column selection condition OR the previous condition/s must be fulfilled'),
+        if symbol.type == 'connector':
+            connectors.append(symbol)
+        elif symbol.type == 'operator':
+            operators.append(symbol)
+        elif symbol.type == 'flag':
+            flags.append(symbol)
 
-    #modify values
-    Symbol('$', 'MODIFY', 'modify settings, metadata, format, headers, values or create new columns'),
-    )
+    connectors = Symbols('CONNECTORS', *connectors)
+    operators = Symbols('OPERATORS', *operators)
+    flags = Symbols('FLAGS', *flags)
 
-connectors_select_cols = set([
-    CONNECTORS.NEW_SELECT_COLS,
-    CONNECTORS.AND_SELECT_COLS,
-    CONNECTORS.OR_SELECT_COLS,
-    ])
-connectors_select_rows = set([
-    CONNECTORS.NEW_SELECT_ROWS,
-    CONNECTORS.AND_SELECT_ROWS,
-    CONNECTORS.OR_SELECT_ROWS,
-    ])
-connectors_select = connectors_select_cols | connectors_select_rows
-
-
-
-FLAGS = Symbols('FLAGS',
-
-    #selection flags
-
-    #select rows/values
-    Symbol('any', 'ANY', 'select whole row if ANY value in the selected columns fulfills the condition'),
-    Symbol('all', 'ALL', 'select whole row if ALL values in the selected columns fulfill the condition'),
-    Symbol('idx', 'IDX', 'select whole row if the index of the row fulfills the condition'),
-    Symbol('each', 'EACH', 'select each value (not the whole row) that fulfills the condition'),
-
-    #negate the selection condition 
-    Symbol('!', 'NEGATE', 'negate/invert the selection condition'),
-
-    #strict comparison
-    Symbol('strict', 'STRICT', 'use strict comparison for selection condition (eg: case sensitive, strict typing)'),
-
-    #save and load selections
-    Symbol('save', 'SAVE_SELECTION', 'save current selection with given <name>. load using: "$load = <name>'),
-    Symbol('load', 'LOAD_SELECTION', 'load a saved selection of rows/values (boolean mask). save using: "$save = <name>'),
+    return symbols, connectors, operators, flags
 
 
 
-    #modification flags
-
-    #modify settings
-    Symbol('verbosity', 'VERBOSITY', 'change the verbosity/logging level'),
-    Symbol('diff', 'DIFF', 'change if and how the difference between the old and new dataframe is shown'),
-
-    #set/modify metadata
-    Symbol('meta', 'METADATA', 'modify the metadata of the selected rows/values'),
-    Symbol('tag', 'TAG_METADATA', 'add a tag of the currently selected column(s) in the form of "\\n@<selected col>: <value>" to the column named "meta"',),
-
-    #modify format
-    Symbol('color', 'COLOR', 'change the color of the selected values'),
-    Symbol('bg', 'BACKGROUND_COLOR', 'change the background color of the selected values'),
-    Symbol('align', 'ALIGN', 'change the alignment of the selected values'),
-    Symbol('width', 'WIDTH', 'change the width of the selected values'),
-    Symbol('css', 'CSS', 'use css to format the selected values'),
-
-    #modify data
-    Symbol('val', 'VAL', 'modify selected values'),
-    Symbol('header', 'HEADER', 'modify the headers of the selected columns'),
-    Symbol('new', 'NEW_COL', 'create a new column with the selected values'),
-
-
-
-    #multipurpose flags
-
-    #evaluate a python expression
-    Symbol('col', 'COL_EVAL', 'when used with the eval operator, evaluates on the whole column'),
-
-    #use regex for matching and contains operations
-    Symbol('regex', 'REGEX', 'use regex for equality and contains operator'),
-
-    )
-
-flags_select = set([
-    FLAGS.ANY,
-    FLAGS.ALL,
-    FLAGS.IDX,
-    FLAGS.EACH,
-    FLAGS.NEGATE,
-    FLAGS.STRICT,
-    FLAGS.REGEX,
-    FLAGS.SAVE_SELECTION,
-    FLAGS.LOAD_SELECTION,
-    ])
-flags_select_rows_scope = set([
-    FLAGS.ANY,
-    FLAGS.ALL,
-    FLAGS.IDX,
-    FLAGS.EACH,
-    ])
-flags_settings = set([
-    FLAGS.VERBOSITY,
-    FLAGS.DIFF,
-    ])
-flags_metadata = set([
-    FLAGS.METADATA,
-    FLAGS.TAG_METADATA,
-    ])
-flags_format = set([
-    FLAGS.COLOR,
-    FLAGS.BACKGROUND_COLOR,
-    FLAGS.ALIGN,
-    FLAGS.WIDTH,
-    FLAGS.CSS,
-    ])
-flags_copy_df = set([
-    FLAGS.VAL,
-    FLAGS.HEADER,
-    FLAGS.NEW_COL,
-    FLAGS.COL_EVAL,
-    FLAGS.METADATA,
-    FLAGS.TAG_METADATA,
-    ])
-flags_modify = flags_settings | flags_metadata | flags_format | flags_copy_df
-
-
-
-OPERATORS = Symbols('OPERATORS',
-
-    #binary selection operators
-    Symbol('>=', 'BIGGER_EQUAL', 'bigger or equal'),
-    Symbol('<=', 'SMALLER_EQUAL', 'smaller or equal'),
-    Symbol('>', 'BIGGER', 'bigger'),
-    Symbol('<', 'SMALLER', 'smaller'),
-    Symbol('==', 'EQUALS', 'equal to'),
-    Symbol('?', 'CONTAINS', 'contains a string (not case sensitive)'),
-
-    #unary selection operators
-    Symbol('is any;', 'IS_ANY', 'is any value (use to reset selection)'),
-    Symbol('is str;', 'IS_STR', 'is a string'),
-    Symbol('is int;', 'IS_INT', 'is an integer'),
-    Symbol('is float;', 'IS_FLOAT', 'is a float'),
-    Symbol('is num;', 'IS_NUM', 'is a number'),
-    Symbol('is bool;', 'IS_BOOL', 'is a boolean'),
-    Symbol('is datetime;', 'IS_DATETIME', 'is a datetime'),
-    Symbol('is date;', 'IS_DATE', 'is a date'),
-    Symbol('is na;', 'IS_NA', 'is a missing value'),
-    Symbol('is nk;', 'IS_NK', 'is not a known value'),
-    Symbol('is yn;', 'IS_YN', 'is a value representing yes or no'),
-    Symbol('is yes;', 'IS_YES', 'is a value representing yes'),
-    Symbol('is no;', 'IS_NO', 'is a value representing no'),
-    Symbol('is unique;', 'IS_UNIQUE', 'is a unique value'),
-    Symbol('is first;', 'IS_FIRST', 'is the first value (of multiple values)'),
-    Symbol('is last;', 'IS_LAST', 'is the last value (of multiple values)'),
-
-
-    #binary modification operators
-    Symbol('+=', 'ADD', 'append a string to the value (coerce to string if needed)'),
-
-    #unary modification operators
-    Symbol('sort;', 'SORT', 'sort values based on the selected column(s)'),
-    Symbol('to str;', 'TO_STR', 'convert to string', type_func=str, dtype=str),
-    Symbol('to int;', 'TO_INT', 'convert to integer', type_func=_int, dtype='Int64'),
-    Symbol('to float;', 'TO_FLOAT', 'convert to float', type_func=_float, dtype='Float64'),
-    Symbol('to num;', 'TO_NUM', 'convert to number', type_func=_num, dtype='object'),
-    Symbol('to bool;', 'TO_BOOL', 'convert to boolean', type_func=_bool, dtype='bool'),
-    Symbol('to datetime;', 'TO_DATETIME', 'convert to datetime', type_func=_datetime, dtype='datetime64[ns]'),
-    Symbol('to date;', 'TO_DATE', 'convert to date', type_func=_date, dtype='datetime64[ns]'),
-    Symbol('to na;', 'TO_NA', 'convert to missing value', type_func=_na),
-    Symbol('to nk;', 'TO_NK', 'convert to not known value', type_func=_nk, dtype='object'),
-    Symbol('to yn;', 'TO_YN', 'convert to yes or no value', type_func=_yn, dtype='object'),
-
-
-    #multipurpose operators
-    Symbol('=', 'SET', 'set values'),  #default. gets interpreted as EQUALS when used in selection instructions
-    Symbol('~', 'EVAL', 'evaluate a python expression'),  #can be used for selection and modification
-
-    )
-
-operators_select = set([
-    OPERATORS.BIGGER_EQUAL,
-    OPERATORS.SMALLER_EQUAL,
-    OPERATORS.BIGGER,
-    OPERATORS.SMALLER,
-    OPERATORS.EQUALS,
-    OPERATORS.SET,  #interpreted as EQUALS for selection instructions
-    OPERATORS.CONTAINS,
-    OPERATORS.EVAL,
-    OPERATORS.IS_ANY,
-    OPERATORS.IS_STR,
-    OPERATORS.IS_INT,
-    OPERATORS.IS_FLOAT,
-    OPERATORS.IS_NUM,
-    OPERATORS.IS_BOOL,
-    OPERATORS.IS_DATETIME,
-    OPERATORS.IS_DATE,
-    OPERATORS.IS_NA,
-    OPERATORS.IS_NK,
-    OPERATORS.IS_YN,
-    OPERATORS.IS_YES,
-    OPERATORS.IS_NO,
-    OPERATORS.IS_UNIQUE,
-    OPERATORS.IS_FIRST,
-    OPERATORS.IS_LAST,
-    ])
-operators_modify = set([
-    OPERATORS.SET,
-    OPERATORS.ADD,
-    OPERATORS.SORT,
-    OPERATORS.EVAL,
-    OPERATORS.TO_STR,
-    OPERATORS.TO_INT,
-    OPERATORS.TO_FLOAT,
-    OPERATORS.TO_NUM,
-    OPERATORS.TO_BOOL,
-    OPERATORS.TO_DATETIME,
-    OPERATORS.TO_DATE,
-    OPERATORS.TO_NA,
-    OPERATORS.TO_NK,
-    OPERATORS.TO_YN,
-    ])
-operators_unary = set([
-    OPERATORS.IS_ANY,
-    OPERATORS.IS_STR,
-    OPERATORS.IS_INT,
-    OPERATORS.IS_FLOAT,
-    OPERATORS.IS_NUM,
-    OPERATORS.IS_BOOL,
-    OPERATORS.IS_DATETIME,
-    OPERATORS.IS_DATE,
-    OPERATORS.IS_NA,
-    OPERATORS.IS_NK,
-    OPERATORS.IS_YN,
-    OPERATORS.IS_YES,
-    OPERATORS.IS_NO,
-    OPERATORS.IS_UNIQUE,
-    OPERATORS.IS_FIRST,
-    OPERATORS.IS_LAST,
-    ])
-operators_binary = set([
-    OPERATORS.BIGGER_EQUAL,
-    OPERATORS.SMALLER_EQUAL,
-    OPERATORS.BIGGER,
-    OPERATORS.SMALLER,
-    OPERATORS.EQUALS,
-    OPERATORS.SET,
-    OPERATORS.CONTAINS,
-    OPERATORS.EVAL,
-    OPERATORS.ADD,
-    ])
-operators_metadata = set([
-    OPERATORS.SET,
-    OPERATORS.ADD,
-    ])
-operators_is_type = set([
-    OPERATORS.IS_STR,
-    OPERATORS.IS_INT,
-    OPERATORS.IS_FLOAT,
-    OPERATORS.IS_NUM,
-    OPERATORS.IS_BOOL,
-    OPERATORS.IS_DATETIME,
-    OPERATORS.IS_DATE,
-    OPERATORS.IS_NA,
-    ])
-
+SYMBOLS, CONNECTORS, OPERATORS, FLAGS = _get_symbols()
+COMMENT = Symbol('COMMENT', '#', 'syntax', 'comments out the rest of the line', [])
+ESCAPE = Symbol('ESCAPE', '´',  'syntax', 'escape the next character', [])
 
 
 
@@ -693,33 +472,34 @@ def parse(instruction_tokenized, args):
         else:
             log(f'trace: no operator found in "{code}". using default "{OPERATORS.SET}"', 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.SET
-    if instruction.connector in connectors_select_rows:
-        if flags.intersection(flags_select_rows_scope) == set() and set([FLAGS.SAVE_SELECTION, FLAGS.LOAD_SELECTION]).intersection(flags) == set():
-            log(f'trace: no row selection flag found in "{code}". using default "{FLAGS.ANY}"', 'qp.qlang.parse', verbosity)
-            instruction.flags.add(FLAGS.ANY)
-    elif instruction.connector == CONNECTORS.MODIFY:
-        if flags.intersection(flags_modify) == set():
-            log(f'trace: no modification flag found in "{code}". using default "{FLAGS.VAL}"', 'qp.qlang.parse', verbosity)
-            instruction.flags.add(FLAGS.VAL)
+    if instruction.connector in CONNECTORS.by_trait['select_rows'] \
+        and not flags.intersection(FLAGS.by_trait['select_rows_scope']):
+        log(f'trace: no row selection scope flag found in "{code}". using default "{FLAGS.ANY}"', 'qp.qlang.parse', verbosity)
+        instruction.flags.add(FLAGS.ANY)
+    elif instruction.connector == CONNECTORS.MODIFY \
+        and not flags.intersection(FLAGS.by_trait['modify']):
+        log(f'trace: no modification flag found in "{code}". using default "{FLAGS.VAL}"', 'qp.qlang.parse', verbosity)
+        instruction.flags.add(FLAGS.VAL)
 
 
     #check compatibility and set function
 
-    if instruction.connector in connectors_select:
-        if instruction.operator not in operators_select:
-            log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
-                'qp.qlang.parse', verbosity)
-            return None, args
+    if instruction.connector in CONNECTORS.by_trait['select']:
 
         if instruction.operator == OPERATORS.SET:
             log(f'trace:"{OPERATORS.SET}" is interpreted as "{OPERATORS.EQUALS}" for selection instruction',
                 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.EQUALS
 
-        if instruction.connector in connectors_select_cols:
+        if instruction.operator not in OPERATORS.by_trait['select']:
+            log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
+                'qp.qlang.parse', verbosity)
+            return None, args
+
+        if instruction.connector in CONNECTORS.by_trait['select_cols']:
             instruction.function = _select_cols
 
-        elif instruction.connector in connectors_select_rows:   
+        elif instruction.connector in CONNECTORS.by_trait['select_rows']:   
             if FLAGS.SAVE_SELECTION in flags:
                 instruction.function = _save_selection
             elif FLAGS.LOAD_SELECTION in flags:
@@ -728,23 +508,23 @@ def parse(instruction_tokenized, args):
                 instruction.function = _select_rows
 
     else:
-        if instruction.operator not in operators_modify:
+        if instruction.operator not in OPERATORS.by_trait['modify']:
             log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
                 'qp.qlang.parse', verbosity)
             return None, args
 
-        elif not flags.issubset(flags_modify):
-            log(f'error: flags "{flags - flags_modify}" are not compatible with "{instruction.connector}"',
+        elif not flags.issubset(FLAGS.by_trait['modify']):
+            log(f'error: flags "{flags - FLAGS.by_trait['modify']}" are not compatible with "{instruction.connector}"',
                 'qp.qlang.parse', verbosity)
             return None, args
 
-        if flags.intersection(flags_settings):
+        if flags.intersection(FLAGS.by_trait['settings']):
             instruction.function = _modify_settings
 
-        elif flags.intersection(flags_metadata):
+        elif flags.intersection(FLAGS.by_trait['metadata']):
             instruction.function = _modify_metadata
 
-        elif flags.intersection(flags_format):
+        elif flags.intersection(FLAGS.by_trait['format']):
             instruction.function = _modify_format
 
         elif FLAGS.HEADER in flags:
@@ -769,11 +549,11 @@ def parse(instruction_tokenized, args):
 
 
     #general checks
-    if instruction.operator in operators_unary and len(instruction.value) > 0:
+    if instruction.operator in OPERATORS.by_trait['unary'] and len(instruction.value) > 0:
         log(f'warning: value {instruction.value} will be ignored for unary operator "{instruction.operator}"',
             'qp.qlang.parse', verbosity)
         instruction.value = ''
-    if flags.intersection(flags_copy_df) and not INPLACE:
+    if flags.intersection(FLAGS.by_trait['copy_df']) and not INPLACE:
         log(f'debug: df will be copied since instruction "{instruction.code}" modifies data',
             'qp.qlang.parse', verbosity)
         args.copy_df = True
@@ -917,7 +697,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
 
 
     #type checks
-    elif operator in operators_is_type:
+    elif operator in OPERATORS.by_trait['is_type']:
         if FLAGS.STRICT in flags:
             if operator == OPERATORS.IS_STR:
                 filtered = series.apply(lambda x: isinstance(x, str))
@@ -1333,19 +1113,29 @@ def _modify_vals(instruction, df_new, args):
 
     operator = instruction.operator
     value = instruction.value
-    type_conversions = [
-        OPERATORS.TO_STR,
-        OPERATORS.TO_INT,
-        OPERATORS.TO_FLOAT,
-        OPERATORS.TO_NUM,
-        OPERATORS.TO_BOOL,
-        OPERATORS.TO_DATETIME,
-        OPERATORS.TO_DATE,
-        OPERATORS.TO_NA,
-        OPERATORS.TO_NK,
-        OPERATORS.TO_YN,
-        ]
-
+    type_conversions = {
+        OPERATORS.TO_STR: str,
+        OPERATORS.TO_INT: _int,
+        OPERATORS.TO_FLOAT: _float,
+        OPERATORS.TO_NUM: _num,
+        OPERATORS.TO_BOOL: _bool,
+        OPERATORS.TO_DATETIME: _datetime,
+        OPERATORS.TO_DATE: _date,
+        OPERATORS.TO_NA: _na,
+        OPERATORS.TO_NK: _nk,
+        OPERATORS.TO_YN: _yn,
+        }
+    dtype_conversions = {
+        OPERATORS.TO_STR: str,
+        OPERATORS.TO_INT: 'Int64',
+        OPERATORS.TO_FLOAT: 'Float64',
+        OPERATORS.TO_NUM: 'object',
+        OPERATORS.TO_BOOL: 'bool',
+        OPERATORS.TO_DATETIME: 'datetime64[ns]',
+        OPERATORS.TO_DATE: 'datetime64[ns]',
+        OPERATORS.TO_NK: 'object',
+        OPERATORS.TO_YN: 'object',
+        }
 
     #data modification  
     if operator == OPERATORS.SET:
@@ -1391,11 +1181,11 @@ def _modify_vals(instruction, df_new, args):
         #type conversion
         elif operator in type_conversions:
             rows = mask_temp.any(axis=1)
-            changed = df_new.loc[rows, cols].map(lambda x: operator.type_func(x))
+            changed = df_new.loc[rows, cols].map(lambda x: type_conversions[operator](x))
             df_new.loc[rows, cols] = changed
-            if hasattr(operator, 'dtype'):
+            if operator in dtype_conversions:
                 for col in df_new.columns[cols]:
-                    df_new[col] = df_new[col].astype(operator.dtype)
+                    df_new[col] = df_new[col].astype(dtype_conversions[operator])
 
     else:
         #data modification
@@ -1411,11 +1201,11 @@ def _modify_vals(instruction, df_new, args):
         #type conversion
         elif operator in type_conversions:
             rows = mask_temp.any(axis=1)
-            changed = df_new.loc[rows, cols].applymap(lambda x: operator.type_func(x))
+            changed = df_new.loc[rows, cols].applymap(lambda x: type_conversions[operator](x))
             df_new.loc[rows, cols] = changed
-            if hasattr(operator, 'dtype'):
+            if operator in dtype_conversions:
                 for col in df_new.columns[cols]:
-                    df_new[col] = df_new[col].astype(operator.dtype)
+                    df_new[col] = df_new[col].astype(dtype_conversions[operator])
 
         else:
             log(f'error: operator "{operator}" is not compatible with value modification',
@@ -1557,127 +1347,128 @@ class DataFrameQueryInteractiveMode:
         self.df = df
 
     def __call__(self):
-        kwargs = {'df': fixed(self.df), 'code': ''}
+        pass
+#         kwargs = {'df': fixed(self.df), 'code': ''}
 
-        #code input
-        ui_code = widgets.Textarea(
-            value='$verbosity=3\n$diff=None\n\n#Enter query code here\n\n',
-            layout=Layout(width='35%', height='97%')
-            )
+#         #code input
+#         ui_code = widgets.Textarea(
+#             value='$verbosity=3\n$diff=None\n\n#Enter query code here\n\n',
+#             layout=Layout(width='35%', height='97%')
+#             )
 
 
 
-        #syntax
+#         #syntax
         
-        def update_symbols(value):
-            if ui_connectors.value in connectors_select_cols:
+#         def update_symbols(value):
+#             if ui_connectors.value in connectors_select_cols:
 
-                operators = sorted(list(operators_select))
-                ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
-                ui_operators.tooltips = [symbol.description for symbol in operators]
+#                 operators = sorted(list(operators_select))
+#                 ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
+#                 ui_operators.tooltips = [symbol.description for symbol in operators]
 
-                flags = sorted(list(flags_select - flags_select_rows_scope))
-                ui_flags.options = [(symbol.glyph, symbol) for symbol in flags]
-                ui_flags.tooltips = [symbol.description for symbol in flags]
-
-
-            elif ui_connectors.value in connectors_select_rows:
-
-                operators = sorted(list(operators_select))
-                ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
-                ui_operators.tooltips = [symbol.description for symbol in operators]
-
-                flags = sorted(list(flags_select))
-                ui_flags.options = [(symbol.glyph, symbol) for symbol in flags]
-                ui_flags.tooltips = [symbol.description for symbol in flags]
+#                 flags = sorted(list(flags_select - flags_select_rows_scope))
+#                 ui_flags.options = [(symbol.glyph, symbol) for symbol in flags]
+#                 ui_flags.tooltips = [symbol.description for symbol in flags]
 
 
-            elif ui_connectors.value == CONNECTORS.MODIFY:
+#             elif ui_connectors.value in connectors_select_rows:
 
-                operators = sorted(list(operators_modify))
-                ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
-                ui_operators.tooltips = [symbol.description for symbol in operators]
+#                 operators = sorted(list(operators_select))
+#                 ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
+#                 ui_operators.tooltips = [symbol.description for symbol in operators]
 
-                flags = sorted(list(flags_modify))
-                ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_modify]
-                ui_flags.tooltips = [symbol.description for symbol in flags_modify]
-
-            else:
-                raise ValueError(f'error: connector "{ui_connectors.value}" is not implemented for interactive mode')
+#                 flags = sorted(list(flags_select))
+#                 ui_flags.options = [(symbol.glyph, symbol) for symbol in flags]
+#                 ui_flags.tooltips = [symbol.description for symbol in flags]
 
 
+#             elif ui_connectors.value == CONNECTORS.MODIFY:
 
-        connectors = sorted(list(CONNECTORS))
-        ui_connectors = widgets.ToggleButtons(
-            options=[(symbol.glyph, symbol) for symbol in connectors],
-            description='connectors:',
-            value=CONNECTORS.MODIFY,
-            tooltips=[symbol.description for symbol in connectors],
-            layout=Layout(width='auto', height='auto'),
-            )
-        ui_connectors.style.button_width = 'auto'
-        ui_connectors.observe(update_symbols, names='value')
+#                 operators = sorted(list(operators_modify))
+#                 ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
+#                 ui_operators.tooltips = [symbol.description for symbol in operators]
 
-        ui_operators = widgets.ToggleButtons(
-            options=[],
-            description='operators:',
-            value=None,
-            tooltips=[],
-            layout=Layout(width='auto', height='auto'),
-            )
-        ui_operators.style.button_width = 'auto'
+#                 flags = sorted(list(flags_modify))
+#                 ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_modify]
+#                 ui_flags.tooltips = [symbol.description for symbol in flags_modify]
 
-        ui_flags = widgets.ToggleButtons(
-            options=[],
-            description='flags:',
-            value=None,
-            tooltips=[],
-            layout=Layout(width='auto', height='auto'),
-            )
-        ui_flags.style.button_width = 'auto'
+#             else:
+#                 raise ValueError(f'error: connector "{ui_connectors.value}" is not implemented for interactive mode')
+
+
+
+#         connectors = sorted(list(CONNECTORS))
+#         ui_connectors = widgets.ToggleButtons(
+#             options=[(symbol.glyph, symbol) for symbol in connectors],
+#             description='connectors:',
+#             value=CONNECTORS.MODIFY,
+#             tooltips=[symbol.description for symbol in connectors],
+#             layout=Layout(width='auto', height='auto'),
+#             )
+#         ui_connectors.style.button_width = 'auto'
+#         ui_connectors.observe(update_symbols, names='value')
+
+#         ui_operators = widgets.ToggleButtons(
+#             options=[],
+#             description='operators:',
+#             value=None,
+#             tooltips=[],
+#             layout=Layout(width='auto', height='auto'),
+#             )
+#         ui_operators.style.button_width = 'auto'
+
+#         ui_flags = widgets.ToggleButtons(
+#             options=[],
+#             description='flags:',
+#             value=None,
+#             tooltips=[],
+#             layout=Layout(width='auto', height='auto'),
+#             )
+#         ui_flags.style.button_width = 'auto'
         
-        ui_syntax = widgets.VBox([
-            ui_connectors,
-            ui_operators,
-            ui_flags,
-            ])
+#         ui_syntax = widgets.VBox([
+#             ui_connectors,
+#             ui_operators,
+#             ui_flags,
+#             ])
 
 
-        #some general info and statistics about the df
-        mem_usage = self.df.memory_usage().sum() / 1024
-        ui_details = widgets.HTML(
-            value=f"""
-            <b>rows:</b> {len(self.df.index)}<br>
-            <b>columns:</b> {len(self.df.columns)}<br>
-            <b>memory usage:</b> {mem_usage:,.3f}kb<br>
-            <b>unique values:</b> {self.df.nunique().sum()}<br>
-            <b>missing values:</b> {self.df.isna().sum().sum()}<br>
-            <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
-            """
-            )
+#         #some general info and statistics about the df
+#         mem_usage = self.df.memory_usage().sum() / 1024
+#         ui_details = widgets.HTML(
+#             value=f"""
+#             <b>rows:</b> {len(self.df.index)}<br>
+#             <b>columns:</b> {len(self.df.columns)}<br>
+#             <b>memory usage:</b> {mem_usage:,.3f}kb<br>
+#             <b>unique values:</b> {self.df.nunique().sum()}<br>
+#             <b>missing values:</b> {self.df.isna().sum().sum()}<br>
+#             <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
+#             """
+#             )
 
 
-        ui_tabs = widgets.Tab(
-            children=[
-                ui_syntax,
-                ui_details,
-                widgets.HTML(value=DataFrameQuery.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
-                ],
-            titles=['syntax', 'df details', 'readme'],
-            layout=Layout(width='50%', height='94%')
-            )
-        ui = HBox([ui_code, ui_tabs], layout=Layout(width='100%', height='330px'))
+#         ui_tabs = widgets.Tab(
+#             children=[
+#                 ui_syntax,
+#                 ui_details,
+#                 widgets.HTML(value=DataFrameQuery.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
+#                 ],
+#             titles=['syntax', 'df details', 'readme'],
+#             layout=Layout(width='50%', height='94%')
+#             )
+#         ui = HBox([ui_code, ui_tabs], layout=Layout(width='100%', height='330px'))
 
-        kwargs['code'] = ui_code
-        display(ui)
-        out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
-        display(out)
+#         kwargs['code'] = ui_code
+#         display(ui)
+#         out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
+#         display(out)
 
-def _interactive_mode(**kwargs):
-    df = kwargs.pop('df')
-    code = kwargs.pop('code')
-    result = query(df, code)
-    display(result)
-    return result 
+# def _interactive_mode(**kwargs):
+#     df = kwargs.pop('df')
+#     code = kwargs.pop('code')
+#     result = query(df, code)
+#     display(result)
+#     return result 
 
 
