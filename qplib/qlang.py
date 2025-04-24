@@ -182,6 +182,7 @@ def _get_symbols():
     symbols.drop(index=['type', 'glyph', 'description'], inplace=True)
     symbols['glyph'] = symbols['glyph'].str.strip('"')
     symbols.iloc[:, 3:] = symbols.iloc[:, 3:].fillna(0).astype('int')
+    compatible = symbols.iloc[:, 3:].astype(bool)
 
     traits_all = symbols.loc[symbols['type'] == 'trait', :].index
     connectors = []
@@ -208,11 +209,11 @@ def _get_symbols():
     operators = Symbols('OPERATORS', *operators)
     flags = Symbols('FLAGS', *flags)
 
-    return symbols, connectors, operators, flags
+    return symbols, connectors, operators, flags, compatible
 
 
 
-SYMBOLS, CONNECTORS, OPERATORS, FLAGS = _get_symbols()
+SYMBOLS, CONNECTORS, OPERATORS, FLAGS, compatible = _get_symbols()
 COMMENT = Symbol('COMMENT', '#', 'syntax', 'comments out the rest of the line', [])
 ESCAPE = Symbol('ESCAPE', '´',  'syntax', 'escape the next character', [])
 
@@ -253,6 +254,7 @@ def query(df_old, code=''):
 
         instruction_tokenized, args = tokenize(instruction_raw, args)
         instruction, args = parse(instruction_tokenized, args)
+        instruction = validate(instruction, args)
 
 
         if instruction is None:
@@ -465,6 +467,7 @@ def parse(instruction_tokenized, args):
 
 
     #set defaults
+
     if instruction.operator is None:
         if FLAGS.TAG_METADATA in flags:
             log(f'trace: no operator found in "{code}". using default "{OPERATORS.ADD}" for tagging metadata', 'qp.qlang.parse', verbosity)
@@ -472,29 +475,32 @@ def parse(instruction_tokenized, args):
         else:
             log(f'trace: no operator found in "{code}". using default "{OPERATORS.SET}"', 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.SET
+
     if instruction.connector in CONNECTORS.by_trait['select_rows'] \
+        and FLAGS.SAVE_SELECTION not in flags \
+        and FLAGS.LOAD_SELECTION not in flags \
         and not flags.intersection(FLAGS.by_trait['select_rows_scope']):
         log(f'trace: no row selection scope flag found in "{code}". using default "{FLAGS.ANY}"', 'qp.qlang.parse', verbosity)
         instruction.flags.add(FLAGS.ANY)
+
     elif instruction.connector == CONNECTORS.MODIFY \
         and not flags.intersection(FLAGS.by_trait['modify']):
         log(f'trace: no modification flag found in "{code}". using default "{FLAGS.VAL}"', 'qp.qlang.parse', verbosity)
         instruction.flags.add(FLAGS.VAL)
 
 
-    #check compatibility and set function
+
+    #set function
 
     if instruction.connector in CONNECTORS.by_trait['select']:
 
-        if instruction.operator == OPERATORS.SET:
+        if instruction.operator == OPERATORS.SET \
+            and FLAGS.SAVE_SELECTION not in flags \
+            and FLAGS.LOAD_SELECTION not in flags:
             log(f'trace:"{OPERATORS.SET}" is interpreted as "{OPERATORS.EQUALS}" for selection instruction',
                 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.EQUALS
 
-        if instruction.operator not in OPERATORS.by_trait['select']:
-            log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
-                'qp.qlang.parse', verbosity)
-            return None, args
 
         if instruction.connector in CONNECTORS.by_trait['select_cols']:
             instruction.function = _select_cols
@@ -508,15 +514,6 @@ def parse(instruction_tokenized, args):
                 instruction.function = _select_rows
 
     else:
-        if instruction.operator not in OPERATORS.by_trait['modify']:
-            log(f'error: operator "{instruction.operator}" is not compatible with "{instruction.connector}"',
-                'qp.qlang.parse', verbosity)
-            return None, args
-
-        elif not flags.issubset(FLAGS.by_trait['modify']):
-            log(f'error: flags "{flags - FLAGS.by_trait['modify']}" are not compatible with "{instruction.connector}"',
-                'qp.qlang.parse', verbosity)
-            return None, args
 
         if flags.intersection(FLAGS.by_trait['settings']):
             instruction.function = _modify_settings
@@ -537,17 +534,6 @@ def parse(instruction_tokenized, args):
             instruction.function = _modify_vals
 
 
-    #check for other incompatible symbols
-    if FLAGS.SAVE_SELECTION in flags and len(flags)>1:
-        log(f'warning: flags "{flags - {FLAGS.SAVE_SELECTION}}" are not compatible with "{FLAGS.SAVE_SELECTION}" and will be ignored',
-            'qp.qlang.parse', verbosity)
-    elif FLAGS.LOAD_SELECTION in flags and len(flags)>1:
-        log(f'warning: flags "{flags - {FLAGS.LOAD_SELECTION}}" are not compatible with "{FLAGS.LOAD_SELECTION}" and will be ignored',
-            'qp.qlang.parse', verbosity)
-
-
-
-
     #general checks
     if instruction.operator in OPERATORS.by_trait['unary'] and len(instruction.value) > 0:
         log(f'warning: value {instruction.value} will be ignored for unary operator "{instruction.operator}"',
@@ -564,6 +550,21 @@ def parse(instruction_tokenized, args):
 
     return instruction, args
 
+
+
+def validate(instruction, args):
+    symbols_list = [instruction.connector.name, instruction.operator.name]
+    symbols_list.extend([flag.name for flag in instruction.flags])
+    symbols = compatible.loc[symbols_list, symbols_list]
+
+    if symbols.all().all():
+        log(f'trace: instruction "{instruction.code}" is valid', 'qp.qlang.validate', args.verbosity)
+    else:
+        incompatible = list(symbols.index[~symbols.all()])
+        #wip: switch to error after more testing
+        log(f'warning: the following symbols are not compatible: {incompatible}', 'qp.qlang.validate', args.verbosity)
+
+    return instruction
 
 
 
