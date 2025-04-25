@@ -1148,6 +1148,17 @@ def test_to_yn():
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
+def test_trim():
+
+    result = df.q(r'%%each is na;  %trim;')
+    expected = df.loc[[1,2,3,4,6,7,8,9,10], ['age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    
+    result = df.q(r'%%each is na;  %!trim;')
+    expected = df.loc[[1,2,3,4,6,7,8,9,10], ['ID', 'name', 'date of birth']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
 def test_type_inference():
     df1 = pd.DataFrame({1:[1,2,3], 'a':[4,5,6]})
     df2 = pd.DataFrame({'1':[1,2,3], 'a':[4,5,6]})

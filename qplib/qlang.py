@@ -580,7 +580,7 @@ def _select_cols(instruction, df_new, settings):
     verbosity = settings.verbosity
     cols = settings.cols
     cols_all = df_new.columns.to_series()
-    cols_new = _filter_series(cols_all, instruction, verbosity, df_new)
+    cols_new = _filter_series(cols_all, instruction, settings, df_new)
 
     if cols_new.any() == False:
         log(f'warning: no columns fulfill the condition in "{instruction.code}"',
@@ -634,11 +634,11 @@ def _select_rows(instruction, df_new, settings):
 
 
     if FLAGS.IDX in flags:
-        rows = _filter_series(rows_all, instruction, verbosity, df_new)
+        rows = _filter_series(rows_all, instruction, settings, df_new)
         mask.loc[rows, :] = True
     else: #corresponds to behaviour of FLAGS.EACH
         for col in df_new.columns[cols]:
-            rows = _filter_series(df_new[col], instruction, verbosity, df_new)
+            rows = _filter_series(df_new[col], instruction, settings, df_new)
             mask.loc[rows, col] = True
 
     if FLAGS.ANY in flags:
@@ -661,12 +661,13 @@ def _select_rows(instruction, df_new, settings):
 
 
 
-def _filter_series(series, instruction, verbosity, df_new=None):
+def _filter_series(series, instruction, settings, df_new=None):
     """
     Filters a pandas series by applying a condition.
     Conditions are made up of a comparison operator and for binary operators a value to compare to.
     FLAGS.NEGATE inverts the result of the condition.
     """
+    verbosity = settings.verbosity
     flags = instruction.flags
     operator = instruction.operator
     value = instruction.value
@@ -681,6 +682,11 @@ def _filter_series(series, instruction, verbosity, df_new=None):
             filtered = series.astype(str).str.contains(value)
         else:
             log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._filter_series', verbosity)
+
+
+    #only for column filtering
+    elif operator == OPERATORS.TRIM:
+        filtered = settings.masks[0].loc[:, series].any()
 
 
     #eval python expression
