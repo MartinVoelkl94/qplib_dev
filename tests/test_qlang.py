@@ -901,7 +901,7 @@ def test_save_load(code, expected, message):
     result = get_df().q(code)
     assert result.equals(expected), qp.diff(result, expected, output='str')
     if message:
-        check_message('WARNING: a selection was already saved as "1". overwriting it')
+        check_message(message)
 
 
 

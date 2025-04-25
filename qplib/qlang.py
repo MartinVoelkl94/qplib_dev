@@ -16,6 +16,7 @@ from .pandas import _diff
 
 #####################     settings     #####################
 
+
 VERBOSITY = 3
 DIFF = None
 INPLACE = False
@@ -94,6 +95,7 @@ class Symbol:
     def __gt__(self, value):
         return self.glyph > value
 
+
 class Symbols:
     """
     Multiple Symbols of the same category are collected in a Symbols object.
@@ -145,6 +147,7 @@ class Symbols:
     def __str__(self):
         return self.__repr__()
 
+
 class Instruction:
     """
     Each query is built from sequential instructions.
@@ -178,25 +181,26 @@ class Instruction:
         return self.__repr__()
 
 
-def _get_symbols():
-    path_symbols = files('qplib').joinpath('data/symbols.csv')
-    symbols = pd.read_csv(path_symbols, index_col=0)
-    symbols.drop(index=['type', 'glyph', 'description'], inplace=True)
-    symbols['glyph'] = symbols['glyph'].str.strip('"')
-    symbols.iloc[:, 3:] = symbols.iloc[:, 3:].fillna(0).astype('int')
-    compatible = symbols.iloc[:, 3:].astype(bool)
 
-    traits_all = symbols.loc[symbols['type'] == 'trait', :].index
+def get_symbols():
+    path_symbols = files('qplib').joinpath('data/symbols.csv')
+    definitions = pd.read_csv(path_symbols, index_col=0)
+    definitions.drop(index=['type', 'glyph', 'description'], inplace=True)
+    definitions['glyph'] = definitions['glyph'].str.strip('"')
+    definitions.iloc[:, 3:] = definitions.iloc[:, 3:].fillna(0).astype('int')
+    compatible = definitions.iloc[:, 3:].astype(bool)
+
+    traits_all = definitions.loc[definitions['type'] == 'trait', :].index
     connectors = []
     operators = []
     flags = []
 
-    for ind in symbols.index:
-        name = symbols.loc[ind, :].name
-        glyph = symbols.loc[ind, 'glyph']
-        symbol_type = symbols.loc[ind, 'type']
-        description = symbols.loc[ind, 'description']
-        traits = [trait for trait in traits_all if symbols.loc[ind, trait] == 2]
+    for ind in definitions.index:
+        name = definitions.loc[ind, :].name
+        glyph = definitions.loc[ind, 'glyph']
+        symbol_type = definitions.loc[ind, 'type']
+        description = definitions.loc[ind, 'description']
+        traits = [trait for trait in traits_all if definitions.loc[ind, trait] == 2]
 
         symbol = Symbol(name, glyph, symbol_type, description, traits)
 
@@ -211,13 +215,14 @@ def _get_symbols():
     operators = Symbols('OPERATORS', *operators)
     flags = Symbols('FLAGS', *flags)
 
-    return symbols, connectors, operators, flags, compatible
+    return definitions, connectors, operators, flags, compatible
 
 
 
-SYMBOLS, CONNECTORS, OPERATORS, FLAGS, compatible = _get_symbols()
+DEFINITIONS, CONNECTORS, OPERATORS, FLAGS, compatible = get_symbols()
 COMMENT = Symbol('COMMENT', '#', 'syntax', 'comments out the rest of the line', [])
 ESCAPE = Symbol('ESCAPE', '´',  'syntax', 'escape the next character', [])
+
 
 
 
@@ -237,66 +242,62 @@ def query(df_old, code=''):
     cols.index = df_new.columns
     mask = pd.DataFrame(np.ones(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
 
-    args = _dict()
-    args.verbosity = VERBOSITY
-    args.diff = DIFF
-    args.cols = cols
-    args.masks = {0: mask}  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
-    args.style = None
-    args.copy_df = False
-    args.df_copied = False
+    settings = _dict()
+    settings.verbosity = VERBOSITY
+    settings.diff = DIFF
+    settings.cols = cols
+    settings.masks = {0: mask}  #the save instruction only adds str keys, therefore the default key is an int to avoid conflicts
+    settings.style = None
+    settings.copy_df = False
+    settings.df_copied = False
 
 
 
     #apply instructions
 
-    instructions_raw, args = scan(code, args)
+    instructions_raw, settings = scan(code, settings)
 
     for instruction_raw in instructions_raw:
 
-        instruction_tokenized, args = tokenize(instruction_raw, args)
-        instruction, args = parse(instruction_tokenized, args)
-        instruction = validate(instruction, args)
+        instruction_tokenized, settings = tokenize(instruction_raw, settings)
+        instruction, settings = parse(instruction_tokenized, settings)
+        instruction = validate(instruction, settings)
 
+        if settings.copy_df and not settings.df_copied:
+            df_new = df_old.copy()
+            settings.df_copied = True
 
-        if instruction is None:
-            log(f'error: instruction "{instruction}" is not valid and will be ignored',
-                'qp.qlang.query', args.verbosity)
-        else:
-            if args.copy_df and not args.df_copied:
-                df_new = df_old.copy()
-                args.df_copied = True
-            df_new, args  = instruction.function(instruction, df_new, args)
+        df_new, settings  = instruction.function(instruction, df_new, settings)
 
 
 
     #results
 
-    rows = args.masks[0].any(axis=1)
-    df_filtered = df_new.loc[rows, args.cols]
+    rows = settings.masks[0].any(axis=1)
+    df_filtered = df_new.loc[rows, settings.cols]
 
-    if args.diff is not None and args.style is not None:
+    if settings.diff is not None and settings.style is not None:
         log('warning: diff and style formatting are not compatible. formatting will be ignored',
-            'qp.qlang.query', args.verbosity)
-        args.style = None
+            'qp.qlang.query', settings.verbosity)
+        settings.style = None
 
-    if args.diff is not None:
+    if settings.diff is not None:
         #show difference before and after filtering
         if 'meta' in df_old.columns and 'meta' not in df_filtered.columns:
             df_filtered.insert(0, 'meta', df_old.loc[rows, 'meta'])
 
         result = _diff(
             df_filtered, df_old,
-            mode=args.diff,
-            verbosity=args.verbosity
+            mode=settings.diff,
+            verbosity=settings.verbosity
             )
 
-    elif args.style is not None:
-        rows_shared = df_filtered.index.intersection(args.style.index)
-        cols_shared = df_filtered.columns.intersection(args.style.columns)
+    elif settings.style is not None:
+        rows_shared = df_filtered.index.intersection(settings.style.index)
+        cols_shared = df_filtered.columns.intersection(settings.style.columns)
         def f(x, style):
             return style
-        result = df_filtered.style.apply(lambda x: f(x, args.style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
+        result = df_filtered.style.apply(lambda x: f(x, settings.style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
 
     else:
         result = df_filtered
@@ -307,8 +308,8 @@ def query(df_old, code=''):
 
 def check_df(df, verbosity=3):
     """
-    Checks dataframe for issues which could interfere with the query language used by df.q().
-    df.q() uses '%', &', '/' and '$' for expression syntax.
+    Checks dataframe for issues which could interfere with the query language.
+    Query language uses '%', &', '/' and '$' for expression syntax.
     """
     problems_found = False
 
@@ -376,13 +377,11 @@ def check_df(df, verbosity=3):
 
 
 
-def scan(code, args):
+def scan(code, settings):
     """
     Turns the plain text input string into a list of raw instructions.
     """
-    verbosity = args.verbosity
-
-
+    verbosity = settings.verbosity
     instructions_raw = []
 
     for line_num, line in enumerate(code.split('\n')):
@@ -422,15 +421,15 @@ def scan(code, args):
                 line = line[1:]
 
 
-
     log('trace: transformed code into raw instructions:\n' + '\n'.join([str(instruction) for instruction in instructions_raw]),
         'qp.qlang.tokenize', verbosity)
 
-    return instructions_raw, args
+    return instructions_raw, settings
 
 
-def tokenize(instruction_raw, args):
-    verbosity = args.verbosity
+
+def tokenize(instruction_raw, settings):
+    verbosity = settings.verbosity
     instruction_tokenized = instruction_raw
     code = instruction_raw.code
 
@@ -446,7 +445,8 @@ def tokenize(instruction_raw, args):
     instruction_tokenized.operator, code = extract_symbol(code, OPERATORS, verbosity)
     instruction_tokenized.value = code
 
-    return instruction_tokenized, args
+    return instruction_tokenized, settings
+
 
 
 def extract_symbol(string, symbols, verbosity=3):
@@ -461,8 +461,8 @@ def extract_symbol(string, symbols, verbosity=3):
 
 
 
-def parse(instruction_tokenized, args):
-    verbosity = args.verbosity
+def parse(instruction_tokenized, settings):
+    verbosity = settings.verbosity
     instruction = instruction_tokenized
     code = instruction.code
     flags = instruction.flags
@@ -544,27 +544,27 @@ def parse(instruction_tokenized, args):
     if flags.intersection(FLAGS.by_trait['copy_df']) and not INPLACE:
         log(f'debug: df will be copied since instruction "{instruction.code}" modifies data',
             'qp.qlang.parse', verbosity)
-        args.copy_df = True
+        settings.copy_df = True
 
 
     log(f'debug: parsed:\n{instruction}',
         'qp.qlang.parse', verbosity)
 
-    return instruction, args
+    return instruction, settings
 
 
 
-def validate(instruction, args):
+def validate(instruction, settings):
     symbols_list = [instruction.connector.name, instruction.operator.name]
     symbols_list.extend([flag.name for flag in instruction.flags])
     symbols = compatible.loc[symbols_list, symbols_list]
 
     if symbols.all().all():
-        log(f'trace: instruction "{instruction.code}" is valid', 'qp.qlang.validate', args.verbosity)
+        log(f'trace: instruction "{instruction.code}" is valid', 'qp.qlang.validate', settings.verbosity)
     else:
         incompatible = list(symbols.index[~symbols.all()])
-        #wip: switch to error after more testing
-        log(f'warning: the following symbols are not compatible: {incompatible}', 'qp.qlang.validate', args.verbosity)
+        log(f'warning: the following symbols are not compatible: {incompatible}',
+            'qp.qlang.validate', settings.verbosity)  #wip: switch to error?
 
     return instruction
 
@@ -573,12 +573,12 @@ def validate(instruction, args):
 ##############     selection instructions     ##############
 
 
-def _select_cols(instruction, df_new, args):
+def _select_cols(instruction, df_new, settings):
     """
     An Instruction to select columns fulfilling a condition.
     """
-    verbosity = args.verbosity
-    cols = args.cols
+    verbosity = settings.verbosity
+    cols = settings.cols
     cols_all = df_new.columns.to_series()
     cols_new = _filter_series(cols_all, instruction, verbosity, df_new)
 
@@ -599,28 +599,28 @@ def _select_cols(instruction, df_new, args):
         log(f'warning: no columns fulfill the condition in "{instruction.code}" and the previous condition(s)',
             'qp.qlang._select_cols', verbosity)
 
-    args.cols = cols
-    return df_new, args
+    settings.cols = cols
+    return df_new, settings
 
 
 
-def _select_rows(instruction, df_new, args):
+def _select_rows(instruction, df_new, settings):
     """
     An Instruction to select rows/values fulfilling a condition.
     """
 
-    verbosity = args.verbosity
+    verbosity = settings.verbosity
     flags = instruction.flags
     value = instruction.value
     rows_all = df_new.index.to_series()
-    cols = args.cols
-    masks = args.masks
+    cols = settings.cols
+    masks = settings.masks
     mask = pd.DataFrame(np.zeros(df_new.shape, dtype=bool), columns=df_new.columns, index=df_new.index)
 
     if cols.any() == False:
         log(f'warning: row filter cannot be applied when no columns where selected', 'qp.qlang._select_rows', verbosity)
         masks[0] = mask
-        return df_new, args
+        return df_new, settings
 
 
     if value.startswith('@'):
@@ -630,7 +630,7 @@ def _select_rows(instruction, df_new, args):
         else:
             log(f'error: column "{column}" not found in dataframe. cannot use "@{column}" as value for row selection',
                 'qp.qlang._select_rows', verbosity)
-            return df_new, args
+            return df_new, settings
 
 
     if FLAGS.IDX in flags:
@@ -656,8 +656,8 @@ def _select_rows(instruction, df_new, args):
     elif instruction.connector == CONNECTORS.NEW_SELECT_ROWS:
         masks[0] = mask
 
-    args.masks = masks
-    return df_new, args
+    settings.masks = masks
+    return df_new, settings
 
 
 
@@ -665,7 +665,7 @@ def _filter_series(series, instruction, verbosity, df_new=None):
     """
     Filters a pandas series by applying a condition.
     Conditions are made up of a comparison operator and for binary operators a value to compare to.
-    FLAG.NEGATE inverts the result of the condition.
+    FLAGS.NEGATE inverts the result of the condition.
     """
     flags = instruction.flags
     operator = instruction.operator
@@ -702,9 +702,9 @@ def _filter_series(series, instruction, verbosity, df_new=None):
     #type checks
     elif operator in OPERATORS.by_trait['is_type']:
         if FLAGS.STRICT in flags:
-            if operator == OPERATORS.IS_STR:
-                filtered = series.apply(lambda x: isinstance(x, str))
-            elif operator == OPERATORS.IS_INT:
+            # if operator == OPERATORS.IS_STR:
+            #     filtered = series.apply(lambda x: isinstance(x, str))
+            if operator == OPERATORS.IS_INT:
                 filtered = series.apply(lambda x: isinstance(x, TYPES_INT))
             elif operator == OPERATORS.IS_FLOAT:
                 filtered = series.apply(lambda x: isinstance(x, TYPES_FLOAT))
@@ -713,14 +713,10 @@ def _filter_series(series, instruction, verbosity, df_new=None):
             elif operator == OPERATORS.IS_BOOL:
                 filtered = series.apply(lambda x: isinstance(x, TYPES_BOOL))
 
-            elif operator == OPERATORS.IS_DATETIME:
-                log(f'warning: operator "is datetime" does not support strict type checking. flag "strict" will be ignored',
-                    'qp.qlang._filter_series', verbosity)
-                filtered = series.apply(lambda x: _datetime(x, errors='ERROR')) != 'ERROR'
-            elif operator == OPERATORS.IS_DATE:
-                log(f'warning: operator "is date" does not support strict type checking. flag "strict" will be ignored',
-                    'qp.qlang._filter_series', verbosity)
-                filtered = series.apply(lambda x: _date(x, errors='ERROR')) != 'ERROR'
+            # elif operator == OPERATORS.IS_DATETIME:
+            #     filtered = series.apply(lambda x: _datetime(x, errors='ERROR')) != 'ERROR'
+            # elif operator == OPERATORS.IS_DATE:
+            #     filtered = series.apply(lambda x: _date(x, errors='ERROR')) != 'ERROR'
 
             elif operator == OPERATORS.IS_NA:
                 filtered = series.isna()
@@ -828,50 +824,45 @@ def _filter_series(series, instruction, verbosity, df_new=None):
             filtered = series == value
 
     else:
-        log(f'error: operator "{operator}" is not implemented for "{instruction.function.__name__}"',
+        log(f'error: could not apply filter condition',
             'qp.qlang._filter_series', verbosity)
-        filtered = None
 
-
-    if FLAGS.NEGATE in flags and isinstance(filtered, pd.Series):
+    if FLAGS.NEGATE in flags:
         filtered = ~filtered
 
     return filtered
 
 
-def _save_selection(instruction, df_new, args):
+def _save_selection(instruction, df_new, settings):
     """
-    An Instruction to save the current selection as a boolean mask.
+    Save the current selection as a boolean mask.
     """
-    masks = args.masks
+    masks = settings.masks
     value = instruction.value
 
     if value in masks.keys():
         log(f'warning: a selection was already saved as "{value}". overwriting it',
-            'qp.qlang._miscellaneous', args.verbosity)
+            'qp.qlang._save_selection', settings.verbosity)
     masks[value] = masks[0].copy()
 
-    args.masks = masks
-    return df_new, args
+    settings.masks = masks
+    return df_new, settings
 
 
-def _load_selection(instruction, df_new, args):
+def _load_selection(instruction, df_new, settings):
     """
     """
-    verbosity = args.verbosity
-    masks = args.masks
-    cols = args.cols
+    verbosity = settings.verbosity
+    masks = settings.masks
     value = instruction.value
     connector = instruction.connector
 
     if value in masks.keys():
-        mask = masks[value]
+        mask = masks[value].copy()
     else:
-        log(f'error: selection "{value}" not found in saved selections', 'qp.qlang._select_rows', verbosity)
+        log(f'error: selection "{value}" not found in saved selections',
+            'qp.qlang._load_selection', verbosity)
         return None
-
-    if FLAGS.NEGATE in instruction.flags:
-        mask.loc[:, cols] = ~mask.loc[:, cols]
 
     if connector == CONNECTORS.NEW_SELECT_ROWS:
         masks[0] = mask
@@ -880,20 +871,20 @@ def _load_selection(instruction, df_new, args):
     elif connector == CONNECTORS.OR_SELECT_ROWS:
         masks[0] = masks[0] | mask
 
-    args.masks = masks
-    return df_new, args
+    settings.masks = masks
+    return df_new, settings
 
 
 
 #############     modification instructions     #############
 
-def _modify_settings(instruction, df_new, args):
+def _modify_settings(instruction, df_new, settings):
     """
     An instruction to change the query settings.
     """
 
-    verbosity = args.verbosity
-    diff = args.diff
+    verbosity = settings.verbosity
+    diff = settings.diff
     value = instruction.value
 
     if FLAGS.VERBOSITY in instruction.flags:
@@ -915,20 +906,20 @@ def _modify_settings(instruction, df_new, args):
         log(f'error: no setting flag found in "{instruction.code}"',
             'qp.qlang._modify_settings', verbosity)
 
-    args.verbosity = verbosity
-    args.diff = diff
-    return df_new, args
+    settings.verbosity = verbosity
+    settings.diff = diff
+    return df_new, settings
 
 
-def _modify_metadata(instruction, df_new, args):
+def _modify_metadata(instruction, df_new, settings):
     """
     An Instruction for metadata modification.
     """
 
-    verbosity = args.verbosity
-    masks = args.masks
+    verbosity = settings.verbosity
+    masks = settings.masks
     rows = masks[0].any(axis=1)
-    cols = args.cols
+    cols = settings.cols
     operator = instruction.operator
     value = instruction.value
 
@@ -978,18 +969,18 @@ def _modify_metadata(instruction, df_new, args):
         log(f'error: operator "{operator}" is not compatible with metadata modification',
             'qp.qlang._modify_metadata', verbosity)
 
-    args.masks = masks
-    args.cols = cols
-    return df_new, args
+    settings.masks = masks
+    settings.cols = cols
+    return df_new, settings
 
 
-def _modify_format(instruction, df_new, args):
+def _modify_format(instruction, df_new, settings):
 
 
-    verbosity = args.verbosity
-    masks = args.masks
-    cols = args.cols
-    style = args.style
+    verbosity = settings.verbosity
+    masks = settings.masks
+    cols = settings.cols
+    style = settings.style
     flags = instruction.flags
     value = instruction.value
     mask_temp = masks[0].copy()
@@ -1037,22 +1028,22 @@ def _modify_format(instruction, df_new, args):
             'qp.qlang._modify_format', verbosity)
 
 
-    args.style = style
-    return df_new, args
+    settings.style = style
+    return df_new, settings
 
 
-def _modify_headers(instruction, df_new, args):
+def _modify_headers(instruction, df_new, settings):
     """
     An Instruction to modify the headers of the selected column(s).
     """
 
-    verbosity = args.verbosity
-    cols = args.cols
-    masks = args.masks
+    verbosity = settings.verbosity
+    cols = settings.cols
+    masks = settings.masks
 
     if cols.any() == False:
         log(f'warning: header modification cannot be applied when no columns where selected', 'qp.qlang._modify_headers', verbosity)
-        return df_new, args
+        return df_new, settings
 
     operator = instruction.operator
     value = instruction.value
@@ -1092,23 +1083,23 @@ def _modify_headers(instruction, df_new, args):
         log(f'error: operator "{operator}" is not compatible with header modification',
             'qp.qlang._modify_headers', verbosity)
 
-    args.cols = cols
-    args.masks = masks
-    return df_new, args
+    settings.cols = cols
+    settings.masks = masks
+    return df_new, settings
 
 
-def _modify_vals(instruction, df_new, args):
+def _modify_vals(instruction, df_new, settings):
     """
     An Instruction to modify the selected values.
     """
 
-    verbosity = args.verbosity
-    masks = args.masks
-    cols = args.cols
+    verbosity = settings.verbosity
+    masks = settings.masks
+    cols = settings.cols
 
     if masks[0].any().any() == False or cols.any() == False:
         log(f'warning: value modification cannot be applied when no values where selected', 'qp.qlang._modify_vals', verbosity)
-        return df_new, args
+        return df_new, settings
 
 
     mask_temp = masks[0].copy()
@@ -1214,18 +1205,18 @@ def _modify_vals(instruction, df_new, args):
             log(f'error: operator "{operator}" is not compatible with value modification',
                 'qp.qlang._modify_vals', verbosity)
 
-    return df_new, args
+    return df_new, settings
 
 
-def _new_col(instruction, df_new, args):
+def _new_col(instruction, df_new, settings):
     """
     An Instruction to add a new column.
     """
 
-    verbosity = args.verbosity
-    masks = args.masks
+    verbosity = settings.verbosity
+    masks = settings.masks
     rows = masks[0].any(axis=1)
-    cols = args.cols
+    cols = settings.cols
     operator = instruction.operator
     value = instruction.value
 
@@ -1277,9 +1268,9 @@ def _new_col(instruction, df_new, args):
                 cols.index = df_new.columns
                 break
 
-    args.masks = masks
-    args.cols = cols
-    return df_new, args
+    settings.masks = masks
+    settings.cols = cols
+    return df_new, settings
 
 
 
