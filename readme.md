@@ -4,7 +4,7 @@ A query language for pandas data exploration/analysis/modification.
 
 It is implemented as an [accessor extension](https://pandas.pydata.org/docs/development/extending.html), meaning it can be called from a dataframe without any further preparation by calling df.q() with a valid text string.  
 
-An interactive wrapper can be called with df.qi() to help with query creation and for exploring the syntax (not yet updated for newest version).  
+An interactive wrapper can be called with df.qi() to help with query creation and for exploring the syntax.  
 
 Take a look at "interactive_demo.ipynb" in the github repo for a quick syntax introduction.
 

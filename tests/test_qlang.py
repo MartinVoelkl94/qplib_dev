@@ -49,258 +49,266 @@ def get_df_tagged():
     return df2
 
 
+def check_message(expected_message):
+    logs = qp.log()
+    last = len(logs) - 1
+    message = logs.loc[last, 'level'] + ': ' + logs.loc[last, 'text']
+
+    assert message == expected_message, f'\nExpected message: {expected_message}\nGot message: {message}'
 
 
 df = get_df()
-@pytest.mark.parametrize("code, expected_cols", [
+@pytest.mark.parametrize("code, expected_cols, message", [
 
     #using operator: set/equals
-    ('', df.columns),
-    ('ID', ['ID']),
-    (' ID', ['ID']),
-    ('ID ', ['ID']),
-    (' ID ', ['ID']),
+    ('', df.columns, None),
+    ('ID', ['ID'], None),
+    (' ID', ['ID'], None),
+    ('ID ', ['ID'], None),
+    (' ID ', ['ID'], None),
 
-    ('=ID', ['ID']),
-    (' =ID', ['ID']),
-    ('= ID', ['ID']),
-    ('= ID ', ['ID']),
-    (' = ID ', ['ID']),
+    ('=ID', ['ID'], None),
+    (' =ID', ['ID'], None),
+    ('= ID', ['ID'], None),
+    ('= ID ', ['ID'], None),
+    (' = ID ', ['ID'], None),
 
-    ('==ID', ['ID']),
-    (' ==ID', ['ID']),
-    ('== ID', ['ID']),
-    ('== ID ', ['ID']),
-    (' == ID ', ['ID']),
+    ('==ID', ['ID'], None),
+    (' ==ID', ['ID'], None),
+    ('== ID', ['ID'], None),
+    ('== ID ', ['ID'], None),
+    (' == ID ', ['ID'], None),
 
-    ('date of birth', ['date of birth']),
-    ('date of birth / age', ['date of birth', 'age']),
-    ('=date of birth / age', ['date of birth', 'age']),
-    ('=date of birth / =age', ['date of birth', 'age']),
-    ('date of birth / =age', ['date of birth', 'age']),
-    ('!=date of birth', ['ID', 'name', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']),
-    ("""ID""", ['ID']),
+    ('date of birth', ['date of birth'], None),
+    ('date of birth / age', ['date of birth', 'age'], None),
+    ('=date of birth / age', ['date of birth', 'age'], None),
+    ('=date of birth / =age', ['date of birth', 'age'], None),
+    ('date of birth / =age', ['date of birth', 'age'], None),
+    ('!=date of birth', ['ID', 'name', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose'], None),
+    ("""ID""", ['ID'], None),
     (
         """ID
         """,
         ['ID']
-    ),
+    , None),
     (
         """
         ID""",
         ['ID']
-    ),
+    , None),
     (
         """
         ID
         """,
         ['ID']
-    ),
-    (r"""ID""", ['ID']),
+    , None),
+    (r"""ID""", ['ID'], None),
     (
         r"""ID
         """,
         ['ID']
-    ),
+    , None),
     (
         r"""
         ID""",
         ['ID']
-    ),
+    , None),
     (
         r"""
         ID
         """,
         ['ID']
-    ),
+    , None),
 
 
     #negation flag
-    ('!=date of birth', ['ID', 'name', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']),
-    ('!==date of birth', ['ID', 'name', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']),
+    ('!=date of birth', ['ID', 'name', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose'], None),
+    ('!==date of birth', ['ID', 'name', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose'], None),
    
     #strictness flag
-    ('strict=', []),
-    ('strict=ID', ['ID']),
-    ('strict =ID', ['ID']),
-    ('strict= ID', ['ID']),
-    ('strict = ID', ['ID']),
-    ('strict=id', []),
-    ('strict=date of birth / age', ['date of birth', 'age']),
-    ('strict=date of birth / =age', ['date of birth', 'age']),
+    ('strict=', [], 'WARNING: no columns fulfill the condition in "%strict="'),
+    ('strict=ID', ['ID'], None),
+    ('strict =ID', ['ID'], None),
+    ('strict= ID', ['ID'], None),
+    ('strict = ID', ['ID'], None),
+    ('strict=id', [], 'WARNING: no columns fulfill the condition in "%strict=id"'),
+    ('strict=date of birth / age', ['date of birth', 'age'], None),
+    ('strict=date of birth / =age', ['date of birth', 'age'], None),
 
     #using operator: contains
-    ('?bp', ['bp systole', 'bp diastole']),
-    ('?I', ['ID', 'date of birth', 'height', 'weight', 'bp diastole', 'diabetes']),
-    ('!?I', ['name', 'age', 'gender', 'bp systole', 'cholesterol', 'dose']),
+    ('?bp', ['bp systole', 'bp diastole'], None),
+    ('?I', ['ID', 'date of birth', 'height', 'weight', 'bp diastole', 'diabetes'], None),
+    ('!?I', ['name', 'age', 'gender', 'bp systole', 'cholesterol', 'dose'], None),
 
     #using operator: strict contains
-    ('strict?I', ['ID']),
+    ('strict?I', ['ID'], None),
 
 
     #using operator: regex equality
-    ('regex=ID´$', ['ID']),
-    ('regex=ID', ['ID']),
-    ('regex=.', []),
-    ('regex=..', ['ID']),
+    ('regex=ID´$', ['ID'], None),
+    ('regex=ID', ['ID'], None),
+    ('regex=.', [], r'WARNING: no columns fulfill the condition in "%regex=."'),
+    ('regex=..', ['ID'], None),
 
     #using operator: regex strict equality
-    ('regex? ID', ['ID']),
-    ('regex? e.', ['date of birth', 'gender', 'height', 'weight', 'cholesterol', 'diabetes']),
+    ('regex? ID', ['ID'], None),
+    ('regex? e.', ['date of birth', 'gender', 'height', 'weight', 'cholesterol', 'diabetes'], None),
 
 
     #using multiple conditions
-    ('?bp / =diabetes', ['bp systole', 'bp diastole', 'diabetes']),
-    ('?bp / =diabetes /= cholesterol', ['bp systole', 'bp diastole', 'cholesterol', 'diabetes']),
-    ('?bp /=cholesterol/= diabetes', ['bp systole', 'bp diastole', 'cholesterol', 'diabetes']),
-    ('?bp & ?systole', ['bp systole']),
-    ('?bp & !?systole', ['bp diastole']),
-    ('?bp & !?systole & ?diastole', ['bp diastole']),
-    ('?bp & !?systole / ?ID', ['ID', 'bp diastole']),
+    ('?bp / =diabetes', ['bp systole', 'bp diastole', 'diabetes'], None),
+    ('?bp / =diabetes /= cholesterol', ['bp systole', 'bp diastole', 'cholesterol', 'diabetes'], None),
+    ('?bp /=cholesterol/= diabetes', ['bp systole', 'bp diastole', 'cholesterol', 'diabetes'], None),
+    ('?bp & ?systole', ['bp systole'], None),
+    ('?bp & !?systole', ['bp diastole'], None),
+    ('?bp & !?systole & ?diastole', ['bp diastole'], None),
+    ('?bp & !?systole / ?ID', ['ID', 'bp diastole'], None),
 
     ])
 
-def test_col_selection(code, expected_cols):
+def test_col_selection(code, expected_cols, message):
     result = df.q(code)
     expected = df.loc[:, expected_cols]
     assert result.equals(expected), qp.diff(result, expected, output='str')
+    if message:
+        check_message(message)
 
 
 
 
 
 df = get_df()
-@pytest.mark.parametrize("code, expected", [
+@pytest.mark.parametrize('code, expected, message', [
 
     #numeric comparison
-    (r'age  %%=30',             df.loc[[1], ['age']]),
-    (r'age  %%==30.0',          df.loc[[1], ['age']]),
-    (r'age  %%strict=30.0',     df.loc[[1], ['age']]),
-    (r'age  %%strict==30.0',    df.loc[[1], ['age']]),
-    (r'age  %%>30',             df.loc[[4,10], ['age']]),
-    (r'age  %%>=30',            df.loc[[1,4,10], ['age']]),
-    (r'age  %%<30',             df.loc[[0], ['age']]),
-    (r'age  %%<=30',            df.loc[[0,1], ['age']]),
-    (r'age  %%!=30',            df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']]),
-    (r'age  %%!==30.0',         df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']]),
-    (r'age  %%strict!=30',      df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']]),
-    (r'age  %%strict!==30.0',   df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']]),
-    (r'age  %%!strict=30',      df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']]),
-    (r'age  %%!strict==30.0',   df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']]),
-    (r'age  %%!>30',            df.loc[[0,1,2,3,5,6,7,8,9], ['age']]),
-    (r'age  %%!>=30',           df.loc[[0,2,3,5,6,7,8,9], ['age']]),
-    (r'age  %%!<30',            df.loc[[1,2,3,4,5,6,7,8,9,10], ['age']]),
-    (r'age  %%!<=30',           df.loc[[2,3,4,5,6,7,8,9,10], ['age']]),
-    (r'age  %%=40',             df.loc[[4], ['age']]),
-    (r'age  %%==40',            df.loc[[4], ['age']]),
-    (r'age  %%=40.0',           df.loc[[4], ['age']]),
-    (r'age  %%==40.0',          df.loc[[4], ['age']]),
-    (r'age  %%strict=40',       df.loc[[4], ['age']]),
-    (r'age  %%strict==40',      df.loc[[4], ['age']]),
-    (r'age  %%strict=40.0',     df.loc[[4], ['age']]),
-    (r'age  %%strict==40.0',    df.loc[[4], ['age']]),
+    (r'age  %%=30',             df.loc[[1], ['age']], None),
+    (r'age  %%==30.0',          df.loc[[1], ['age']], None),
+    (r'age  %%strict=30.0',     df.loc[[1], ['age']], None),
+    (r'age  %%strict==30.0',    df.loc[[1], ['age']], None),
+    (r'age  %%>30',             df.loc[[4,10], ['age']], None),
+    (r'age  %%>=30',            df.loc[[1,4,10], ['age']], None),
+    (r'age  %%<30',             df.loc[[0], ['age']], None),
+    (r'age  %%<=30',            df.loc[[0,1], ['age']], None),
+    (r'age  %%!=30',            df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']], None),
+    (r'age  %%!==30.0',         df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']], None),
+    (r'age  %%strict!=30',      df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']], None),
+    (r'age  %%strict!==30.0',   df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']], None),
+    (r'age  %%!strict=30',      df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']], None),
+    (r'age  %%!strict==30.0',   df.loc[[0,2,3,4,5,6,7,8,9,10], ['age']], None),
+    (r'age  %%!>30',            df.loc[[0,1,2,3,5,6,7,8,9], ['age']], None),
+    (r'age  %%!>=30',           df.loc[[0,2,3,5,6,7,8,9], ['age']], None),
+    (r'age  %%!<30',            df.loc[[1,2,3,4,5,6,7,8,9,10], ['age']], None),
+    (r'age  %%!<=30',           df.loc[[2,3,4,5,6,7,8,9,10], ['age']], None),
+    (r'age  %%=40',             df.loc[[4], ['age']], None),
+    (r'age  %%==40',            df.loc[[4], ['age']], None),
+    (r'age  %%=40.0',           df.loc[[4], ['age']], None),
+    (r'age  %%==40.0',          df.loc[[4], ['age']], None),
+    (r'age  %%strict=40',       df.loc[[4], ['age']], None),
+    (r'age  %%strict==40',      df.loc[[4], ['age']], None),
+    (r'age  %%strict=40.0',     df.loc[[4], ['age']], None),
+    (r'age  %%strict==40.0',    df.loc[[4], ['age']], None),
     
     #date comparison
-    (r'date of birth  %%=1995-01-02',                                df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%==1995-01-02',                               df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%=1995.01.02',                                df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%=1995_01_02',                                df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%=1995´/01´/02',                              df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%==1995 01 02',                               df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%=1995-Jan-02',                               df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%=02-01-1995',                                df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%=02-Jan-1995',                               df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%==Jan-02-1995',                              df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%=02-01.1995',                                df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%=02 Jan-1995',                               df.loc[[0], ['date of birth']]),
-    (r'date of birth  %%==Jan´/02_1995',                             df.loc[[0], ['date of birth']]),
-    (r'date of birth  $to datetime;  %%=05-11-2007',                 df.loc[[4], ['date of birth']]),
-    (r'date of birth  $to datetime;  %%>1990-01-01',                 df.loc[[0,1,4], ['date of birth']]),
-    (r'date of birth  $to datetime;  %%>1990-01-01  &&<2000-01-01',  df.loc[[0,1], ['date of birth']]),
+    (r'date of birth  %%=1995-01-02',                                df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%==1995-01-02',                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=1995.01.02',                                df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=1995_01_02',                                df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=1995´/01´/02',                              df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%==1995 01 02',                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=1995-Jan-02',                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=02-01-1995',                                df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=02-Jan-1995',                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%==Jan-02-1995',                              df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=02-01.1995',                                df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=02 Jan-1995',                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%==Jan´/02_1995',                             df.loc[[0], ['date of birth']], None),
+    (r'date of birth  $to datetime;  %%=05-11-2007',                 df.loc[[4], ['date of birth']], None),
+    (r'date of birth  $to datetime;  %%>1990-01-01',                 df.loc[[0,1,4], ['date of birth']], None),
+    (r'date of birth  $to datetime;  %%>1990-01-01  &&<2000-01-01',  df.loc[[0,1], ['date of birth']], None),
 
 
     #using type operators
-    (r'name  %%is str;',                 df.loc[:, ['name']]),
-    (r'name  %%!is str;',                df.loc[[], ['name']]),
-    (r'name  %%is num;',                 df.loc[[], ['name']]),
-    (r'name  %%!is num;',                df.loc[:, ['name']]),
-    (r'name  %%is na;',                  df.loc[[], ['name']]),
-    (r'name  %%!is na;',                 df.loc[:, ['name']]),
+    (r'name  %%is str;',                 df.loc[:, ['name']], None),
+    (r'name  %%!is str;',                df.loc[[], ['name']], None),
+    (r'name  %%is num;',                 df.loc[[], ['name']], None),
+    (r'name  %%!is num;',                df.loc[:, ['name']], None),
+    (r'name  %%is na;',                  df.loc[[], ['name']], None),
+    (r'name  %%!is na;',                 df.loc[:, ['name']], None),
 
-    (r'age   %%is int;',                 df.loc[[0,1,4,10], ['age']]),
-    (r'age   %%strict is int;',          df.loc[[0,10], ['age']]),
-    (r'age   %%is float;',               df.loc[[0,1,2,4,6,10], ['age']]),
-    (r'age   %%strict is float;',        df.loc[[2], ['age']]),
-    (r'age   %%is na;',                  df.loc[[2,3,6,8], ['age']]),
+    (r'age   %%is int;',                 df.loc[[0,1,4,10], ['age']], None),
+    (r'age   %%strict is int;',          df.loc[[0,10], ['age']], None),
+    (r'age   %%is float;',               df.loc[[0,1,2,4,6,10], ['age']], None),
+    (r'age   %%strict is float;',        df.loc[[2], ['age']], None),
+    (r'age   %%is na;',                  df.loc[[2,3,6,8], ['age']], None),
 
-    (r'weight  %%is int;',               df.loc[[1,9,10], ['weight']]),
-    (r'weight  %%strict is int;',        df.loc[[10], ['weight']]),
-    (r'weight  %%is float;',             df.loc[[0,1,7,9,10], ['weight']]),
-    (r'weight  %%strict is float;',      df.loc[[0], ['weight']]),
-    (r'weight  %%is num;',               df.loc[[0,1,4,6,7,9,10], ['weight']]),
-    (r'weight  %%strict is num;',        df.loc[[0,10], ['weight']]),
-    (r'weight  %%is num;  &&!is na;',    df.loc[[0,1,7,9,10], ['weight']]),
+    (r'weight  %%is int;',               df.loc[[1,9,10], ['weight']], None),
+    (r'weight  %%strict is int;',        df.loc[[10], ['weight']], None),
+    (r'weight  %%is float;',             df.loc[[0,1,7,9,10], ['weight']], None),
+    (r'weight  %%strict is float;',      df.loc[[0], ['weight']], None),
+    (r'weight  %%is num;',               df.loc[[0,1,4,6,7,9,10], ['weight']], None),
+    (r'weight  %%strict is num;',        df.loc[[0,10], ['weight']], None),
+    (r'weight  %%is num;  &&!is na;',    df.loc[[0,1,7,9,10], ['weight']], None),
 
-    (r'height       %%is bool;',         df.loc[[6], ['height']]),
-    (r'bp diastole  %%is bool;',         df.loc[[9], ['bp diastole']]),
-    (r'diabetes     %%is bool;',         df.loc[[0,1,3,4,5,6,9,10], ['diabetes']]),
-    (r'diabetes     %%strict is bool;',  df.loc[[], ['diabetes']]),
+    (r'height       %%is bool;',         df.loc[[6], ['height']], None),
+    (r'bp diastole  %%is bool;',         df.loc[[9], ['bp diastole']], None),
+    (r'diabetes     %%is bool;',         df.loc[[0,1,3,4,5,6,9,10], ['diabetes']], None),
+    (r'diabetes     %%strict is bool;',  df.loc[[], ['diabetes']], None),
 
-    (r'diabetes  %%is yn;',              df.loc[[0,1,3,4,5,6,9,10], ['diabetes']]),
-    (r'diabetes  %%is na;  //is yn;',    df.loc[:, ['diabetes']]),
-    (r'diabetes  %%is yes;',             df.loc[[1,4,5,10], ['diabetes']]),
-    (r'diabetes  %%is no;',              df.loc[[0,3,6,9], ['diabetes']]),
+    (r'diabetes  %%is yn;',              df.loc[[0,1,3,4,5,6,9,10], ['diabetes']], None),
+    (r'diabetes  %%is na;  //is yn;',    df.loc[:, ['diabetes']], None),
+    (r'diabetes  %%is yes;',             df.loc[[1,4,5,10], ['diabetes']], None),
+    (r'diabetes  %%is no;',              df.loc[[0,3,6,9], ['diabetes']], None),
 
-    (r'cholesterol  %%is na;',           df.loc[[2,4,7,9], ['cholesterol']]),
-    (r'age          %%is na;',           df.loc[[2,3,6,8], ['age']]),
-    (r'age          %%strict is na;',           df.loc[[2,3], ['age']]),
+    (r'cholesterol  %%is na;',           df.loc[[2,4,7,9], ['cholesterol']], None),
+    (r'age          %%is na;',           df.loc[[2,3,6,8], ['age']], None),
+    (r'age          %%strict is na;',           df.loc[[2,3], ['age']], None),
 
 
     #using regex equality
-    (r'ID %%regex=1....',                                df.loc[[0,1,2], ['ID']]),
-    (r'ID %%regex!=3....',                               df.loc[[0,1,2,3,4,5], ['ID']]),
-    (r'ID %%!regex=3....',                               df.loc[[0,1,2,3,4,5], ['ID']]),
-    (r'name %%regex=\b[A-Z][a-z]*\s[A-Z][a-z]*\b',    df.loc[[0,1,2,3,7], ['name']]), #two words with first letter capitalized and separated by a space
-    (r'name %%regex=^[^A-Z]*´$',                          df.loc[[4], ['name']]), #all lowercase
-    (r'dose %%regex=^(?=.*[a-zA-Z])(?=.*[0-9]).*´$',      df.loc[[0,2,3,4,5,8,10], ['dose']]), #containing letters and numbers
+    (r'ID %%regex=1....',                                df.loc[[0,1,2], ['ID']], None),
+    (r'ID %%regex!=3....',                               df.loc[[0,1,2,3,4,5], ['ID']], None),
+    (r'ID %%!regex=3....',                               df.loc[[0,1,2,3,4,5], ['ID']], None),
+    (r'name %%regex=\b[A-Z][a-z]*\s[A-Z][a-z]*\b',    df.loc[[0,1,2,3,7], ['name']], None), #two words with first letter capitalized and separated by a space
+    (r'name %%regex=^[^A-Z]*´$',                          df.loc[[4], ['name']], None), #all lowercase
+    (r'dose %%regex=^(?=.*[a-zA-Z])(?=.*[0-9]).*´$',      df.loc[[0,2,3,4,5,8,10], ['dose']], None), #containing letters and numbers
 
 
     #using regex search
-    ( 'bp systole %%regex?m', df.loc[[4], ['bp systole']]),
-    (r'bp systole %%regex?\D', df.loc[[2,4,6], ['bp systole']]),
-    ( 'bp systole %%regex?\d', df.loc[[0,1,3,4,5,7,9,10], ['bp systole']]),
+    ( 'bp systole %%regex?m', df.loc[[4], ['bp systole']], None),
+    (r'bp systole %%regex?\D', df.loc[[2,4,6], ['bp systole']], None),
+    ( 'bp systole %%regex?\d', df.loc[[0,1,3,4,5,7,9,10], ['bp systole']], None),
 
 
      #using index
-    (r'%%idx = 3',                                   df.iloc[[3], :]),
-    (r'%%idx > 5',                                   df.iloc[6:, :]),
-    (r'%%idx < 5',                                   df.iloc[:5, :]),
-    (r'%%idx >= 5',                                  df.iloc[5:, :]),
-    (r'%%idx <= 5',                                  df.iloc[:6, :]),
-    (r'%%idx != 5',                                  df.iloc[[0,1,2,3,4,6,7,8,9,10], :]),
-    (r'%%idx == 5',                                  df.iloc[[5], :]),
-    (r'%%idx >5  &&idx <8',                          df.iloc[6:8, :]),
-    (r'%%idx >5  &&idx <8  &&idx != 6',              df.iloc[[7], :]),
-    (r'%%idx >5  &&idx <8  &&idx != 6  &&idx != 7',  df.iloc[[], :]),
-    (r'%%idx ~ len(str(x)) > 1',                     df.iloc[[10], :]),
-    (r'%%idx ?1',                                    df.iloc[[1, 10], :]),
+    (r'%%idx = 3',                                   df.iloc[[3], :], None),
+    (r'%%idx > 5',                                   df.iloc[6:, :], None),
+    (r'%%idx < 5',                                   df.iloc[:5, :], None),
+    (r'%%idx >= 5',                                  df.iloc[5:, :], None),
+    (r'%%idx <= 5',                                  df.iloc[:6, :], None),
+    (r'%%idx != 5',                                  df.iloc[[0,1,2,3,4,6,7,8,9,10], :], None),
+    (r'%%idx == 5',                                  df.iloc[[5], :], None),
+    (r'%%idx >5  &&idx <8',                          df.iloc[6:8, :], None),
+    (r'%%idx >5  &&idx <8  &&idx != 6',              df.iloc[[7], :], None),
+    (r'%%idx >5  &&idx <8  &&idx != 6  &&idx != 7',  df.iloc[[], :], None),
+    (r'%%idx ~ len(str(x)) > 1',                     df.iloc[[10], :], None),
+    (r'%%idx ?1',                                    df.iloc[[1, 10], :], None),
 
 
     #comparison between columns
-    (r'id  %%=@ID',                                  df.loc[:, ['ID']]),
-    (r'age / height  $to num;   %height  %%>@age',   df.loc[[0, 10], ['height']]),
-    (r'age / height  $to num;   %height  %%<@age',   df.loc[[], ['height']]),
-    (r'cholesterol   %%=@bp systole',                df.loc[[2], ['cholesterol']]),
+    (r'id  %%=@ID',                                  df.loc[:, ['ID']], None),
+    (r'age / height  $to num;   %height  %%>@age',   df.loc[[0, 10], ['height']], None),
+    (r'age / height  $to num;   %height  %%<@age',   df.loc[[], ['height']], None),
+    (r'cholesterol   %%=@bp systole',                df.loc[[2], ['cholesterol']], None),
 
 
     #apply row filter condition on multiple cols
-    (r'id / name  %%?j',                df.loc[[0,1,2,9,10], ['ID', 'name']]),
-    (r'id / name  %%?j  //?n',          df.loc[[0,1,2,3,5,8,9,10], ['ID', 'name']]),
-    (r'id / name  %%?j  &&?n',          df.loc[[0,1,2,10], ['ID', 'name']]),
-    (r'height / weight   %%is num;;',     df.loc[:, ['height', 'weight']]),
-    (r'height / weight   %%any is num;;', df.loc[:, ['height', 'weight']]),
-    (r'height / weight   %%anyis num;;',  df.loc[:, ['height', 'weight']]),
-    (r'height / weight   %%all is num;;', df.loc[[0,6,9,10], ['height', 'weight']]),
+    (r'id / name  %%?j',                df.loc[[0,1,2,9,10], ['ID', 'name']], None),
+    (r'id / name  %%?j  //?n',          df.loc[[0,1,2,3,5,8,9,10], ['ID', 'name']], None),
+    (r'id / name  %%?j  &&?n',          df.loc[[0,1,2,10], ['ID', 'name']], None),
+    (r'height / weight   %%is num;',     df.loc[:, ['height', 'weight']], None),
+    (r'height / weight   %%any is num;', df.loc[:, ['height', 'weight']], None),
+    (r'height / weight   %%anyis num;',  df.loc[:, ['height', 'weight']], None),
+    (r'height / weight   %%all is num;', df.loc[[0,6,9,10], ['height', 'weight']], None),
 
 
     #using uniqueness operators
@@ -309,32 +317,36 @@ df = get_df()
         diabetes  %%is unique;
         is any;
         """,
-        df.loc[[1,2,4,6,7,8,9], :]
+        df.loc[[1,2,4,6,7,8,9], :],
+        None
     ),
     (
         r"""
         diabetes  %%is first;
         is any;
         """,
-        df.loc[[0,1,2,4,5,6,7,8,9], :]
+        df.loc[[0,1,2,4,5,6,7,8,9], :],
+        None
     ),
     (
         r"""
         diabetes  %%is last;
         is any;
         """,
-        df.loc[[1,2,3,4,6,7,8,9,10], :]
+        df.loc[[1,2,3,4,6,7,8,9,10], :],
+        None
     ),
 
 
     #by evaluating python expressions
-    (r'age  %%~ isinstance(x, int)', df.loc[[0, 10], ['age']]),
+    (r'age  %%~ isinstance(x, int)', df.loc[[0, 10], ['age']], None),
     (
         r"""
         age / height  $to num;
         age  %%col~ col < df["height"]
         """,
-        df.loc[[0, 10], ['age']]
+        df.loc[[0, 10], ['age']],
+        None
     ),
     (
         r"""
@@ -342,7 +354,8 @@ df = get_df()
         age  %%col~ col == df["age"].max()
         age  $to str;
         """,
-        df.loc[[4], ['age']]
+        df.loc[[4], ['age']],
+        None
     ),
 
 
@@ -352,7 +365,8 @@ df = get_df()
         ID  %%r=1....
         diabetes  %%is yes;
         """,
-        df.loc[[1, 4, 5, 10], ['diabetes']]
+        df.loc[[1, 4, 5, 10], ['diabetes']],
+        None
     ),
     (
         r"""
@@ -360,7 +374,8 @@ df = get_df()
         diabetes  &&is yes;
         ID / diabetes
         """,
-        df.loc[[1], ['ID', 'diabetes']]
+        df.loc[[1], ['ID', 'diabetes']],
+        None
     ),
     (
         r"""
@@ -368,14 +383,16 @@ df = get_df()
         ID  &&regex=1....
         / diabetes
         """,
-        df.loc[[1], ['ID', 'diabetes']]
+        df.loc[[1], ['ID', 'diabetes']],
+        None
     ),
     (
         r"""
         diabetes %%is yes;
         / ID &&regex=1....
         """,
-        df.loc[[1], ['ID', 'diabetes']]
+        df.loc[[1], ['ID', 'diabetes']],
+        None
     ),
     (
         r"""
@@ -383,21 +400,24 @@ df = get_df()
         gender  %%=m  //=male  &&load1
         ID / gender
         """,
-        df.loc[[0,3,5], ['ID', 'gender']]
+        df.loc[[0,3,5], ['ID', 'gender']],
+        None
     ),
     (
         r"""
         ID  %%regex=1.... // regex=2....  // save 1
         gender %%=m // =male  &&load1
         """,
-        df.loc[[0,3,5], ['gender']]
+        df.loc[[0,3,5], ['gender']],
+        None
     ), 
     (
         r"""
         ID  %%regex=1.... // regex=2....  &&save1
         gender %%=m // =m // =male  // load 1
         """,
-        df.loc[[0,1,2,3,4,5], ['gender']]
+        df.loc[[0,1,2,3,4,5], ['gender']],
+        None
     ),
     (
         r"""
@@ -405,48 +425,55 @@ df = get_df()
         gender %%=f // =f // =female  // load 1
         ID
         """,
-        df.loc[[0,1,2,3,4,5,10], ['ID']]
+        df.loc[[0,1,2,3,4,5,10], ['ID']],
+        None
     ),
     (
         r"""
         gender  %%=f // =female
         age  &&>30
         """,
-        df.loc[[10], ['age']]
+        df.loc[[10], ['age']],
+        None
     ),
     (
         r"""
         gender  %%=f  //=female  %%save a
         age  %%>30  && load a 
         """,
-        df.loc[[10], ['age']]
+        df.loc[[10], ['age']],
+        None
     ),
     (
         r"""
         age  %%>30
         age  // <18
         """,
-        df.loc[[0,4,10], ['age']]
+        df.loc[[0,4,10], ['age']],
+        None
     ),
     (
         r"""
         age  %%>30  %%save=a
         age  %%<18  //load=a
         """,
-        df.loc[[0,4,10], ['age']]
+        df.loc[[0,4,10], ['age']],
+        None
     ),
     (
         r"""
         age  %%>30   //<18
         """,
-        df.loc[[0,4,10], ['age']]
+        df.loc[[0,4,10], ['age']],
+        None
     ),
     (
         r"""
         weight  %%<70  &&>40  %%save=between 40 and 70
         diabetes %%is yes;  &&load=between 40 and 70   
         """,
-        df.loc[[1], ['diabetes']]
+        df.loc[[1], ['diabetes']],
+        None
     ),
     (
         r"""
@@ -455,15 +482,18 @@ df = get_df()
         diabetes  %%is no;  &&load1
         weight  / diabetes
         """,
-        df.loc[[], ['weight', 'diabetes']]
+        df.loc[[], ['weight', 'diabetes']],
+        None
     ),
 
     ])
-def test_row_selection(code, expected):
+def test_row_selection(code, expected, message):
     df = get_df()
     temp = df.q(code)
     result = df.loc[temp.index, temp.columns]
     assert result.equals(expected), qp.diff(result, expected, output='str')
+    if message:
+        check_message(message)
 
 
 
@@ -477,9 +507,9 @@ def test_col_eval():
         """)
     df1['ID'] = df1['name']
     expected = df1.loc[:, ['ID']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test0: copy col contents\n' + qp.diff(result, expected, output='str')
 
-def test_col_eval1():
+
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -489,9 +519,9 @@ def test_col_eval1():
         """)
     df1['ID'] = df1['name']
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test1: copy col contents and select all\n' + qp.diff(result, expected, output='str')
 
-def test_col_eval2():
+
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -501,10 +531,9 @@ def test_col_eval2():
     df1['ID'] = df1['name']
     df1['age'] = df1['name']
     expected = df1.loc[:, ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test2: copy col contents to multiple cols\n' + qp.diff(result, expected, output='str')
 
 
-def test_col_eval3():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -514,10 +543,9 @@ def test_col_eval3():
     for col in df1.columns:
         df1[col] = df1['name']
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test3: copy col contents to all cols\n' + qp.diff(result, expected, output='str')
 
 
-def test_col_eval4():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -527,10 +555,9 @@ def test_col_eval4():
     df1['ID'] = df1['name']
     df1['age'] = df1['name']
     expected = df1.loc[:, ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test4: conditionally copy col contents to multiple cols\n' + qp.diff(result, expected, output='str')
 
 
-def test_col_eval5():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -540,10 +567,9 @@ def test_col_eval5():
     df1['ID'] = df1['name']
     df1['age'] = df1['name']
     expected = df1.loc[[0,1,2,3,4,8,10], ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test5: conditionally copy col contents to multiple cols\n' + qp.diff(result, expected, output='str')
 
 
-def test_col_eval6():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -553,8 +579,8 @@ def test_col_eval6():
     df1['ID'] = df1['name']
     df1.loc[[0,1,2,3,4,8,10], 'age'] = df1.loc[[0,1,2,3,4,8,10], 'name']
     expected = df1.loc[:, ['ID', 'age']]
-    assert (result.loc[[5,6,7,9], 'age'] != df.loc[[5,6,7,9], 'name']).all()
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert (result.loc[[5,6,7,9], 'age'] != df.loc[[5,6,7,9], 'name']).all(), 'failed test6: conditionally copy col contents to multiple cols\n' + qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test7: conditionally copy col contents to multiple cols\n' + qp.diff(result, expected, output='str')
 
 
 
@@ -568,23 +594,21 @@ def test_eval():
         """)
     df1['name'] = df1['name'].str.lower()
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test0: change to lowercase\n' + qp.diff(result, expected, output='str')
 
 
-def test_eval1():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
         r"""
-        name  %%!x? x == x.lower()  $ ~ x.lower()
+        name  %%!~ x == x.lower()  $ ~ x.lower()
         is any; %%is any;
         """)
     df1['name'] = df1['name'].str.lower()
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test1: conditionally change to lowercase\n' + qp.diff(result, expected, output='str')
 
 
-def test_eval2():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -594,23 +618,9 @@ def test_eval2():
         """)
     df1['gender'] = df1['gender'].astype(str).str.lower()
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test2: convert and change to lowercase\n' + qp.diff(result, expected, output='str')
 
 
-def test_eval3():
-    df = qp.get_df()
-    df1 = qp.get_df()
-    result = df.q(
-        r"""
-        gender  $to str;   $~ x.lower()
-        is any;
-        """)
-    df1['gender'] = df1['gender'].astype(str).str.lower()
-    expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
-
-
-def test_eval4():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -619,10 +629,9 @@ def test_eval4():
         """)
     df1.loc[0, 'ID'] = '10001'
     expected = df1.loc[[0], ['ID']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test3: convert single entry to str\n' + qp.diff(result, expected, output='str')
 
 
-def test_eval5():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -632,10 +641,9 @@ def test_eval5():
     df1['ID'] = str(0)
     df1['age'] = str(0)
     expected = df1.loc[:, ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test4: conditionally convert multiple entries to str\n' + qp.diff(result, expected, output='str')
 
 
-def test_eval6():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -645,10 +653,9 @@ def test_eval6():
     df1.loc[[0,1,2,3,4,8,10], 'ID'] = 0
     df1.loc[[0,1,2,3,4,8,10], 'age'] = 0
     expected = df1.loc[[0,1,2,3,4,8,10], ['ID', 'age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test5: conditionally convert multiple entries to str\n' + qp.diff(result, expected, output='str')
 
 
-def test_eval7():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -658,59 +665,54 @@ def test_eval7():
     df1['ID'] = 10
     df1.loc[[0,1,2,3,4,8,10], 'age'] = 10
     expected = df1.loc[:, ['ID', 'age']]
-    assert (result['ID'] == 10).all()
-    assert (result.loc[[5,6,7,9], 'age'] != 10).all()
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert (result['ID'] == 10).all(), 'failed test6: conditionally convert multiple entries to str\n' + qp.diff(result, expected, output='str')
+    assert (result.loc[[5,6,7,9], 'age'] != 10).all(), 'failed test7: conditionally convert multiple entries to str\n' + qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test8: conditionally convert multiple entries to str\n' + qp.diff(result, expected, output='str')
 
 
 
 
-def test_header_replace():
+def test_header():
     df1 = get_df()
     df2 = get_df()
     result = df1.q('id  $header id')
     expected = df2.rename(columns={'ID': 'id'}).loc[:, ['id']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test0: rename col header\n' + qp.diff(result, expected, output='str')
 
 
-def test_header_replace1():
     df1 = get_df()
     df2 = get_df()
-    result = df1.q('id  $header id   %name  $header n   %date of birth  $header dob  %is any;')
+    result = df1.q(r'id  $header id   %name  $header n   %date of birth  $header dob  %is any;')
     expected = df2.rename(columns={'ID': 'id', 'name': 'n', 'date of birth': 'dob'})
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test1: rename multiple col headers\n' + qp.diff(result, expected, output='str')
 
 
-def test_header_append():
     df1 = get_df()
     df2 = get_df()
     result = df1.q('id  $header += abc')
     expected = df2.rename(columns={'ID': 'IDabc'}).loc[:, ['IDabc']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test2: append to col header\n' + qp.diff(result, expected, output='str')
 
 
-def test_header_append1():
     df1 = get_df()
     df2 = get_df()
     result = df1.q('id / name / date of birth   $header += abc  %is any;')
     expected = df2.rename(columns={'ID': 'IDabc', 'name': 'nameabc', 'date of birth': 'date of birthabc'})
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test3: append to multiple col headers\n' + qp.diff(result, expected, output='str')
 
 
-def test_header_eval():
     df1 = get_df()
     df2 = get_df()
     result = df1.q('id  $header ~ x.lower() + str(len(x))   %is any;')
     expected = df2.rename(columns={'ID': 'id2'})
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test4: rename col header with eval\n' + qp.diff(result, expected, output='str')
 
 
-def test_header_eval1():
     df1 = get_df()
     df2 = get_df()
     result = df1.q('id / weight / diabetes    $header ~ x.lower() + str(len(x))   %is any;')
     expected = df2.rename(columns={'ID': 'id2', 'weight': 'weight6', 'diabetes': 'diabetes8'})
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test5: rename multiple col headers with eval\n' + qp.diff(result, expected, output='str')
 
 
 
@@ -722,7 +724,7 @@ df = get_df()
     (r'=a%%>0     $meta+= >0  %is any;  %%is any;', [ '', '', '>0']),
     (r'=a   %%>0   $meta ~ x + ">0"  %is any;  %%is any;', [ '', '', '>0']),
     (r'=a   %%>0   $meta col~ col + ">0"  %is any;  %%is any;', [ '', '', '>0']),
-    (r'=a%%>0     $metatag   %is any;  %%is any;', [ '', '', '\n@a: ']),
+    (r'=a%%>0     $tag   %is any;  %%is any;', [ '', '', '\n@a: ']),
     (r'=a%%>0  /b     $tag  %is any;  %%is any;', [ '', '', '\n@a@b: ']),
     (r'=a%%>0  /b     $tag=value >0   %is any;  %%is any;', [ '', '', '\n@a@b: value >0']),
     ])
@@ -731,7 +733,7 @@ def test_metadata(code, metadata):
     df = df.q(code)
     df1 = get_df_simple_tagged()
     df1['meta'] = metadata
-    assert df.equals(df1), qp.diff(df, df1, output='str')
+    assert df.equals(df1), 'failed test: metadata tagging\n' + qp.diff(df, df1, output='str')
 
 
 def test_metadata_continous():
@@ -740,27 +742,27 @@ def test_metadata_continous():
     df1 = get_df_simple_tagged()
     df1['meta'] = [ '', '', '>0']
     df = df.q(r'=a  %%>0   $meta +=>0   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
+    assert df.equals(df1), 'failed test0: continous metadata tagging\n' + qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '', '>0>0']
     df = df.q(r'=a   %%>0  $meta+=>0   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
+    assert df.equals(df1), 'failed test1: continous metadata tagging\n' + qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '0', '>0>0']
     df = df.q(r'=a   %%==0    $meta += 0   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
+    assert df.equals(df1), 'failed test2: continous metadata tagging\n' + qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '', '>0>0']
     df = df.q(r'a   %%==0    $meta ~ x.replace("0", "")   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
+    assert df.equals(df1), 'failed test3: continous metadata tagging\n' + qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '', '>>']
     df = df.q(r'=a   %%>0    $meta~x.replace("0", "")   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
+    assert df.equals(df1), 'failed test4: continous metadata tagging\n' + qp.diff(df, df1, output='str')
 
     df1['meta'] = [ '', '', '']
     df = df.q(r'=a     $meta=   %is any;  %%is any;')
-    assert df.equals(df1), qp.diff(df, df1, output='str')
+    assert df.equals(df1), 'failed test5: continous metadata tagging\n' + qp.diff(df, df1, output='str')
 
 
 
@@ -782,7 +784,8 @@ def test_new_col(code, content, cols):
     df2 = get_df()
     df2['new1'] = content
     expected = df2.loc[:, cols]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test0: creating new col\n' + qp.diff(result, expected, output='str')
+
 
 def test_new_col1():
     df1 = get_df()
@@ -790,63 +793,69 @@ def test_new_col1():
     df2 = get_df()
     df2['new col'] = 'a'
     expected = df2.loc[:,['new col']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test1: creating new col with header\n' + qp.diff(result, expected, output='str')
 
 
-def test_new_col2():
     df1 = get_df()
     result = df1.q('$new a   &newb   /=new1 /=new2')
     df2 = get_df()
     df2['new1'] = 'a'
     expected = df2.loc[:,['new1']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test2: creating new col\n' + qp.diff(result, expected, output='str')
+    check_message('WARNING: no columns fulfill the condition in "/=new2"')
 
 
-def test_new_col3():
     df1 = get_df()
     result = df1.q('$new a /new b   /=new1 /=new2')
     df2 = get_df()
     df2['new1'] = 'a'
     expected = df2.loc[:,['new1']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test3: creating new col\n' + qp.diff(result, expected, output='str')
+    check_message('WARNING: no columns fulfill the condition in "/=new2"')
 
 
-def test_new_col4():
+    df1 = get_df()
+    result = df1.q('$new a  $new b   /=new1 /=new2')
+    df2 = get_df()
+    df2['new1'] = 'a'
+    df2['new2'] = 'b'
+    expected = df2.loc[:,['new1', 'new2']]
+    assert result.equals(expected), 'failed test4: creating multiple new cols\n' + qp.diff(result, expected, output='str')
+
+
     df1 = get_df()
     result = df1.q(r'%%idx = 0  $new a')
     df2 = get_df()
     df2['new1'] = 'a'
     expected = df2.loc[[0],['new1']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test5: creating new col with index\n' + qp.diff(result, expected, output='str')
 
 
-def test_new_col5():
     df1 = get_df()
     result = df1.q(r'$new a  %%idx = 0  ')
     df2 = get_df()
     df2['new1'] = 'a'
     expected = df2.loc[[0],['new1']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test6: creating new col and select with index\n' + qp.diff(result, expected, output='str')
 
 
-def test_new_col6():
     df1 = get_df()
     result = df1.q(r'%%idx = 0   %%save1  %%is any;   $new a  %%load1')
     df2 = get_df()
     df2['new1'] = 'a'
     expected = df2.loc[[0],['new1']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test7: check if selection saving and loading works correctly with new col creation\n' + qp.diff(result, expected, output='str')
 
 
 
-@pytest.mark.parametrize("code, expected", [
-    (r'id %%?1  %%save1   %%is any;  %%load1',                   df.loc[[0,1,2,3,6],['ID']]),
-    (r'id %%?1  %%save=1   %%is any;  %%load=1',                 df.loc[[0,1,2,3,6],['ID']]),
-    (r'id %%any?1  %%save1   %%is any;  %%load1',                df.loc[[0,1,2,3,6],['ID']]),
-    (r'id %%all?1  %%save1   %%is any;  %%load1',                df.loc[[0,1,2,3,6],['ID']]),
-    (r'id %%each?1  %%save1   %%is any;  %%load1',               df.loc[[0,1,2,3,6],['ID']]),
-    (r'id %%?1  %%save1   %is any;  %%is any;   %id  %%load1',   df.loc[[0,1,2,3,6],['ID']]),
-    (r'id %%?2  %%save1  %%?1  %%save1  %%is any;  %%load1',     df.loc[[0,1,2,3,6],['ID']]),
+@pytest.mark.parametrize('code, expected, message', [
+    (r'id %%?1  %%save1   %%is any;  %%load1',                   df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?1  %%save=1   %%is any;  %%load=1',                 df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%any?1  %%save1   %%is any;  %%load1',                df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%all?1  %%save1   %%is any;  %%load1',                df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%each?1  %%save1   %%is any;  %%load1',               df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?1  %%save1   %is any;  %%is any;   %id  %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?2  %%save1  %%?1  %%save1  %%is any;  %%load1',     df.loc[[0,1,2,3,6],['ID']], None),
     
     (
         r"""
@@ -854,7 +863,8 @@ def test_new_col6():
         id   %%?2   %%save2
         id   %%load1   &&load2
         """,
-        df.loc[[1,3],['ID']]
+        df.loc[[1,3],['ID']],
+        None
     ),
 
     (
@@ -863,7 +873,8 @@ def test_new_col6():
         id   %%?2   %%save2
         id   %%load1   //load2
         """,
-        df.loc[[0,1,2,3,4,5,6,7],['ID']]
+        df.loc[[0,1,2,3,4,5,6,7],['ID']],
+        None
     ),
     
     (
@@ -872,7 +883,8 @@ def test_new_col6():
         id   %%?2   %%save2
         id   %%load1   &&load2
         """,
-        df.loc[[4,5,7],['ID']]
+        df.loc[[4,5,7],['ID']],
+        None
     ),
     
     (
@@ -881,39 +893,43 @@ def test_new_col6():
         id   %%!?2   %%save2
         id   %%load1   &&load2
         """,
-        df.loc[[8,9,10],['ID']]
+        df.loc[[8,9,10],['ID']],
+        None
     ),
     ])
-def test_save_load(code, expected):
+def test_save_load(code, expected, message):
     result = get_df().q(code)
     assert result.equals(expected), qp.diff(result, expected, output='str')
+    if message:
+        check_message('WARNING: a selection was already saved as "1". overwriting it')
 
 
 
-def test_scope1():
+def test_selection_scopes():
     df1 = qp.get_df()
     result = df1.q(r'%%is na; $')
     df2 = qp.get_df()
     df2.loc[[1,2,3,4,6,7,8,9,10], :] = ''
     expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test0: check if default selection scope is "any"\n' + qp.diff(result, expected, output='str')
     
-def test_scope2():
+
     df1 = qp.get_df()
     result = df1.q(r'%%any is na; $')
     df2 = qp.get_df()
     df2.loc[[1,2,3,4,6,7,8,9,10], :] = ''
     expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test1: check selection scope "any"\n' + qp.diff(result, expected, output='str')
 
-def test_scope3():
+
     df1 = qp.get_df()
     result = df1.q(r'%%all is na; $')
     df2 = qp.get_df()
     expected = df2.loc[[], :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test2: check selection scope "all"\n' + qp.diff(result, expected, output='str')
+    check_message('WARNING: value modification cannot be applied when no values where selected')
 
-def test_scope4():
+
     df1 = qp.get_df()
     result = df1.q(r'%%each is na; $')
     df2 = qp.get_df()
@@ -927,7 +943,7 @@ def test_scope4():
     df2.loc[[2,7,8], 'diabetes'] = ''
     df2.loc[[1,6,7], 'dose'] = ''
     expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test3: check selection scope "each"\n' + qp.diff(result, expected, output='str')
 
 
 
@@ -941,10 +957,9 @@ def test_set_val():
         """)
     df1['name'] = 'a'
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test0: set values\n' + qp.diff(result, expected, output='str')
 
 
-def test_set_val1():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -954,10 +969,9 @@ def test_set_val1():
         """)
     df1['name'] = 'a'
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test1: set values\n' + qp.diff(result, expected, output='str')
 
 
-def test_set_val2():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -969,7 +983,7 @@ def test_set_val2():
     df1['name'] = 'a'
     df1['gender'] = 'b'
     expected = df1.loc[:, :]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test2: set values in multiple cols\n' + qp.diff(result, expected, output='str')
 
 
 
@@ -1004,7 +1018,7 @@ def test_sort(code, expected_cols):
     df = qp.get_df()
     result = df.q(code)
     expected = df.sort_values(by=expected_cols)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test: sort values\n' + qp.diff(result, expected, output='str')
 
 
 
@@ -1132,5 +1146,17 @@ def test_to_yn():
     df2['age'] = df2['age'].astype('object')
     expected = df2.loc[:,['diabetes']]
     assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_type_inference():
+    df1 = pd.DataFrame({1:[1,2,3], 'a':[4,5,6]})
+    df2 = pd.DataFrame({'1':[1,2,3], 'a':[4,5,6]})
+    result1 = df1.q('1')
+    result2 = df2.q('1')
+    expected1 = df1.loc[:, [1]]
+    expected2 = df2.loc[:, ['1']]
+    assert result1.equals(expected1), qp.diff(result1, expected1, output='str')
+    assert result2.equals(expected2), qp.diff(result2, expected2, output='str')
+
 
 
