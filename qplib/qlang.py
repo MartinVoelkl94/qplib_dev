@@ -6,6 +6,7 @@ import qplib as qp
 
 from IPython.display import display
 from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
+from importlib.resources import files
 
 from .util import log
 from .types import _dict, _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
@@ -178,7 +179,8 @@ class Instruction:
 
 
 def _get_symbols():
-    symbols = pd.read_csv('qplib/data/symbols.csv', index_col=0)
+    path_symbols = files('qplib').joinpath('data/symbols.csv')
+    symbols = pd.read_csv(path_symbols, index_col=0)
     symbols.drop(index=['type', 'glyph', 'description'], inplace=True)
     symbols['glyph'] = symbols['glyph'].str.strip('"')
     symbols.iloc[:, 3:] = symbols.iloc[:, 3:].fillna(0).astype('int')
