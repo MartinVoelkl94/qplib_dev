@@ -1347,128 +1347,180 @@ class DataFrameQueryInteractiveMode:
         self.df = df
 
     def __call__(self):
-        pass
-#         kwargs = {'df': fixed(self.df), 'code': ''}
+        kwargs = {'df': fixed(self.df), 'code': ''}
 
-#         #code input
-#         ui_code = widgets.Textarea(
-#             value='$verbosity=3\n$diff=None\n\n#Enter query code here\n\n',
-#             layout=Layout(width='35%', height='97%')
-#             )
-
+        #code input
+        ui_code = widgets.Textarea(
+            value='$verbosity=3\n$diff=None\n\n#Enter query code here,\n#or use the buttons to the right to create a query\n\n',
+            layout=Layout(width='35%', height='97%')
+            )
 
 
-#         #syntax
+
+        #syntax
+
+
+        def get_symbols_compatible():
+            if ui_connectors.value is None:
+                symbols_compatible_with_connector = set(compatible.index)
+            else:
+                compatible_with_connector = compatible[ui_connectors.value.name]
+                symbols_compatible_with_connector = set(compatible[compatible_with_connector].index)
+
+            if ui_operators.value is None:
+                symbols_compatible_with_operator = set(compatible.index)
+            else:
+                compatible_with_operator = compatible[ui_operators.value.name]
+                symbols_compatible_with_operator = set(compatible[compatible_with_operator].index)
+
+            return symbols_compatible_with_connector.intersection(symbols_compatible_with_operator)
+     
+
+        def new_connector(value):
+
+            ui_operators.value = None
+            ui_flags.value = None
+            ui_instruction.value = ui_connectors.value.glyph
+
+            symbols_compatible = get_symbols_compatible()
+
+            operators_compatible = {operator for operator in OPERATORS if operator.name in symbols_compatible}
+            ui_operators.options = [(symbol.glyph, symbol) for symbol in operators_compatible]
+            ui_operators.tooltips = [symbol.description for symbol in operators_compatible]
+
+            flags_compatible = {flag for flag in FLAGS if flag.name in symbols_compatible}
+            ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_compatible]
+            ui_flags.tooltips = [symbol.description for symbol in flags_compatible]
+
         
-#         def update_symbols(value):
-#             if ui_connectors.value in connectors_select_cols:
+        def new_operator(value):
 
-#                 operators = sorted(list(operators_select))
-#                 ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
-#                 ui_operators.tooltips = [symbol.description for symbol in operators]
+            ui_flags.value = None
+            
+            if ui_connectors.value is not None and ui_operators.value is not None:
+                ui_instruction.value = f'{ui_connectors.value.glyph} {ui_operators.value.glyph}'
 
-#                 flags = sorted(list(flags_select - flags_select_rows_scope))
-#                 ui_flags.options = [(symbol.glyph, symbol) for symbol in flags]
-#                 ui_flags.tooltips = [symbol.description for symbol in flags]
+            if ui_operators.value in OPERATORS.by_trait['unary']:
+                ui_instruction_value.value = ''
+                ui_instruction_value.disabled = True
+                ui_instruction_value.layout.visibility = 'hidden'
+                ui_instruction_value.layout.width = '0px'
+            else:
+                ui_instruction_value.disabled = False
+                ui_instruction_value.layout.visibility = 'visible'
+                ui_instruction_value.layout.width = 'auto'
 
+            symbols_compatible = get_symbols_compatible()
 
-#             elif ui_connectors.value in connectors_select_rows:
+            flags_compatible = {flag for flag in FLAGS if flag.name in symbols_compatible}
+            ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_compatible]
+            ui_flags.tooltips = [symbol.description for symbol in flags_compatible]
 
-#                 operators = sorted(list(operators_select))
-#                 ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
-#                 ui_operators.tooltips = [symbol.description for symbol in operators]
-
-#                 flags = sorted(list(flags_select))
-#                 ui_flags.options = [(symbol.glyph, symbol) for symbol in flags]
-#                 ui_flags.tooltips = [symbol.description for symbol in flags]
-
-
-#             elif ui_connectors.value == CONNECTORS.MODIFY:
-
-#                 operators = sorted(list(operators_modify))
-#                 ui_operators.options = [(symbol.glyph, symbol) for symbol in operators]
-#                 ui_operators.tooltips = [symbol.description for symbol in operators]
-
-#                 flags = sorted(list(flags_modify))
-#                 ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_modify]
-#                 ui_flags.tooltips = [symbol.description for symbol in flags_modify]
-
-#             else:
-#                 raise ValueError(f'error: connector "{ui_connectors.value}" is not implemented for interactive mode')
-
-
-
-#         connectors = sorted(list(CONNECTORS))
-#         ui_connectors = widgets.ToggleButtons(
-#             options=[(symbol.glyph, symbol) for symbol in connectors],
-#             description='connectors:',
-#             value=CONNECTORS.MODIFY,
-#             tooltips=[symbol.description for symbol in connectors],
-#             layout=Layout(width='auto', height='auto'),
-#             )
-#         ui_connectors.style.button_width = 'auto'
-#         ui_connectors.observe(update_symbols, names='value')
-
-#         ui_operators = widgets.ToggleButtons(
-#             options=[],
-#             description='operators:',
-#             value=None,
-#             tooltips=[],
-#             layout=Layout(width='auto', height='auto'),
-#             )
-#         ui_operators.style.button_width = 'auto'
-
-#         ui_flags = widgets.ToggleButtons(
-#             options=[],
-#             description='flags:',
-#             value=None,
-#             tooltips=[],
-#             layout=Layout(width='auto', height='auto'),
-#             )
-#         ui_flags.style.button_width = 'auto'
         
-#         ui_syntax = widgets.VBox([
-#             ui_connectors,
-#             ui_operators,
-#             ui_flags,
-#             ])
+        def new_flag(value):
+            if ui_connectors.value is not None and ui_operators.value is not None and ui_flags.value is not None:
+                ui_instruction.value = f'{ui_connectors.value.glyph} {ui_flags.value.glyph} {ui_operators.value.glyph}'
 
 
-#         #some general info and statistics about the df
-#         mem_usage = self.df.memory_usage().sum() / 1024
-#         ui_details = widgets.HTML(
-#             value=f"""
-#             <b>rows:</b> {len(self.df.index)}<br>
-#             <b>columns:</b> {len(self.df.columns)}<br>
-#             <b>memory usage:</b> {mem_usage:,.3f}kb<br>
-#             <b>unique values:</b> {self.df.nunique().sum()}<br>
-#             <b>missing values:</b> {self.df.isna().sum().sum()}<br>
-#             <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
-#             """
-#             )
+        connectors = sorted(list(CONNECTORS))
+        ui_connectors = widgets.ToggleButtons(
+            options=[(symbol.glyph, symbol) for symbol in connectors],
+            description='connectors:',
+            value=None,
+            tooltips=[symbol.description for symbol in connectors],
+            layout=Layout(width='auto', height='auto'),
+            )
+        ui_connectors.style.button_width = 'auto'
+        ui_connectors.observe(new_connector, names='value')
 
 
-#         ui_tabs = widgets.Tab(
-#             children=[
-#                 ui_syntax,
-#                 ui_details,
-#                 widgets.HTML(value=DataFrameQuery.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
-#                 ],
-#             titles=['syntax', 'df details', 'readme'],
-#             layout=Layout(width='50%', height='94%')
-#             )
-#         ui = HBox([ui_code, ui_tabs], layout=Layout(width='100%', height='330px'))
+        ui_operators = widgets.ToggleButtons(
+            options=[(symbol.glyph, symbol) for symbol in OPERATORS],
+            description='operators:',
+            value=None,
+            tooltips=[symbol.description for symbol in OPERATORS],
+            layout=Layout(width='auto', height='auto'),
+            )
+        ui_operators.style.button_width = 'auto'
+        ui_operators.observe(new_operator, names='value')
 
-#         kwargs['code'] = ui_code
-#         display(ui)
-#         out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
-#         display(out)
 
-# def _interactive_mode(**kwargs):
-#     df = kwargs.pop('df')
-#     code = kwargs.pop('code')
-#     result = query(df, code)
-#     display(result)
-#     return result 
+        ui_flags = widgets.ToggleButtons(
+            options=[(symbol.glyph, symbol) for symbol in FLAGS],
+            description='flags:',
+            value=None,
+            tooltips=[symbol.description for symbol in FLAGS],
+            layout=Layout(width='auto', height='auto'),
+            )
+        ui_flags.style.button_width = 'auto'
+        ui_flags.observe(new_flag, names='value')
+        
+
+        ui_instruction = widgets.HTML(value='',)
+        
+        ui_instruction_value = widgets.Text(
+            value='',
+            disabled=True,
+            layout=Layout(width='0px', visibility='hidden')
+            )
+        
+        def add_instruction(test):
+            ui_code.value += f'\n{ui_instruction.value} {ui_instruction_value.value}'
+        ui_button = widgets.Button(
+            description='add',
+            button_style='success',
+            tooltip='add instruction to query code',
+            )
+        ui_button.on_click(add_instruction)
+
+
+        ui_builder = widgets.VBox([
+            widgets.HBox([
+                ui_instruction,
+                ui_instruction_value,
+                ui_button,
+                ]),
+            ui_connectors,
+            ui_operators,
+            ui_flags,
+            ])
+
+
+        #some general info and statistics about the df
+        mem_usage = self.df.memory_usage().sum() / 1024
+        ui_details = widgets.HTML(
+            value=f"""
+            <b>rows:</b> {len(self.df.index)}<br>
+            <b>columns:</b> {len(self.df.columns)}<br>
+            <b>memory usage:</b> {mem_usage:,.3f}kb<br>
+            <b>unique values:</b> {self.df.nunique().sum()}<br>
+            <b>missing values:</b> {self.df.isna().sum().sum()}<br>
+            <b>columns:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
+            """
+            )
+
+
+        ui_tabs = widgets.Tab(
+            children=[
+                ui_builder,
+                ui_details,
+                widgets.HTML(value=DataFrameQuery.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
+                ],
+            titles=['query builder', 'df details', 'readme'],
+            layout=Layout(width='50%', height='94%')
+            )
+        ui = HBox([ui_code, ui_tabs], layout=Layout(width='100%', height='330px'))
+
+        kwargs['code'] = ui_code
+        display(ui)
+        out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
+        display(out)
+
+def _interactive_mode(**kwargs):
+    df = kwargs.pop('df')
+    code = kwargs.pop('code')
+    result = query(df, code)
+    display(result)
+    return result 
 
 
