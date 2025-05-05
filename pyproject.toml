@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qplib"
-version = "0.7.0"
+version = "0.7.1"
 description = "query language for pandas"
 readme = "README.md"
 authors = [{ name = "martin v", email = "martinv16248@gmail.com" }]
