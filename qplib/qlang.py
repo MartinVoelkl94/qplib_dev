@@ -1374,6 +1374,25 @@ class DataFrameQueryInteractiveMode:
                 symbols_compatible_with_operator = set(compatible[compatible_with_operator].index)
 
             return symbols_compatible_with_connector.intersection(symbols_compatible_with_operator)
+
+
+        def build_instruction(ui_connectors, ui_operators, ui_flags):
+            if ui_connectors.value is None:
+                connector = ''
+            else:
+                connector = ui_connectors.value.glyph + ' '
+
+            if ui_operators.value is None:
+                operator = ''
+            else:
+                operator = ui_operators.value.glyph + ' '
+
+            if ui_flags.value is None:
+                flag = ''
+            else:
+                flag = ui_flags.value.glyph + ' '
+
+            return f'{connector}{flag}{operator}'
      
 
         def new_connector(value):
@@ -1384,21 +1403,29 @@ class DataFrameQueryInteractiveMode:
 
             symbols_compatible = get_symbols_compatible()
 
-            operators_compatible = {operator for operator in OPERATORS if operator.name in symbols_compatible}
+            operators_compatible = sorted([operator for operator in OPERATORS if operator.name in symbols_compatible])
             ui_operators.options = [(symbol.glyph, symbol) for symbol in operators_compatible]
             ui_operators.tooltips = [symbol.description for symbol in operators_compatible]
 
-            flags_compatible = {flag for flag in FLAGS if flag.name in symbols_compatible}
+            flags_compatible = sorted([flag for flag in FLAGS if flag.name in symbols_compatible])
             ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_compatible]
             ui_flags.tooltips = [symbol.description for symbol in flags_compatible]
 
         
         def new_operator(value):
 
-            ui_flags.value = None
+            symbols_compatible = get_symbols_compatible()
+
+            flag_old = ui_flags.value
+            flags_compatible = sorted([flag for flag in FLAGS if flag.name in symbols_compatible])
+            ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_compatible]
+            ui_flags.tooltips = [symbol.description for symbol in flags_compatible]
+            if flag_old in flags_compatible:
+                ui_flags.value = flag_old
+            else:
+                ui_flags.value = None
             
-            if ui_connectors.value is not None and ui_operators.value is not None:
-                ui_instruction.value = f'{ui_connectors.value.glyph} {ui_operators.value.glyph}'
+            ui_instruction.value = build_instruction(ui_connectors, ui_operators, ui_flags)
 
             if ui_operators.value in OPERATORS.by_trait['unary']:
                 ui_instruction_value.value = ''
@@ -1410,16 +1437,9 @@ class DataFrameQueryInteractiveMode:
                 ui_instruction_value.layout.visibility = 'visible'
                 ui_instruction_value.layout.width = 'auto'
 
-            symbols_compatible = get_symbols_compatible()
-
-            flags_compatible = {flag for flag in FLAGS if flag.name in symbols_compatible}
-            ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_compatible]
-            ui_flags.tooltips = [symbol.description for symbol in flags_compatible]
-
-        
+    
         def new_flag(value):
-            if ui_connectors.value is not None and ui_operators.value is not None and ui_flags.value is not None:
-                ui_instruction.value = f'{ui_connectors.value.glyph} {ui_flags.value.glyph} {ui_operators.value.glyph}'
+            ui_instruction.value = build_instruction(ui_connectors, ui_operators, ui_flags)
 
 
         connectors = sorted(list(CONNECTORS))
@@ -1476,9 +1496,9 @@ class DataFrameQueryInteractiveMode:
 
         ui_builder = widgets.VBox([
             widgets.HBox([
+                ui_button,
                 ui_instruction,
                 ui_instruction_value,
-                ui_button,
                 ]),
             ui_connectors,
             ui_operators,
