@@ -1013,11 +1013,39 @@ def test_set_val():
         """,
         ['ID', 'name']
     ),
+
+    (
+        r"""
+        id  $!sort;   %is any;
+        """,
+        'ID'
+    ),
+    (
+        r"""
+        name  $!sort;   %is any;
+        """,
+        'name'
+    ),
+    (
+        r"""
+        id /name  $!sort;   %is any;
+        """,
+        ['ID', 'name']
+    ),
+    (
+        r"""
+        name /id  $!sort;   %is any;
+        """,
+        ['ID', 'name']
+    ),
     ])
 def test_sort(code, expected_cols):
     df = qp.get_df()
     result = df.q(code)
-    expected = df.sort_values(by=expected_cols)
+    if '$!sort;' in code:
+        expected = df.sort_values(by=expected_cols, ascending=False)
+    else:
+        expected = df.sort_values(by=expected_cols)
     assert result.equals(expected), 'failed test: sort values\n' + qp.diff(result, expected, output='str')
 
 

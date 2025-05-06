@@ -559,6 +559,7 @@ def validate(instruction, settings):
     symbols_list.extend([flag.name for flag in instruction.flags])
     symbols = compatible.loc[symbols_list, symbols_list]
 
+    #current approach is fast but not very specific in which symbols are not compatible
     if symbols.all().all():
         log(f'trace: instruction "{instruction.code}" is valid', 'qp.qlang.validate', settings.verbosity)
     else:
