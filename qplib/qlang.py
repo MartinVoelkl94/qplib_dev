@@ -1455,22 +1455,24 @@ class DataFrameQueryInteractiveMode:
         ui_connectors.observe(new_connector, names='value')
 
 
+        operators = sorted(list(OPERATORS))
         ui_operators = widgets.ToggleButtons(
-            options=[(symbol.glyph, symbol) for symbol in OPERATORS],
+            options=[(symbol.glyph, symbol) for symbol in operators],
             description='operators:',
             value=None,
-            tooltips=[symbol.description for symbol in OPERATORS],
+            tooltips=[symbol.description for symbol in operators],
             layout=Layout(width='auto', height='auto'),
             )
         ui_operators.style.button_width = 'auto'
         ui_operators.observe(new_operator, names='value')
 
 
+        flags = sorted(list(FLAGS))
         ui_flags = widgets.ToggleButtons(
-            options=[(symbol.glyph, symbol) for symbol in FLAGS],
+            options=[(symbol.glyph, symbol) for symbol in flags],
             description='flags:',
             value=None,
-            tooltips=[symbol.description for symbol in FLAGS],
+            tooltips=[symbol.description for symbol in flags],
             layout=Layout(width='auto', height='auto'),
             )
         ui_flags.style.button_width = 'auto'
