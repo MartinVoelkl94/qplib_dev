@@ -60,19 +60,33 @@ def log(text=None, context='', verbosity=None, clear=False):
         return pd.DataFrame(logs)
 
     
-    levels = {'TRACE': 5, 'DEBUG': 4, 'INFO': 3, 'WARNING': 2, 'ERROR': 1}
-    colors = {'TRACE': GREY_LIGHT, 'DEBUG': BLUE_LIGHT, 'INFO': GREEN_LIGHT, 'WARNING': ORANGE_LIGHT, 'ERROR': RED_LIGHT}
+    levels = {
+        'TRACE': 5,
+        'DEBUG': 4,
+        'INFO': 3,
+        'WARNING': 2,
+        'ERROR': 1,
+        }
+    colors = {
+        'TRACE': GREY_LIGHT,
+        'DEBUG': BLUE_LIGHT,
+        'INFO': GREEN_LIGHT,
+        'WARNING': ORANGE_LIGHT,
+        'ERROR': RED_LIGHT,
+        }
+    
     level = 'INFO'
     level_int = 3
     text_temp = text.upper()
 
+    #detect logging level
     for level_temp in levels.keys():
         if text_temp.startswith(level_temp):
             level = level_temp
             level_int = levels[level]
             color = colors[level]
             text = text[len(level_temp):].strip()
-            if text[0] in [':', '-', ' ']:
+            if text and text[0] in [':', '-', ' ']:
                 text = text[1:].strip()
             break
 
@@ -88,14 +102,18 @@ def log(text=None, context='', verbosity=None, clear=False):
     logs.append(message)
 
     if level_int <= verbosity:
+        #make html friendly
         message['text'] = message['text'].replace('\n', '<br>').replace('\t', '&emsp;')
         message['context'] = message['context'].replace('\n', '<br>').replace('\t', '&emsp;')
         message_df = pd.DataFrame(message, index=[len(logs)])
+
+        #for jupyter
         if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':
             display(message_df.style.hide(axis=1).apply(
                     lambda x: [f'background-color: {color}' for i in x], axis=1
                     ).set_properties(**{'text-align': 'left'})
                 )
+        #everywhere else
         else:
             print(message_df)
 
@@ -260,7 +278,7 @@ def ls(path_or_object='', out='df', recursive=False, verbosity=3):
         layers = []
         result = pd.DataFrame()
         result = _ls_object(path_or_object, recursive, result, layers)
-        return result#.fillna('')
+        return result
 
 def lsr(path_or_object='', out='df', recursive=True):
     """
@@ -305,7 +323,6 @@ def _list_files(path, out, recursive):
         files['type'] = files['_path'].apply(lambda x: 'dir' if os.path.isdir(x) else os.path.splitext(x)[1])
 
         files.drop(columns='_path', inplace=True)
-        # display(files)
 
         return files
 
@@ -472,34 +489,25 @@ def mkdir(name, verbosity=3):
     return
 
 
-def isdir(name, verbosity=3):
+def isdir(name):
     """
     check if directory exists
     """
-    if os.path.isdir(name):
-        return True
-    else:
-        return False
+    return os.path.isdir(name)
   
     
-def isfile(name, verbosity=3):
+def isfile(name):
     """
     check if file exists
     """
-    if os.path.isfile(name):
-        return True
-    else:
-        return False
+    return os.path.isfile(name)
 
 
-def ispath(name, verbosity=3):
+def ispath(name):
     """
     check if path exists
     """
-    if os.path.exists(name):
-        return True
-    else:
-        return False
+    return os.path.exists(name)
 
 
 
