@@ -75,6 +75,7 @@ def log(text=None, context='', verbosity=None, clear=False):
         'ERROR': RED_LIGHT,
         }
     
+    color = GREEN_LIGHT
     level = 'INFO'
     level_int = 3
     text_temp = text.upper()
