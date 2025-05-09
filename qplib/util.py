@@ -94,11 +94,17 @@ def log(text=None, context='', verbosity=None, clear=False):
     if verbosity is None:
         verbosity = level_int
     
+    if len(logs) == 0:
+        delta_ms = 0.0
+    else:
+        delta_ms = pd.Timestamp.now() - logs[-1]['time']
+        delta_ms = delta_ms.total_seconds()*1000
     message = {
         'level': level,
         'text': text,
         'context': context,
-        'time': time
+        'time': time,
+        'delta_ms': delta_ms,
         }
     logs.append(message)
 
