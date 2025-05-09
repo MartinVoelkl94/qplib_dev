@@ -267,7 +267,9 @@ def query(df_old, code=''):
             df_new = df_old.copy()
             settings.df_copied = True
 
+        log(f'debug: applying instruction:\n"{instruction}"', 'qp.qlang.query', settings.verbosity)
         df_new, settings  = instruction.function(instruction, df_new, settings)
+        log(f'trace: instruction applied', 'qp.qlang.query', settings.verbosity)
 
 
 
@@ -547,7 +549,7 @@ def parse(instruction_tokenized, settings):
         settings.copy_df = True
 
 
-    log(f'debug: parsed:\n{instruction}',
+    log(f'trace: parsed instruction: "{instruction.code}"',
         'qp.qlang.parse', verbosity)
 
     return instruction, settings
