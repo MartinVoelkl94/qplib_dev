@@ -52,7 +52,8 @@ def get_df_tagged():
 def check_message(expected_message):
     logs = qp.log()
     logs['text_full'] = logs['level'] + ': ' + logs['text']
-    assert expected_message in logs['text_full'].values, f'did not find expected message in logs: {expected_message}\n {logs['text_full']}'
+    log_texts = logs['text_full'].to_list()
+    assert expected_message in logs['text_full'].values, f'did not find expected message: {expected_message}\nin logs:\n{log_texts}'
 
 
 df = get_df()
