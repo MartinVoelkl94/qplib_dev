@@ -2,13 +2,38 @@
 
 A query language for pandas data exploration/analysis/modification.
 
-It is implemented as an [accessor extension](https://pandas.pydata.org/docs/development/extending.html), meaning it can be called from a dataframe without any further preparation by calling df.q() with a valid text string.  
+It is implemented as an [accessor extension](https://pandas.pydata.org/docs/development/extending.html), meaning it can be called from a dataframe without any further preparation by calling df.q() with a valid text string.
+
+example:
+```python
+import qplib as qp
+
+df = qp.get_df()
+
+
+#"%" selects columns
+#"%%" selects rows
+#show all patients with ID > 2000
+df.q(r'%id  %%>20000')
+
+#select all patients whose name contains "j"
+df.q(r'%name  %%?j')
+
+#select all patients whose name contains "j" and "a"
+df.q(r'%name  %%?j  &&?a')
+
+#select all patients whose name contains "j" or "a"
+df.q(r'%name  %%?j  //?a')
+```
 
 An interactive wrapper can be called with df.qi() to help with query creation and for exploring the syntax.  
 
-Take a look at "interactive_demo.ipynb" in the github repo for a quick syntax introduction.
+Take a look at "interactive_demo.ipynb" in the github repo for a quick syntax introduction and more examples.
+
+The query language allows for arbitrary code execution via eval(), please be aware of the risks.
 
 Currently published on [testpypi](https://test.pypi.org/project/qplib/).
+
 <br>
 <br>
 
