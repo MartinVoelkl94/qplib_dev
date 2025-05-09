@@ -13,7 +13,7 @@ df = qp.get_df()
 
 #"%" selects columns
 #"%%" selects rows
-#show all patients with ID > 2000
+#show all patients with ID > 20000
 df.q(r'%id  %%>20000')
 
 #select all patients whose name contains "j"
