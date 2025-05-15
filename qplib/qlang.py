@@ -1353,8 +1353,11 @@ class DataFrameQueryInteractiveMode:
         kwargs = {'df': fixed(self.df), 'code': ''}
 
         #code input
+        readme = '$verbosity=3\n$diff=None\n\n#Enter query code here,\n' \
+                + '#or use the buttons to the right to create a query.\n' \
+                + '#hover over buttons for tooltips.\n\n'
         ui_code = widgets.Textarea(
-            value='$verbosity=3\n$diff=None\n\n#Enter query code here,\n#or use the buttons to the right to create a query\n\n',
+            value=readme,
             layout=Layout(width='35%', height='97%')
             )
 
