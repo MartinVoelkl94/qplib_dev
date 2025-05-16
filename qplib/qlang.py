@@ -589,7 +589,7 @@ def _select_cols(instruction, df_new, settings):
         log(f'warning: no columns fulfill the condition in "{instruction.code}"',
             'qp.qlang._select_cols', verbosity)
 
-    if cols is None:
+    if cols is None: #pragma: no cover (should not happen)
         cols = cols_new
     elif instruction.connector == CONNECTORS.NEW_SELECT_COLS:
         cols = cols_new
@@ -683,7 +683,7 @@ def _filter_series(series, instruction, settings, df_new=None):
             filtered = series.astype(str).str.fullmatch(value)
         elif operator == OPERATORS.CONTAINS:
             filtered = series.astype(str).str.contains(value)
-        else:
+        else: #pragma: no cover (covered by validate())
             log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._filter_series', verbosity)
 
 
@@ -832,7 +832,7 @@ def _filter_series(series, instruction, settings, df_new=None):
         elif operator == OPERATORS.EQUALS:
             filtered = series == value
 
-    else:
+    else: #pragma: no cover  (should not happen)
         log(f'error: could not apply filter condition',
             'qp.qlang._filter_series', verbosity)
 
@@ -869,9 +869,9 @@ def _load_selection(instruction, df_new, settings):
     if value in masks.keys():
         mask = masks[value].copy()
     else:
-        log(f'error: selection "{value}" not found in saved selections',
+        log(f'error: selection "{value}" is not in saved selections',
             'qp.qlang._load_selection', verbosity)
-        return None
+        return None, settings
 
     if connector == CONNECTORS.NEW_SELECT_ROWS:
         masks[0] = mask
@@ -911,7 +911,7 @@ def _modify_settings(instruction, df_new, settings):
         else:
             log(f'warning: diff must be one of [None, mix, old, new, new+]. "{value}" is not valid',
                 'qp.qlang._modify_settings', verbosity)
-    else:
+    else: #pragma: no cover (covered by validate())
         log(f'error: no setting flag found in "{instruction.code}"',
             'qp.qlang._modify_settings', verbosity)
 
@@ -935,9 +935,9 @@ def _modify_metadata(instruction, df_new, settings):
 
     if 'meta' not in df_new.columns:
         log(f'info: no metadata column found in dataframe. creating new column named "meta"',
-            'qp.qlang._metadata', verbosity)
+            'qp.qlang._modify_metadata', verbosity)
         df_new['meta'] = ''
-        cols = pd.concat([cols, pd.Series([False])])
+        cols = pd.concat([cols, pd.Series([True])])
         cols.index = df_new.columns
 
 
@@ -949,8 +949,8 @@ def _modify_metadata(instruction, df_new, settings):
             df_new.loc[rows, 'meta'] = f'\n{tag}: {value}'
         elif operator == OPERATORS.ADD:
             df_new.loc[rows, 'meta'] += f'\n{tag}: {value}'
-        else:
-            log(f'error: operator "{operator}" is not compatible with TAG_METADATA flag', 'qp.qlang._metadata', verbosity)
+        else: #pragma: no cover (covered by validate())
+            log(f'error: operator "{operator}" is not compatible with TAG_METADATA flag', 'qp.qlang._modify_metadata', verbosity)
 
     elif operator == OPERATORS.SET:
         df_new.loc[rows, 'meta'] = value
@@ -967,14 +967,14 @@ def _modify_metadata(instruction, df_new, settings):
             else:  #only needs to be evaluated once
                 eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
                 df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].map(lambda x: eval_result)
-        else:
+        else: #pragma: no cover (tests only run with pandas >= 2.1.0)
             if 'x' in value:
                 df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
             else:
                 eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
                 df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].applymap(lambda x: eval_result)
 
-    else:
+    else: #pragma: no cover (covered by validate())
         log(f'error: operator "{operator}" is not compatible with metadata modification',
             'qp.qlang._modify_metadata', verbosity)
 
@@ -1032,7 +1032,7 @@ def _modify_format(instruction, df_new, settings):
             value += ';'
         style[mask_temp] += value
 
-    else:
+    else: #pragma: no cover (should not happen)
         log(f'error: no format flag found in "{instruction.code}"',
             'qp.qlang._modify_format', verbosity)
 
@@ -1088,7 +1088,7 @@ def _modify_headers(instruction, df_new, settings):
                     },
                 inplace=True
                 )
-    else:
+    else: #pragma: no cover (covered by validate())
         log(f'error: operator "{operator}" is not compatible with header modification',
             'qp.qlang._modify_headers', verbosity)
 
@@ -1152,7 +1152,7 @@ def _modify_vals(instruction, df_new, settings):
             rows = mask_temp.any(axis=1)
             changed = df_new.loc[rows, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
             df_new = df_new.mask(mask_temp, changed)
-        else:
+        else: #pragma: no cover (covered by validate())
             log(f'error: operator "{operator}" is not compatible with COL_EVAL flag', 'qp.qlang._modify_vals', verbosity)
 
     elif FLAGS.REGEX in instruction.flags:
@@ -1160,7 +1160,7 @@ def _modify_vals(instruction, df_new, settings):
             rows = mask_temp.any(axis=1)
             for col in df_new.columns[cols]:
                 df_new.loc[rows, col] = df_new.loc[rows, col].str.extract(value).loc[rows, 0]
-        else:
+        else: #pragma: no cover (covered by validate())
             log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._modify_vals', verbosity)
 
     elif operator == OPERATORS.SORT:
@@ -1190,7 +1190,7 @@ def _modify_vals(instruction, df_new, settings):
                 for col in df_new.columns[cols]:
                     df_new[col] = df_new[col].astype(dtype_conversions[operator])
 
-    else:
+    else: #pragma: no cover (tests only run with pandas >= 2.1.0)
         #data modification
         if operator == OPERATORS.EVAL:
             rows = mask_temp.any(axis=1)
@@ -1240,7 +1240,7 @@ def _new_col(instruction, df_new, settings):
 
     if operator == OPERATORS.SET:
         for i in range(1, 1001):
-            if i == 1000:
+            if i == 1000: #pragma: no cover (unlikely to happen)
                 log(f'warning: could not add new column. too many columns named "new<x>"',
                     'qp.qlang._new_col', verbosity)
                 break
@@ -1259,7 +1259,7 @@ def _new_col(instruction, df_new, settings):
 
     elif operator == OPERATORS.EVAL:
         for i in range(1, 1001):
-            if i == 1000:
+            if i == 1000: #pragma: no cover (unlikely to happen)
                 log(f'warning: could not add new column. too many columns named "new<x>"',
                     'qp.qlang._new_col', verbosity)
                 break
@@ -1342,7 +1342,7 @@ class DataFrameQuery:
 
 
 @pd.api.extensions.register_dataframe_accessor('qi')
-class DataFrameQueryInteractiveMode: #pragma: no cover
+class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested)
     """
     Interactive version of df.q() for building queries in Jupyter notebooks.
     """
@@ -1544,7 +1544,7 @@ class DataFrameQueryInteractiveMode: #pragma: no cover
         out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
         display(out)
 
-def _interactive_mode(**kwargs):
+def _interactive_mode(**kwargs): #pragma: no cover (dynamic UI is not tested)
     df = kwargs.pop('df')
     code = kwargs.pop('code')
     result = query(df, code)

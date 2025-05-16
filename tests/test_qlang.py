@@ -1,8 +1,9 @@
 
 import pytest
-import qplib as qp
 import pandas as pd
 import numpy as np
+import qplib as qp
+from qplib import log
 
 
 
@@ -238,6 +239,9 @@ df = get_df()
     (r'diabetes     %%is bool;',         df.loc[[0,1,3,4,5,6,9,10], ['diabetes']], None),
     (r'diabetes     %%strict is bool;',  df.loc[[], ['diabetes']], None),
 
+    (r'date of birth  %%is date;',       df.loc[:, ['date of birth']], None),
+    (r'date of birth  %%is datetime;',   df.loc[:, ['date of birth']], None),
+
     (r'diabetes  %%is yn;',              df.loc[[0,1,3,4,5,6,9,10], ['diabetes']], None),
     (r'diabetes  %%is na;  //is yn;',    df.loc[:, ['diabetes']], None),
     (r'diabetes  %%is yes;',             df.loc[[1,4,5,10], ['diabetes']], None),
@@ -245,7 +249,9 @@ df = get_df()
 
     (r'cholesterol  %%is na;',           df.loc[[2,4,7,9], ['cholesterol']], None),
     (r'age          %%is na;',           df.loc[[2,3,6,8], ['age']], None),
-    (r'age          %%strict is na;',           df.loc[[2,3], ['age']], None),
+    (r'age          %%strict is na;',    df.loc[[2,3], ['age']], None),
+
+    (r'age  %%is nk;',              df.loc[[7,9], ['age']], None),
 
 
     #using regex equality
@@ -641,6 +647,7 @@ def test_diff_retain_meta():
 
 
 def test_eval():
+
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
@@ -726,6 +733,12 @@ def test_eval():
     assert result.equals(expected), 'failed test8: conditionally convert multiple entries to str\n' + qp.diff(result, expected, output='str')
 
 
+    df = get_df()
+    result = df.q('name  $~str(1)')
+    expected = df.copy().loc[:, ['name']]
+    expected['name'] = '1'
+    assert result.equals(expected), 'failed test9: convert all entries to python expression\n' + qp.diff(result, expected, output='str')
+
 
 
 def test_header():
@@ -772,6 +785,59 @@ def test_header():
 
 
 
+
+
+def test_logging():
+    df = get_df()
+
+    result = df.q(r'$diff=mix  $color=red')
+    check_message('WARNING: diff and style formatting are not compatible. formatting will be ignored')
+
+    log(clear=True, verbosity=1)
+    result = df.q(r'diabetes  %%is na;')
+    result1 = df.q(r'diabetes  %%is na;0')
+    expected = df.copy().loc[[2,7,8], ['diabetes']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result1.equals(expected), qp.diff(result1, expected, output='str')
+    check_message('WARNING: value 0 will be ignored for unary operator "is na;: IS_NA"')
+
+    log(clear=True, verbosity=1)
+    result = df.q(r'test  %%is na;')
+    expected = pd.DataFrame()
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    check_message('WARNING: no columns fulfill the condition in "%test  "')
+    check_message('WARNING: row filter cannot be applied when no columns where selected')
+
+    log(clear=True, verbosity=1)
+    result = df.q(r'id %%=@test')
+    expected = df.copy().loc[:, ['ID']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    check_message('ERROR: column "test" not found in dataframe. cannot use "@test" as value for row selection')
+
+    log(clear=True, verbosity=1)
+    with pytest.raises(AttributeError):
+        result = df.q(r'%%load1')
+    check_message('ERROR: selection "1" is not in saved selections')
+
+    log(clear=True, verbosity=1)
+    result = df.q(r'$verbosity=6')
+    check_message('WARNING: verbosity must be an integer between 0 and 5. "6" is not valid')
+
+    log(clear=True, verbosity=1)
+    result = df.q(r'$diff=old+')
+    check_message('WARNING: diff must be one of [None, mix, old, new, new+]. "old+" is not valid')
+    
+    log(clear=True, verbosity=1)
+    result = df.q(r'test  $header=abc')
+    check_message('WARNING: header modification cannot be applied when no columns where selected')
+    
+    log(clear=True, verbosity=1)
+    result = df.q(r'$new=@test')
+    check_message('ERROR: column "test" not found in dataframe. cannot add a new column thats a copy of it')
+
+
+
+
 df = get_df()
 @pytest.mark.parametrize("code, metadata", [
     (r'a %%>0  $meta = >0  %is any;  %%is any;', ['', '', '>0']),
@@ -779,6 +845,7 @@ df = get_df()
     (r'=a   %%>0   $meta +=>0  %is any;  %%is any;', [ '', '', '>0']),
     (r'=a%%>0     $meta+= >0  %is any;  %%is any;', [ '', '', '>0']),
     (r'=a   %%>0   $meta ~ x + ">0"  %is any;  %%is any;', [ '', '', '>0']),
+    (r'=a   %%>0   $meta ~ ">" + str(0)  %is any;  %%is any;', [ '', '', '>0']),
     (r'=a   %%>0   $meta col~ col + ">0"  %is any;  %%is any;', [ '', '', '>0']),
     (r'=a%%>0     $tag   %is any;  %%is any;', [ '', '', '\n@a: ']),
     (r'=a%%>0  /b     $tag  %is any;  %%is any;', [ '', '', '\n@a@b: ']),
@@ -790,6 +857,16 @@ def test_metadata(code, metadata):
     df1 = get_df_simple_tagged()
     df1['meta'] = metadata
     assert df.equals(df1), 'failed test: metadata tagging\n' + qp.diff(df, df1, output='str')
+
+
+def test_metadata_init():
+    df = pd.DataFrame({
+        'a': [1, 2, 3],
+        })
+    result = df.q(r'$meta=a   %is any;')
+    expected = df.copy()
+    expected['meta'] = ['a', 'a', 'a']
+    assert result.equals(expected), 'failed test: metadata init\n' + qp.diff(result, expected, output='str')
 
 
 def test_metadata_continous():
@@ -1110,6 +1187,18 @@ def test_style():
     result = df.q(r'$color=red')
     isinstance(result, pd.io.formats.style.Styler)
 
+    #updating the style
+    result = df.q(
+        r"""
+        $color=red
+        $new=a
+        $color=blue
+        """
+        )
+    isinstance(result, pd.io.formats.style.Styler)
+    expected = pd.DataFrame('a', index=df.index, columns=['new1'])
+    assert result.data.equals(expected), 'failed test: updating style\n' + qp.diff(result.data, expected, output='str')
+
 
 def test_tagging():
 
@@ -1259,15 +1348,6 @@ def test_type_inference():
     assert result2.equals(expected2), qp.diff(result2, expected2, output='str')
 
 
-def test_warnings():
-    df = get_df()
-    result = df.q(r'$diff=mix  $color=red')
-    check_message('WARNING: diff and style formatting are not compatible. formatting will be ignored')
 
-    df = get_df()
-    result = df.q(r'diabetes  %%is na;')
-    result1 = df.q(r'diabetes  %%is na;0')
-    expected = df.copy().loc[[2,7,8], ['diabetes']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
-    assert result1.equals(expected), qp.diff(result1, expected, output='str')
-    check_message('WARNING: value 0 will be ignored for unary operator "is na;: IS_NA"')
+
+
