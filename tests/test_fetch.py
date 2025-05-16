@@ -1,6 +1,7 @@
 import datetime
 import os
 import shutil
+import pytest
 import pandas as pd
 import qplib as qp
 
@@ -31,7 +32,34 @@ def setup(tmpdir):
         with open(f'archive/date_{date}.txt', 'w') as f:
             f.write(date)
 
+    with open(f'archive/date_123.txt', 'w') as f:
+        f.write('incorrect date')
 
+
+
+def test_no_timestamps(tmpdir):
+    # setup(tmpdir)
+    with pytest.raises(FileNotFoundError):
+        file = qp.fetch(f'date_')
+
+
+def test_fetch(tmpdir):
+    setup(tmpdir)
+    file = qp.fetch(f'archive/date_{today1}.txt')
+    with open(file, 'r') as f:
+        result = qp.date(f.read())
+        expected = qp.date(today1)
+    assert result == expected, f'failed test for loading most recent file.\nResult: {result}\nexpected: {expected}'
+
+
+def test_fetch_in_root(tmpdir):
+    setup(tmpdir)
+    qp.cd('archive')
+    file = qp.fetch(f'date_{today1}.txt')
+    with open(file, 'r') as f:
+        result = qp.date(f.read())
+        expected = qp.date(today1)
+    assert result == expected, f'failed test for loading most recent file.\nResult: {result}\nexpected: {expected}'
 
 
 def test_most_recent(tmpdir):
@@ -42,6 +70,15 @@ def test_most_recent(tmpdir):
         expected = qp.date(today1)
     assert result == expected, f'failed test for loading most recent file.\nResult: {result}\nexpected: {expected}'
 
+
+def test_most_recent_in_root(tmpdir):
+    setup(tmpdir)
+    qp.cd('archive')
+    file = qp.fetch(f'date_')
+    with open(file, 'r') as f:
+        result = qp.date(f.read())
+        expected = qp.date(today1)
+    assert result == expected, f'failed test for loading most recent file.\nResult: {result}\nexpected: {expected}'
 
 
 
@@ -67,13 +104,13 @@ def test_before_this_year(tmpdir):
     setup(tmpdir)
 
     if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
-        date_correct = yesterday
+        date_correct = yesterday #pragma: no cover
     elif qp.date(last_week).year < qp.date(today).year and qp.date(last_week) > qp.date(last_year):
-        date_correct = last_week
+        date_correct = last_week #pragma: no cover
     elif qp.date(last_month).year < qp.date(today).year and qp.date(last_month) > qp.date(last_year):
-        date_correct = last_month
+        date_correct = last_month #pragma: no cover
     else:
-        date_correct = last_year
+        date_correct = last_year #pragma: no cover
        
     file = qp.fetch(f'archive/date_', before='this year')
     with open(file, 'r') as f:
@@ -86,11 +123,11 @@ def test_before_this_month(tmpdir):
     setup(tmpdir)
     
     if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
-        date_correct = yesterday
+        date_correct = yesterday #pragma: no cover
     elif qp.date(last_week).year < qp.date(today).year and qp.date(last_week) > qp.date(last_year):
-        date_correct = last_week
+        date_correct = last_week #pragma: no cover
     else:
-        date_correct = last_month
+        date_correct = last_month #pragma: no cover
        
     file = qp.fetch(f'archive/date_', before='this month')
     with open(file, 'r') as f:
@@ -103,7 +140,7 @@ def test_before_this_week(tmpdir):
     setup(tmpdir)
     
     if qp.date(yesterday).year < qp.date(today).year and qp.date(yesterday) > qp.date(last_year):
-        date_correct = yesterday
+        date_correct = yesterday #pragma: no cover
     else:
         date_correct = last_week
        

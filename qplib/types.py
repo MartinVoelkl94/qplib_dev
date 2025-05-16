@@ -95,7 +95,8 @@ def _date(x, errors='coerce', na=pd.NaT):
     elif isinstance(result, datetime.datetime) or isinstance(result, pd.Timestamp):
         return result.date()
     
-    elif errors == 'raise':
+    #raise and coerce are handled in _datetime and should not be reached here
+    elif errors == 'raise': #pragma: no cover
         raise ValueError(f"""could not convert "{x}" to datetime.
             Error handling:
             errors='raise': raises a ValueError
@@ -106,7 +107,7 @@ def _date(x, errors='coerce', na=pd.NaT):
     elif errors == 'ignore':
         return x
     elif errors == 'coerce':
-        return na
+        return na #pragma: no cover
     else:
         return errors
 
@@ -323,11 +324,9 @@ class _dict(dict):
         for val in self.values():
             if isinstance(val, dict):
                 values_flat.extend(_dict(val).values_flat())
-            elif isinstance(val, _dict):
-                values_flat.extend(val.values_flat())
             elif hasattr(val, '__iter__') and not isinstance(val, (str, bytes)):
                 for item in val:
-                    if isinstance(item, (dict, _dict)):
+                    if isinstance(item, dict):
                         values_flat.extend(_dict(item).values_flat())
                     else:
                         values_flat.append(item)

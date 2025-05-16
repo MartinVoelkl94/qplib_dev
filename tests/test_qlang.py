@@ -6,14 +6,6 @@ import numpy as np
 
 
 
-
-def get_df_simple():
-    df = pd.DataFrame({
-        'a': [-1, 0, 1],
-        'b': [1, 2, 3]
-        })
-    return df
-
 def get_df_simple_tagged():
     df = pd.DataFrame({
         'meta': ['', '', ''],
@@ -40,13 +32,6 @@ def get_df():
         'dose': ['10kg', 'NaN', '15 mg once a day', '20mg', '20 Mg', '25g', 'NaN', None, '30 MG', '35', '40ml']
         })
     return df
-
-
-def get_df_tagged():
-    df1 = get_df()
-    df2 = pd.DataFrame('', index=df1.index, columns=['meta', *df1.columns])
-    df2.iloc[:, 1:] = df1.loc[:, :]
-    return df2
 
 
 def check_message(expected_message):
@@ -273,9 +258,9 @@ df = get_df()
 
 
     #using regex search
-    ( 'bp systole %%regex?m', df.loc[[4], ['bp systole']], None),
+    (r'bp systole %%regex?m', df.loc[[4], ['bp systole']], None),
     (r'bp systole %%regex?\D', df.loc[[2,4,6], ['bp systole']], None),
-    ( 'bp systole %%regex?\d', df.loc[[0,1,3,4,5,7,9,10], ['bp systole']], None),
+    (r'bp systole %%regex?\d', df.loc[[0,1,3,4,5,7,9,10], ['bp systole']], None),
 
 
      #using index
@@ -491,7 +476,7 @@ def test_row_selection(code, expected, message):
     temp = df.q(code)
     result = df.loc[temp.index, temp.columns]
     assert result.equals(expected), qp.diff(result, expected, output='str')
-    if message:
+    if message: #pragma: no cover
         check_message(message)
 
 
@@ -581,6 +566,78 @@ def test_col_eval():
     assert (result.loc[[5,6,7,9], 'age'] != df.loc[[5,6,7,9], 'name']).all(), 'failed test6: conditionally copy col contents to multiple cols\n' + qp.diff(result, expected, output='str')
     assert result.equals(expected), 'failed test7: conditionally copy col contents to multiple cols\n' + qp.diff(result, expected, output='str')
 
+
+def test_comment():
+    df = get_df()
+    result = df.q('#id')
+    expected = df.copy()
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+    df = get_df()
+    result = df.q('id #name')
+    expected = df.copy().loc[:, ['ID']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+    df = get_df()
+    result = df.q(
+        r"""
+        id
+        #name
+        """
+        )
+    expected = df.copy().loc[:, ['ID']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_diff_mix():
+    df = get_df()
+    result = df.q(r'$new=a   $diff=mix').data
+    result = result.reindex(sorted(result.columns), axis=1)
+    expected = df.copy()
+    expected.insert(0, 'meta', '')
+    expected.insert(1, 'new1', ['a']*11)
+    expected = expected.reindex(sorted(expected.columns), axis=1)
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_diff_new():
+    df = get_df()
+    result = df.q(r'$new=1   $diff=new').data
+    expected = pd.DataFrame({
+        'meta': ['']*11,
+        'new1': ['1']*11,
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_diff_new_plus():
+    df = pd.DataFrame({
+        'a': [1,2,3],
+        })
+    result = df.q(r'$val=b   $diff=new+').data
+    expected = pd.DataFrame({
+            'meta': ['<br>vals changed: 1', '<br>vals changed: 1', '<br>vals changed: 1'],
+            'a': ['b', 'b', 'b'],
+            'old: a': [1, 2, 3],
+            })
+    expected['old: a'] = expected['old: a'].astype('object')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_diff_old():
+    df = get_df()
+    result = df.q(r'$new=1   $diff=old').data
+    expected = df.copy()
+    expected.insert(0, 'meta', '')
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_diff_retain_meta():
+    df = get_df()
+    df.insert(0, 'meta', 'test')
+    result = df.q(r'id $diff=new').data
+    expected = df.copy().loc[:, ['meta', 'ID']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_eval():
@@ -899,7 +956,7 @@ def test_new_col1():
 def test_save_load(code, expected, message):
     result = get_df().q(code)
     assert result.equals(expected), qp.diff(result, expected, output='str')
-    if message:
+    if message: #pragma: no cover
         check_message(message)
 
 
@@ -1047,6 +1104,11 @@ def test_sort(code, expected_cols):
         expected = df.sort_values(by=expected_cols)
     assert result.equals(expected), 'failed test: sort values\n' + qp.diff(result, expected, output='str')
 
+
+def test_style():
+    df = get_df()
+    result = df.q(r'$color=red')
+    isinstance(result, pd.io.formats.style.Styler)
 
 
 def test_tagging():
@@ -1197,4 +1259,15 @@ def test_type_inference():
     assert result2.equals(expected2), qp.diff(result2, expected2, output='str')
 
 
+def test_warnings():
+    df = get_df()
+    result = df.q(r'$diff=mix  $color=red')
+    check_message('WARNING: diff and style formatting are not compatible. formatting will be ignored')
 
+    df = get_df()
+    result = df.q(r'diabetes  %%is na;')
+    result1 = df.q(r'diabetes  %%is na;0')
+    expected = df.copy().loc[[2,7,8], ['diabetes']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result1.equals(expected), qp.diff(result1, expected, output='str')
+    check_message('WARNING: value 0 will be ignored for unary operator "is na;: IS_NA"')

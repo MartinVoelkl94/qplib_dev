@@ -297,7 +297,7 @@ def query(df_old, code=''):
     elif settings.style is not None:
         rows_shared = df_filtered.index.intersection(settings.style.index)
         cols_shared = df_filtered.columns.intersection(settings.style.columns)
-        def f(x, style):
+        def f(x, style): #pragma: no cover
             return style
         result = df_filtered.style.apply(lambda x: f(x, settings.style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
 
@@ -540,7 +540,7 @@ def parse(instruction_tokenized, settings):
 
     #general checks
     if instruction.operator in OPERATORS.by_trait['unary'] and len(instruction.value) > 0:
-        log(f'warning: value {instruction.value} will be ignored for unary operator "{instruction.operator}"',
+        log(f'warning: value {instruction.value} will be ignored for unary operator {instruction.operator}',
             'qp.qlang.parse', verbosity)
         instruction.value = ''
     if flags.intersection(FLAGS.by_trait['copy_df']) and not INPLACE:
@@ -1342,7 +1342,7 @@ class DataFrameQuery:
 
 
 @pd.api.extensions.register_dataframe_accessor('qi')
-class DataFrameQueryInteractiveMode:
+class DataFrameQueryInteractiveMode: #pragma: no cover
     """
     Interactive version of df.q() for building queries in Jupyter notebooks.
     """

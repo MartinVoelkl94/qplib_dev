@@ -313,6 +313,8 @@ def test_date(input, expected):
 
 
 @pytest.mark.parametrize("input, expected", [
+    (0, pd.NaT),
+
     ('2020-01-01', (2020, 1, 1)),
     ('2020-01-01 00:00:00', (2020, 1, 1)),
     ('2020-01-01 00:00:01', (2020, 1, 1, 0, 0, 1)),
@@ -357,8 +359,11 @@ def test_date(input, expected):
 
 def test_datetime(input, expected):
     result = qp.datetime(input)
-    expected = datetime.datetime(*expected)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    if expected is pd.NaT:
+        assert result is expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    else:
+        expected = datetime.datetime(*expected)
+        assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
 
@@ -694,11 +699,11 @@ def test_dict_setattr():
 def test_dict_values_flat():
     d = qp.dict({
         'a': 1,
-        'b': [2, 3],
+        'b': [2, {'x': 3}],
         'c': (4, 5),
         'd': {6,7},
-        'e': {'e0': 8, 'e1': 9},
-        'f': qp.dict({'f0': 10, 'f1': [11, 12]})
+        'e': {'y0': 8, 'y1': {'y2': 9}},
+        'f': qp.dict({'z0': 10, 'z1': [11, 12]})
         })
     assert d.values_flat() == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "Failed for nested structures"
 

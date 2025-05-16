@@ -115,7 +115,7 @@ def log(text=None, context='', verbosity=None, clear=False):
         message_df = pd.DataFrame(message, index=[len(logs)])
 
         #for jupyter
-        if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':
+        if get_ipython().__class__.__name__ == 'ZMQInteractiveShell': #pragma: no cover
             display(message_df.style.hide(axis=1).apply(
                     lambda x: [f'background-color: {color}' for i in x], axis=1
                     ).set_properties(**{'text-align': 'left'})
@@ -183,15 +183,15 @@ def fetch(path, before='now', verbosity=3):
                 extension = '.' + timestamp_str_full.split('.')[-1]
                 timestamp_str = timestamp_str_full.replace(f'{extension}', '')
                 timestamp = _datetime(timestamp_str)
-                if timestamp < _datetime(cutoff):  #type: ignore  (turns of pylance for this line)
+                if timestamp < _datetime(cutoff):  #type: ignore  (turns off pylance for this line)
                     timestamps[timestamp] = timestamp_str
-            except:
+            except: #pragma: no cover
                 pass
 
     if len(timestamps) == 0:
         log(f'error: no timestamped files starting with "{name}" found in "{folder}" before {cutoff}',
             'qp.fetch()', verbosity)
-        return None
+        raise FileNotFoundError(f'no timestamped files starting with "{name}" found in "{folder}" before {cutoff}')
     else:
         timestamps = timestamps.sort_index()
         latest = timestamps.iloc[len(timestamps) - 1]
@@ -215,7 +215,7 @@ def match(patterns, value, regex=True):
 
 
 
-def header(word='header', slim=True, width=None, filler=' '):
+def header(word='header', slim=True, width=None, filler=' '): #pragma: no cover
     """
     Creates text headers for code sections or plain text.
 
@@ -258,7 +258,7 @@ def header(word='header', slim=True, width=None, filler=' '):
     print(text)
 
 
-def now(fmt='%Y_%m_%d'):
+def now(fmt='%Y_%m_%d'): #pragma: no cover
     """
     alias for datetime.datetime.now().strftime(format_str)
 

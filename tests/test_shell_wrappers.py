@@ -22,7 +22,7 @@ def test_cd_pwd(tmpdir):
     path = qp.pwd()
     if '\\' in path:
         path = path.split('\\')[-1]
-    elif '/' in path:
+    elif '/' in path: #pragma: no cover
         path = path.split('/')[-1]
     assert path == 'dir1', 'failed test for changing directory and finding path to current directory'
 
@@ -35,7 +35,7 @@ def test_cd_return(tmpdir):
     result1 = qp.pwd()
     if '\\' in result1:
         result1 = result1.split('\\')[-1]
-    elif '/' in result1:
+    elif '/' in result1: #pragma: no cover
         result1 = result1.split('/')[-1]
 
 
@@ -43,7 +43,7 @@ def test_cd_return(tmpdir):
     result2 = qp.pwd()
     if '\\' in result2:
         result2 = result2.split('\\')[-1]
-    elif '/' in result2:
+    elif '/' in result2: #pragma: no cover
         result2 = result2.split('/')[-1]
 
     assert result1 == 'dir2' and result2 == 'dir1', 'failed test for going back and forth in directory structure'
