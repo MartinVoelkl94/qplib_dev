@@ -314,7 +314,7 @@ def _diff_df(
     if max_rows is None:
         max_rows = 200
     if max_cols is None:
-        max_cols = 20
+        max_cols = 50
     if output.endswith('.xlsx'):
         newline = '\n'
     else:
