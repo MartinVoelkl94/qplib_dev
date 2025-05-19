@@ -10,7 +10,7 @@ def hide(
     regex=True,
     hide=True,  #True=hide, False=unhide
     verbosity=3,
-    ):
+    ): #pragma: no cover (does not affect reading of xlsx files)
 
     if hide==True:
         mode = 'hidden'

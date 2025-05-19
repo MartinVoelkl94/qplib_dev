@@ -122,12 +122,12 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
     if fix_headers is True:
         log('info: striping column headers of leading and trailing whitespace',
-            'qp.df.format()', verbosity)
+            'df.format()', verbosity)
         df.columns = df.columns.str.strip()
              
 
     if 'meta' in df.columns:
-        log('debug: ensuring column "meta" is string', 'qp.df.format()', verbosity)
+        log('debug: ensuring column "meta" is string', 'df.format()', verbosity)
         df.loc[:, 'meta'] = df.loc[:, 'meta'].astype(str)
     elif add_metadata is True:
         log('info: adding column "meta" at position 0', 'df.format()', verbosity)

@@ -80,14 +80,14 @@ class Symbol:
         self.traits = traits
 
     def details(self):
-        traits = '\n\t'.join(self.traits)
-        return f'name:{self.name}\n\tsymbol:{self.glyph}\n\tdescription{self.description}\n\ttraits:\n\t{traits}'
+        traits = '\n\t\t'.join(self.traits)
+        return f'symbol:\n\tname: {self.name}\n\tsymbol: {self.glyph}\n\tdescription: {self.description}\n\ttraits:\n\t\t{traits}\n\t'
 
     def __repr__(self):
-        return f'"{self.glyph}: {self.name}"'
+        return f'<"{self.glyph}": {self.name}>'
  
     def __str__(self):
-        return f'"{self.glyph}: {self.name}"'
+        return self.__repr__()
     
     def __lt__(self, value):
         return self.glyph < value
@@ -119,7 +119,7 @@ class Symbols:
         elif value == 'by_trait':
             return super().__getattribute__(value)
         elif value in self.by_glyph:
-            return self.by_glyph[value]
+            return self.by_glyph[value] #pragma: no cover (not possible with current symbols)
         elif value in self.by_name:
             return self.by_name[value]
         elif value in self.by_trait:
@@ -267,7 +267,7 @@ def query(df_old, code=''):
             df_new = df_old.copy()
             settings.df_copied = True
 
-        log(f'debug: applying instruction:\n"{instruction}"', 'qp.qlang.query', settings.verbosity)
+        log(f'debug: applying instruction:\n{instruction}', 'qp.qlang.query', settings.verbosity)
         df_new, settings  = instruction.function(instruction, df_new, settings)
         log(f'trace: instruction applied', 'qp.qlang.query', settings.verbosity)
 
@@ -1007,10 +1007,10 @@ def _modify_format(instruction, df_new, settings):
     if FLAGS.COLOR in flags:
         style[mask_temp] += f'color: {value};'
 
-    elif FLAGS.BACKGROUND_COLOR in flags:
+    elif FLAGS.BACKGROUND_COLOR in flags: #pragma: no cover (visual changes are currently not tested)
         style[mask_temp] += f'background-color: {value};'
 
-    elif FLAGS.ALIGN in flags:
+    elif FLAGS.ALIGN in flags: #pragma: no cover (visual changes are currently not tested)
         if value in ['left', 'right', 'center', 'justify']:
             style[mask_temp] += f'text-align: {value};'
         elif value in ['top', 'middle', 'bottom']:
@@ -1019,7 +1019,7 @@ def _modify_format(instruction, df_new, settings):
             log(f'warning: alignment "{value}" is not valid. must be one of [left, right, center, justify, top, middle, bottom]',
                 'qp.qlang._modify_format', verbosity)
 
-    elif FLAGS.WIDTH in flags:
+    elif FLAGS.WIDTH in flags: #pragma: no cover (visual changes are currently not tested)
         if not value.endswith(('px', 'cm', 'mm', 'in', 'pt', 'pc', 'em', 'ex', 'ch', 'rem', 'vw', 'vh', 'vmin', 'vmax', '%')):
             log(f'warning: no unit for column width was used. defaulting to "px". other options: [cm, mm, in, pt, pc, em, ex, ch, rem, vw, vh, vmin, vmax, %]',
                 'qp.qlang._modify_format', verbosity)
@@ -1027,7 +1027,7 @@ def _modify_format(instruction, df_new, settings):
         style[mask_temp] += f'width: {value};'
 
 
-    elif FLAGS.CSS in flags:
+    elif FLAGS.CSS in flags: #pragma: no cover (visual changes are currently not tested)
         if not value.endswith(';'):
             value += ';'
         style[mask_temp] += value
@@ -1155,13 +1155,14 @@ def _modify_vals(instruction, df_new, settings):
         else: #pragma: no cover (covered by validate())
             log(f'error: operator "{operator}" is not compatible with COL_EVAL flag', 'qp.qlang._modify_vals', verbosity)
 
-    elif FLAGS.REGEX in instruction.flags:
-        if operator == OPERATORS.SET:
-            rows = mask_temp.any(axis=1)
-            for col in df_new.columns[cols]:
-                df_new.loc[rows, col] = df_new.loc[rows, col].str.extract(value).loc[rows, 0]
-        else: #pragma: no cover (covered by validate())
-            log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._modify_vals', verbosity)
+    #wip: reintroduce/change regex flag?
+    # elif FLAGS.REGEX in instruction.flags:
+    #     if operator == OPERATORS.SET:
+    #         rows = mask_temp.any(axis=1)
+    #         for col in df_new.columns[cols]:
+    #             df_new.loc[rows, col] = df_new.loc[rows, col].str.extract(value).loc[rows, 0]
+    #     else: #pragma: no cover (covered by validate())
+    #         log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._modify_vals', verbosity)
 
     elif operator == OPERATORS.SORT:
         if FLAGS.NEGATE in instruction.flags:

@@ -486,6 +486,24 @@ def test_row_selection(code, expected, message):
         check_message(message)
 
 
+def test_check_df():
+    df = pd.DataFrame(
+        0,
+        columns=['a', 'a', ' a', 'a ', '$%&/', '='],
+        index=[1, 1, 2]
+        )
+    log(clear=True, verbosity=1)
+    df.check()
+    check_message('ERROR: index is not unique')
+    check_message('ERROR: columns are not unique')
+    check_message('WARNING: the following column headers contain "%" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following column headers contain "&" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following column headers contain "/" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following column headers contain "$" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message("WARNING: the following column headers contain leading whitespace which should be removed:<br>&emsp;[' a']")
+    check_message("WARNING: the following column headers contain trailing whitespace which should be removed:<br>&emsp;['a ']")
+    check_message("WARNING: the following column headers start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:<br>['=']<br>explicitely use a valid operator to avoid conflicts.")
+
 
 
 def test_col_eval():
@@ -790,6 +808,10 @@ def test_header():
 def test_logging():
     df = get_df()
 
+    docstring = df.q.__str__()
+    expected = "docstring of dataframe accessor pd_object.q():\n\nA query language for pandas data exploration/analysis/modification.\ndf.qi() without any args can be used to interactively build a query in Jupyter notebooks.\n\n\nexamples:\n\n#select col\ndf.q('id')\ndf.q('%id')  #equivalent\ndf.q('%=id') #equivalent\ndf.q('%==id') #equivalent\ndf.q('% == id') #equivalent\n\n#select multiple cols\ndf.q('id  /name')\n\n#select rows in a col which fullfill a condition\ndf.q('id  %%>20000')\n\n#select rows fullfilling multiple conditions in the same col\ndf.q('id  %%>20000   &&<30000')\n\n#select rows fullfilling both conditions in different cols\ndf.q('id  %%>20000    %name   &&?john')\n\n#select rows fullfilling either condition in different cols\ndf.q('id   %%>20000   %name   //?john')\n\n"
+    assert docstring == expected, f'docstring does not match expected:\n{docstring}\n\nexpected:\n{expected}'
+
     result = df.q(r'$diff=mix  $color=red')
     check_message('WARNING: diff and style formatting are not compatible. formatting will be ignored')
 
@@ -799,7 +821,7 @@ def test_logging():
     expected = df.copy().loc[[2,7,8], ['diabetes']]
     assert result.equals(expected), qp.diff(result, expected, output='str')
     assert result1.equals(expected), qp.diff(result1, expected, output='str')
-    check_message('WARNING: value 0 will be ignored for unary operator "is na;: IS_NA"')
+    check_message('WARNING: value 0 will be ignored for unary operator <"is na;": IS_NA>')
 
     log(clear=True, verbosity=1)
     result = df.q(r'test  %%is na;')
@@ -824,8 +846,21 @@ def test_logging():
     check_message('WARNING: verbosity must be an integer between 0 and 5. "6" is not valid')
 
     log(clear=True, verbosity=1)
+    qp.qlang.VERBOSITY = 0
+    result = df.q(r'$verbosity=0')
+    qp.qlang.VERBOSITY = 1
+    assert len(log()) == 0, 'log should be empty when verbosity is set to 0'
+
+    log(clear=True, verbosity=1)
     result = df.q(r'$diff=old+')
     check_message('WARNING: diff must be one of [None, mix, old, new, new+]. "old+" is not valid')
+
+    result1 = df.q(r'$diff=None')
+    result2 = df.q(r'$diff=0')
+    result3 = df.q(r'$diff=false')
+    assert isinstance(result1, pd.DataFrame), f'setting diff to None should return a dataframe, not {type(result1)}'
+    assert result1.equals(result2), qp.diff(result1, result2, output='str')
+    assert result1.equals(result3), qp.diff(result1, result3, output='str')
     
     log(clear=True, verbosity=1)
     result = df.q(r'test  $header=abc')
@@ -918,6 +953,57 @@ def test_new_col(code, content, cols):
     df2['new1'] = content
     expected = df2.loc[:, cols]
     assert result.equals(expected), 'failed test0: creating new col\n' + qp.diff(result, expected, output='str')
+
+
+def test_modify_val():
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        name $ a
+        is any; %%is any;
+        """)
+    df1['name'] = 'a'
+    expected = df1.loc[:, :]
+    assert result.equals(expected), 'failed test0: set values\n' + qp.diff(result, expected, output='str')
+
+
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        name $ =a
+        is any; %%is any;
+        """)
+    df1['name'] = 'a'
+    expected = df1.loc[:, :]
+    assert result.equals(expected), 'failed test1: set values\n' + qp.diff(result, expected, output='str')
+
+
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        name $ a
+        gender $ b
+        is any; %%is any;
+        """)
+    df1['name'] = 'a'
+    df1['gender'] = 'b'
+    expected = df1.loc[:, :]
+    assert result.equals(expected), 'failed test2: set values in multiple cols\n' + qp.diff(result, expected, output='str')
+
+    
+    df = qp.get_df()
+    df1 = qp.get_df()
+    result = df.q(
+        r"""
+        name $=a $+=a
+        is any; %%is any;
+        """)
+    df1['name'] = 'aa'
+    expected = df1.loc[:, :]
+    assert result.equals(expected), 'failed test3: appending to values\n' + qp.diff(result, expected, output='str')
 
 
 def test_new_col1():
@@ -1079,48 +1165,6 @@ def test_selection_scopes():
     assert result.equals(expected), 'failed test3: check selection scope "each"\n' + qp.diff(result, expected, output='str')
 
 
-
-def test_set_val():
-    df = qp.get_df()
-    df1 = qp.get_df()
-    result = df.q(
-        r"""
-        name $ a
-        is any; %%is any;
-        """)
-    df1['name'] = 'a'
-    expected = df1.loc[:, :]
-    assert result.equals(expected), 'failed test0: set values\n' + qp.diff(result, expected, output='str')
-
-
-    df = qp.get_df()
-    df1 = qp.get_df()
-    result = df.q(
-        r"""
-        name $ =a
-        is any; %%is any;
-        """)
-    df1['name'] = 'a'
-    expected = df1.loc[:, :]
-    assert result.equals(expected), 'failed test1: set values\n' + qp.diff(result, expected, output='str')
-
-
-    df = qp.get_df()
-    df1 = qp.get_df()
-    result = df.q(
-        r"""
-        name $ a
-        gender $ b
-        is any; %%is any;
-        """)
-    df1['name'] = 'a'
-    df1['gender'] = 'b'
-    expected = df1.loc[:, :]
-    assert result.equals(expected), 'failed test2: set values in multiple cols\n' + qp.diff(result, expected, output='str')
-
-
-
-
 @pytest.mark.parametrize("code, expected_cols", [
     (
         r"""
@@ -1198,6 +1242,32 @@ def test_style():
     isinstance(result, pd.io.formats.style.Styler)
     expected = pd.DataFrame('a', index=df.index, columns=['new1'])
     assert result.data.equals(expected), 'failed test: updating style\n' + qp.diff(result.data, expected, output='str')
+
+
+def test_symbols():
+    sym1 = qp.qlang.OPERATORS['=']
+    sym1a = qp.qlang.OPERATORS.SET
+    sym1b = qp.qlang.OPERATORS['SET']
+    sym2 = qp.qlang.OPERATORS.TRIM
+    assert sym1 == sym1a, f'symbol {sym1} should be equal to {sym1a}'
+    assert sym1 == sym1b, f'symbol {sym1} should be equal to {sym1b}'
+    assert sym1 != sym2, f'symbol {sym1} should not be equal to {sym2}'
+    assert sym1 < sym2, f'symbol {sym1} should be less than {sym2}'
+
+    details = 'symbol:\n\tname: SET\n\tsymbol: =\n\tdescription: set values\n\ttraits:\n\t\tmodify\n\t\tsettings\n\t\tmetadata\n\t'
+    assert sym1.details() == details, f'symbol {sym1} should have details:\n{details}'
+
+    symbols_modify1 = qp.qlang.OPERATORS.modify
+    symbols_modify2 = qp.qlang.OPERATORS['modify']
+    assert symbols_modify1 == symbols_modify2, f'symbols {symbols_modify1} should be equal to {symbols_modify2}'
+    assert sym1 in symbols_modify1, f'symbol {sym1} should be in modification symbols'
+
+    assert qp.qlang.OPERATORS['x'] is None, f'should return None for unknown symbol'
+    check_message('ERROR: symbol "x" not found in "OPERATORS"')
+
+    connectors = qp.qlang.CONNECTORS.__str__()
+    expected = 'CONNECTORS:\n\t<"%%": NEW_SELECT_ROWS>\n\t<"&&": AND_SELECT_ROWS>\n\t<"//": OR_SELECT_ROWS>\n\t<"%": NEW_SELECT_COLS>\n\t<"&": AND_SELECT_COLS>\n\t<"/": OR_SELECT_COLS>\n\t<"$": MODIFY>'
+    assert connectors == expected, f'CONNECTORS should be:\n{expected}'
 
 
 def test_tagging():
