@@ -5,6 +5,7 @@ from .qlang import query, DataFrameQuery, DataFrameQueryInteractiveMode
 from .pandas import \
     get_df, \
     get_dfs, \
+    merge, \
     _diff as diff
 
 from .xlsx import hide

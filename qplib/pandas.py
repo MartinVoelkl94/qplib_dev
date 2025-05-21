@@ -139,6 +139,88 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
 
 
+ROW_SIGNIFIER_START = '#'
+ROW_SIGNIFIER_STOP = ' ;\n'
+
+def _to_rows(x):
+    x_list = x.tolist()
+    if len(x_list) < 2:
+        return x
+    else:
+        x_str = f'{ROW_SIGNIFIER_START}1: {x_list[0]}{ROW_SIGNIFIER_STOP}'
+        for i, item in enumerate(x_list[1:]):
+            x_str += f'{ROW_SIGNIFIER_START}{i+2}: {item}{ROW_SIGNIFIER_STOP}'
+    return x_str
+
+
+def merge(left, right, on='uid', duplicates=True, prefix=None, verbosity=3):
+    """
+    Performs a modified left join on two dataframes:
+    - left df.index must be unique
+    - right df.index can be non-unique
+    - duplicates in right df are aggregated into a single cell as string
+    - aggregated string format: "#1: item1 ;\n#2: item2 ;\n#3: item3 ;"
+    - (start ("#") and stop (" ;") signifiers can be changed using ROW_SIGNIFIER_START and ROW_SIGNIFIER_STOP)
+    - left join on the specified column
+    - if duplicates=True, all columns from right df are kept
+    - if duplicates=False, only columns from right df that are not in left df are kept
+    - if prefix is None, a sequential integer prefix is generated automatically
+    - if prefix is not None, the prefix is added to all columns from right df
+    - if verbosity > 0, log messages are printed
+
+    for nice excel formatting:
+    - open resulting excel file
+    - select all
+    - make all cols very wide
+    - click "Wrap Text"
+    - auto fit column width
+    - align text to top
+    """
+
+    left = left.copy().fillna('')
+    right = right.copy().fillna('')
+
+
+    #validate
+    if on not in left.columns:
+        log(f'Error: "{on}" is not in left dataframe', 'qp.merge', verbosity=verbosity)
+    elif not left[on].is_unique:
+        log(f'Error: column "{on}" is not unique in left dataframe', 'qp.merge', verbosity=verbosity)
+    if on not in right.columns:
+        log(f'Error: "{on}" is not in right dataframe', 'qp.merge', verbosity=verbosity)
+
+
+    #prepare right dataframe
+
+    right_compact = right.groupby(on).agg(lambda x: _to_rows(x))
+
+    if duplicates:
+        cols = right_compact.columns
+    else:
+        cols_diff = right_compact.columns.difference(left.columns)
+        cols = [col for col in right_compact.columns if col in cols_diff]
+        right_compact = right_compact[cols]
+
+    if prefix is None:
+        i = 1
+        prefix = '1_'
+        while i < 1000:
+            for col in left.columns:
+                if col.startswith(prefix):
+                    i += 1
+                    prefix = f'{i}_'
+            else:
+                break
+    
+    right_compact.columns = [f'{prefix}{col}' for col in right_compact.columns]
+
+
+    #merge dataframes
+    result = pd.merge(left, right_compact, how='left', on=on).fillna('')
+    return result
+
+
+
 def _diff(
     df_new: pd.DataFrame | str,
     df_old: pd.DataFrame | str,
