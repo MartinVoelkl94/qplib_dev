@@ -139,24 +139,22 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
 
 
-ROW_SIGNIFIER_START = '#'
-ROW_SIGNIFIER_STOP = ' ;\n'
 
-def _to_rows(x):
+def _to_lines(x, line_start='#', line_stop=' ;\n'):
     x_list = x.tolist()
     if len(x_list) < 2:
         return x
     else:
-        x_str = f'{ROW_SIGNIFIER_START}1: {x_list[0]}{ROW_SIGNIFIER_STOP}'
+        x_str = f'{line_start}1: {x_list[0]}{line_stop}'
         for i, item in enumerate(x_list[1:]):
-            x_str += f'{ROW_SIGNIFIER_START}{i+2}: {item}{ROW_SIGNIFIER_STOP}'
+            x_str += f'{line_start}{i+2}: {item}{line_stop}'
     return x_str
 
 
-def merge(left, right, on='uid', duplicates=True, prefix=None, verbosity=3):
+def merge(left, right, on='uid', duplicates=True, prefix=None, line_start='#', line_stop=' ;\n', verbosity=3):
     """
     Performs a modified left join on two dataframes:
-    - left df.index must be unique
+    - left df.index should be unique
     - right df.index can be non-unique
     - duplicates in right df are aggregated into a single cell as string
     - aggregated string format: "#1: item1 ;\n#2: item2 ;\n#3: item3 ;"
@@ -185,14 +183,14 @@ def merge(left, right, on='uid', duplicates=True, prefix=None, verbosity=3):
     if on not in left.columns:
         log(f'Error: "{on}" is not in left dataframe', 'qp.merge', verbosity=verbosity)
     elif not left[on].is_unique:
-        log(f'Error: column "{on}" is not unique in left dataframe', 'qp.merge', verbosity=verbosity)
+        log(f'warning: column "{on}" is not unique in left dataframe', 'qp.merge', verbosity=verbosity)
     if on not in right.columns:
         log(f'Error: "{on}" is not in right dataframe', 'qp.merge', verbosity=verbosity)
 
 
     #prepare right dataframe
 
-    right_compact = right.groupby(on).agg(lambda x: _to_rows(x))
+    right_compact = right.groupby(on).agg(lambda x: _to_lines(x, line_start, line_stop))
 
     if duplicates:
         cols = right_compact.columns

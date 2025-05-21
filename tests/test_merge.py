@@ -6,11 +6,6 @@ from qplib import merge, log
 
 
 
-start = qp.pandas.ROW_SIGNIFIER_START
-stop = qp.pandas.ROW_SIGNIFIER_STOP
-
-
-
 def check_message(expected_message):
     logs = qp.log()
     logs['text_full'] = logs['level'] + ': ' + logs['text']
@@ -50,17 +45,17 @@ def test_default():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         '1_age': [
-            f'{start}1: 42{stop}{start}2: 42{stop}',
+            '#1: 42 ;\n#2: 42 ;\n',
             17,
             '',
             ],
         '1_term': [
-            f'{start}1: headache{stop}{start}2: nausea{stop}',
+            '#1: headache ;\n#2: nausea ;\n',
             'headache',
             '',
             ],
         '1_start': [
-            f'{start}1: 2023-01-01{stop}{start}2: {stop}',
+            '#1: 2023-01-01 ;\n#2:  ;\n',
             datetime.date(2021, 12, 3),
             '',
             ],
@@ -76,17 +71,17 @@ def test_prefix():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         'MH_age': [
-            f'{start}1: 42{stop}{start}2: 42{stop}',
+            '#1: 42 ;\n#2: 42 ;\n',
             17,
             '',
             ],
         'MH_term': [
-            f'{start}1: headache{stop}{start}2: nausea{stop}',
+            '#1: headache ;\n#2: nausea ;\n',
             'headache',
             '',
             ],
         'MH_start': [
-            f'{start}1: 2023-01-01{stop}{start}2: {stop}',
+            '#1: 2023-01-01 ;\n#2:  ;\n',
             datetime.date(2021, 12, 3),
             '',
             ],
@@ -102,12 +97,64 @@ def test_duplicates():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         '1_term': [
-            f'{start}1: headache{stop}{start}2: nausea{stop}',
+            '#1: headache ;\n#2: nausea ;\n',
             'headache',
             '',
             ],
         '1_start': [
-            f'{start}1: 2023-01-01{stop}{start}2: {stop}',
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_line_start():
+    df1, df2, df3 = get_dfs()
+    result = merge(df1, df2, on='uid', duplicates=True, prefix=None, line_start='§', verbosity=3)
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '§1: 42 ;\n§2: 42 ;\n',
+            17,
+            '',
+            ],
+        '1_term': [
+            '§1: headache ;\n§2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        '1_start': [
+            '§1: 2023-01-01 ;\n§2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_line_stop():
+    df1, df2, df3 = get_dfs()
+    result = merge(df1, df2, on='uid', duplicates=True, prefix=None, line_stop='§', verbosity=3)
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '#1: 42§#2: 42§',
+            17,
+            '',
+            ],
+        '1_term': [
+            '#1: headache§#2: nausea§',
+            'headache',
+            '',
+            ],
+        '1_start': [
+            '#1: 2023-01-01§#2: §',
             datetime.date(2021, 12, 3),
             '',
             ],
@@ -124,12 +171,12 @@ def test_sequential():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         '1_term': [
-            f'{start}1: headache{stop}{start}2: nausea{stop}',
+            '#1: headache ;\n#2: nausea ;\n',
             'headache',
             '',
             ],
         '1_start': [
-            f'{start}1: 2023-01-01{stop}{start}2: {stop}',
+            '#1: 2023-01-01 ;\n#2:  ;\n',
             datetime.date(2021, 12, 3),
             '',
             ],
@@ -139,23 +186,23 @@ def test_sequential():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         '1_term': [
-            f'{start}1: headache{stop}{start}2: nausea{stop}',
+            '#1: headache ;\n#2: nausea ;\n',
             'headache',
             '',
             ],
         '1_start': [
-            f'{start}1: 2023-01-01{stop}{start}2: {stop}',
+            '#1: 2023-01-01 ;\n#2:  ;\n',
             datetime.date(2021, 12, 3),
             '',
             ],
         '2_term': [
             'mexalen',
-            f'{start}1: aspirin{stop}{start}2: ibuprofen{stop}',
+            '#1: aspirin ;\n#2: ibuprofen ;\n',
             '',
             ],
         '2_dose': [
             '1mg',
-            f'{start}1: {stop}{start}2: 3{stop}',
+            '#1:  ;\n#2: 3 ;\n',
             '',
             ],
         })
@@ -173,24 +220,24 @@ def test_logging():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         '1_term': [
-            f'{start}1: headache{stop}{start}2: nausea{stop}',
-            f'{start}1: headache{stop}{start}2: nausea{stop}',
+            '#1: headache ;\n#2: nausea ;\n',
+            '#1: headache ;\n#2: nausea ;\n',
             '',
             ],
         '1_start': [
-            f'{start}1: 2023-01-01{stop}{start}2: {stop}',
-            f'{start}1: 2023-01-01{stop}{start}2: {stop}',
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            '#1: 2023-01-01 ;\n#2:  ;\n',
             '',
             ],
         })
     assert result.equals(expected), qp.diff(result, expected, output='str')
-    check_message('ERROR: column "uid" is not unique in left dataframe')
+    check_message('WARNING: column "uid" is not unique in left dataframe')
 
     log(clear=True)
     df2.drop(columns=['uid'], inplace=True)
     with pytest.raises(KeyError):
         merge(df1, df2, on='uid', duplicates=False, prefix=None, verbosity=3)
-    check_message('ERROR: column "uid" is not unique in left dataframe')
+    check_message('WARNING: column "uid" is not unique in left dataframe')
     check_message('ERROR: "uid" is not in right dataframe')
 
     log(clear=True)
@@ -198,3 +245,4 @@ def test_logging():
     with pytest.raises(KeyError):
         merge(df1, df3, on='uid', duplicates=False, prefix=None, verbosity=3)
     check_message('ERROR: "uid" is not in left dataframe')
+
