@@ -210,6 +210,201 @@ def test_sequential():
     assert result2.equals(expected2), qp.diff(result2, expected2, output='str')
 
 
+def test_flatten_once():
+    df1, df2, df3 = get_dfs()
+    result = merge(df1, df2, on='uid', flatten='age', duplicates=True, prefix=None, verbosity=3)
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '#1: 42 ;\n#2: 42 ;\n',
+            17,
+            '',
+            ],
+        '1_age_1': [
+            42,
+            17,
+            '',
+            ],
+        '1_age_2': [
+            42,
+            '',
+            '',
+            ],
+        '1_term': [
+            '#1: headache ;\n#2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        '1_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_flatten_list():
+    df1, df2, df3 = get_dfs()
+    result = merge(df1, df2, on='uid', flatten=['age'], duplicates=True, prefix=None, verbosity=3)
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '#1: 42 ;\n#2: 42 ;\n',
+            17,
+            '',
+            ],
+        '1_age_1': [
+            42,
+            17,
+            '',
+            ],
+        '1_age_2': [
+            42,
+            '',
+            '',
+            ],
+        '1_term': [
+            '#1: headache ;\n#2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        '1_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_flatten_twice():
+    df1, df2, df3 = get_dfs()
+    result = merge(df1, df2, on='uid', flatten=['age', 'term'], duplicates=True, prefix=None, verbosity=3)
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '#1: 42 ;\n#2: 42 ;\n',
+            17,
+            '',
+            ],
+        '1_age_1': [
+            42,
+            17,
+            '',
+            ],
+        '1_age_2': [
+            42,
+            '',
+            '',
+            ],
+        '1_term': [
+            '#1: headache ;\n#2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        '1_term_1': [
+            'headache',
+            'headache',
+            '',
+            ],
+        '1_term_2': [
+            'nausea',
+            '',
+            '',
+            ],
+        '1_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_flatten_twice_prefix():
+    df1, df2, df3 = get_dfs()
+    result = merge(df1, df2, on='uid', flatten=['age', 'term'], duplicates=True, prefix='MH_', verbosity=3)
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        'MH_age': [
+            '#1: 42 ;\n#2: 42 ;\n',
+            17,
+            '',
+            ],
+        'MH_age_1': [
+            42,
+            17,
+            '',
+            ],
+        'MH_age_2': [
+            42,
+            '',
+            '',
+            ],
+        'MH_term': [
+            '#1: headache ;\n#2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        'MH_term_1': [
+            'headache',
+            'headache',
+            '',
+            ],
+        'MH_term_2': [
+            'nausea',
+            '',
+            '',
+            ],
+        'MH_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_flatten_twice_prefix_duplicates():
+    df1, df2, df3 = get_dfs()
+    result = merge(df1, df2, on='uid', flatten=['age', 'term'], duplicates=False, prefix='MH_', verbosity=3)
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        'MH_term': [
+            '#1: headache ;\n#2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        'MH_term_1': [
+            'headache',
+            'headache',
+            '',
+            ],
+        'MH_term_2': [
+            'nausea',
+            '',
+            '',
+            ],
+        'MH_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
 def test_logging():
     log(clear=True)
     df1, df2, df3 = get_dfs()

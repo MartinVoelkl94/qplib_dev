@@ -141,24 +141,25 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
 
 def _to_lines(x, line_start='#', line_stop=' ;\n'):
-    x_list = x.tolist()
-    if len(x_list) < 2:
+    if not isinstance(x, list):
         return x
+    if len(x) == 1:
+        return x[0]
     else:
-        x_str = f'{line_start}1: {x_list[0]}{line_stop}'
-        for i, item in enumerate(x_list[1:]):
-            x_str += f'{line_start}{i+2}: {item}{line_stop}'
+        x_str = ''
+        for i, item in enumerate(x):
+            x_str += f'{line_start}{i+1}: {item}{line_stop}'
     return x_str
 
 
-def merge(left, right, on='uid', duplicates=True, prefix=None, line_start='#', line_stop=' ;\n', verbosity=3):
+def merge(left, right, on='uid', flatten=None, duplicates=True, prefix=None, line_start='#', line_stop=' ;\n', verbosity=3):
     """
     Performs a modified left join on two dataframes:
     - left df.index should be unique
     - right df.index can be non-unique
     - duplicates in right df are aggregated into a single cell as string
-    - aggregated string format: "#1: item1 ;\n#2: item2 ;\n#3: item3 ;"
-    - (start ("#") and stop (" ;") signifiers can be changed using ROW_SIGNIFIER_START and ROW_SIGNIFIER_STOP)
+        - aggregated string format: "#1: item1 ;\n#2: item2 ;\n#3: item3 ;"
+    - if flatten is not None, the specified columns are flattened into multiple columns
     - left join on the specified column
     - if duplicates=True, all columns from right df are kept
     - if duplicates=False, only columns from right df that are not in left df are kept
@@ -175,11 +176,15 @@ def merge(left, right, on='uid', duplicates=True, prefix=None, line_start='#', l
     - align text to top
     """
 
+
+
+    #prepare and validate
     left = left.copy().fillna('')
     right = right.copy().fillna('')
-
-
-    #validate
+    if flatten is None:
+        flatten = []
+    if not isinstance(flatten, list):
+        flatten = [flatten]
     if on not in left.columns:
         log(f'Error: "{on}" is not in left dataframe', 'qp.merge', verbosity=verbosity)
     elif not left[on].is_unique:
@@ -188,10 +193,11 @@ def merge(left, right, on='uid', duplicates=True, prefix=None, line_start='#', l
         log(f'Error: "{on}" is not in right dataframe', 'qp.merge', verbosity=verbosity)
 
 
-    #prepare right dataframe
+    #aggregate repeating rows into lists
+    right_compact = right.groupby(on).agg(list)
 
-    right_compact = right.groupby(on).agg(lambda x: _to_lines(x, line_start, line_stop))
 
+    #remove duplicate cols (if duplicates is False)
     if duplicates:
         cols = right_compact.columns
     else:
@@ -199,6 +205,27 @@ def merge(left, right, on='uid', duplicates=True, prefix=None, line_start='#', l
         cols = [col for col in right_compact.columns if col in cols_diff]
         right_compact = right_compact[cols]
 
+
+    #create new columns from lists (for cols in flatten)
+    cols_new = []
+    for col in right_compact.columns:
+        cols_new.append(col)
+        if col in flatten:
+            n_max = right_compact[col].apply(lambda x: len(x)).max()
+            cols_flat = [f'{col}_{i+1}' for i in range(n_max)]
+            split = pd.DataFrame(right_compact[col].to_list(), columns=cols_flat)
+            split.index = right_compact.index
+            right_compact = right_compact.merge(split, left_index=True, right_index=True, how='left')
+            cols_new += cols_flat
+
+    right_compact = right_compact[cols_new]
+
+
+    #transform lists into multi line strings
+    right_compact = right_compact.map(lambda x: _to_lines(x, line_start=line_start, line_stop=line_stop))
+
+
+    #add prefix to columns
     if prefix is None:
         i = 1
         prefix = '1_'
