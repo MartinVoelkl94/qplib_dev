@@ -50,6 +50,12 @@ A small logger to be used in notebooks or the REPL. Makes it easier to keep trac
 <br>
 
 
+## qp.diff()
+
+creates colored diff output for two dataframes, see interactive_demo.ipynb for examples. Works with pandas dataframes, csv files, excel files and excel files with multiple sheets.
+<br>
+<br>
+
 ## "bashlike" wrappers
 
 While python has functions to achieve similar results as common bash commands, they are often more verbose, less intuitive if you are already used to the bash names and spread out over different modules and different namespaces in those modules (os, os.path, shutil, sys, ...).  

@@ -298,11 +298,11 @@ def _diff(
     requirements for the excel sheets:
     - only sheets with the same name are compared
     - needs a unique column to use as index, or sequential order of records
-    - index must be unique
-    - index must correspond to the same "item" in both sheets
+    - this column must be unique
+    - this column must correspond to the same "item" in both sheets
 
-    if index_col=None:
-    - uses sequential numbers as index instead of any given column
+    if uid=None:
+    - uses index instead of any given unique column
     - uniqueness is guaranteed
     - only works if all sheets have the same "items" in the same rows
     """
