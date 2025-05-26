@@ -56,6 +56,7 @@ creates colored diff output for two dataframes, see interactive_demo.ipynb for e
 <br>
 <br>
 
+
 ## "bashlike" wrappers
 
 While python has functions to achieve similar results as common bash commands, they are often more verbose, less intuitive if you are already used to the bash names and spread out over different modules and different namespaces in those modules (os, os.path, shutil, sys, ...).  
