@@ -1,3 +1,4 @@
+.coverage
 .gitignore
 LICENSE
 README.md
@@ -19,6 +20,8 @@ __pycache__/logger.cpython-311.pyc
 __pycache__/logger.cpython-312.pyc
 __pycache__/pandas_extensions.cpython-311.pyc
 __pycache__/util.cpython-311.pyc
+dist/qplib-0.7.2-py3-none-any.whl
+dist/qplib-0.7.2.tar.gz
 qplib/__init__.py
 qplib/pandas.py
 qplib/qlang.py
@@ -71,6 +74,7 @@ tests/test_fetch.py
 tests/test_format.py
 tests/test_log.py
 tests/test_match.py
+tests/test_merge.py
 tests/test_qlang.py
 tests/test_report.xml
 tests/test_shell_wrappers.py
@@ -95,6 +99,7 @@ tests/__pycache__/test_log.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_log.cpython-313-pytest-8.3.5.pyc
 tests/__pycache__/test_match.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_match.cpython-313-pytest-8.3.5.pyc
+tests/__pycache__/test_merge.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_pytest.cpython-312-pytest-6.2.5.pyc
 tests/__pycache__/test_qlang.cpython-312-pytest-8.3.2.pyc
 tests/__pycache__/test_qlang.cpython-312-pytest-8.3.3.pyc

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: qplib
-Version: 0.7.2
+Version: 0.7.3
 Summary: query language for pandas
 Author-email: martin v <martinv16248@gmail.com>
 License-Expression: MIT
@@ -41,7 +41,7 @@ df = qp.get_df()
 
 #"%" selects columns
 #"%%" selects rows
-#show all patients with ID > 2000
+#show all patients with ID > 20000
 df.q(r'%id  %%>20000')
 
 #select all patients whose name contains "j"
@@ -74,6 +74,13 @@ Currently published on [testpypi](https://test.pypi.org/project/qplib/).
 ## logging with qp.log()
 
 A small logger to be used in notebooks or the REPL. Makes it easier to keep track of outputs in large notebooks by providing color coded output. Does not log to file, but instead to a dataframe which can then be viewed at the end of the notebook.
+<br>
+<br>
+
+
+## qp.diff()
+
+creates colored diff output for two dataframes, see interactive_demo.ipynb for examples. Works with pandas dataframes, csv files, excel files and excel files with multiple sheets.
 <br>
 <br>
 
