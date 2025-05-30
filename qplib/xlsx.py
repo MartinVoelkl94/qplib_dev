@@ -2,7 +2,6 @@ import openpyxl
 from .util import log, match
 
 
-
 def hide(
     filename,
     axis='col',  #'row', 'col', 'sheet'
@@ -11,6 +10,9 @@ def hide(
     hide=True,  #True=hide, False=unhide
     verbosity=3,
     ): #pragma: no cover (does not affect reading of xlsx files)
+    """
+    Hide or unhide columns, rows, or sheets in an Excel file.
+    """
 
     if hide==True:
         mode = 'hidden'

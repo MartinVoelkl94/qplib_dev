@@ -8,7 +8,7 @@ from IPython.display import display
 from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
 
-from .util import log, GREEN, ORANGE, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
+from .util import log, GREEN, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
 from .types import _dict
 from .xlsx import hide
 
@@ -159,12 +159,13 @@ def _to_lines(x, line_start='#', line_stop=' ;\n'):
 def merge(left, right, on='uid', flatten=None, duplicates=True, prefix=None, line_start='#', line_stop=' ;\n', verbosity=3):
     """
     Performs a modified left join on two dataframes:
-    - left df.index should be unique
-    - right df.index can be non-unique
-    - duplicates in right df are aggregated into a single cell as string
+    - key-column specified by arg "on" in left df should be unique
+    - key-column specified by arg "on" in right df can be non-unique
+    - if right df has multiple values for the same key:
+        - they are aggregated into a string with multiple lines
         - aggregated string format: "#1: item1 ;\n#2: item2 ;\n#3: item3 ;"
     - if flatten is not None, the specified columns are flattened into multiple columns
-    - left join on the specified column
+    - left join on key-column
     - if duplicates=True, all columns from right df are kept
     - if duplicates=False, only columns from right df that are not in left df are kept
     - if prefix is None, a sequential integer prefix is generated automatically
@@ -266,19 +267,18 @@ def _diff(
     """
     compares two dataframes/csv/excel files and returns differences
 
-    mode:
-    not needed for output="summary" or "str" or "print"
+    mode (not needed for output="summary" or "str" or "print"):
     - 'new': creates new dataframe with highlighted value additions, removals and changes
     - 'new+': also shows old values in columns next to new values (old values are hidden when saved to excel)
     - 'old': creates old dataframe with highlighted value additions, removals and changes
     - 'mix': creates mixture of new and old dataframe with highlighted value additions, removals and changes
     
     output:
-    - 'df': returns the dataframe with highlighted differences (using the given mode argument)
-    - 'summary': returns a dictionary containing the number of added, removed and changed values and columns for each sheet
+    - 'df': returns dataframe(s) with highlighted differences (using the given mode argument). multiple dfs are returned in a dict.
+    - 'summary': returns a df containing the number of added, removed and changed values and columns for each sheet
     - 'str': returns a string containing a summary of the differences
-    - 'all': returns a tuple containing the dataframe, the summary dictionary and the string
-    - 'print': prints the string containing a summary of the differences and returns None
+    - 'all': returns a tuple containing the dataframe, the summary df and the string
+    - 'print': prints a string containing a summary of the differences and returns None
     - '<filename.xlsx>': saves the differences to an excel file with the given name and returns as with 'all'
 
     ignore:
@@ -297,14 +297,13 @@ def _diff(
 
     requirements for the excel sheets:
     - only sheets with the same name are compared
-    - needs a unique column to use as index, or sequential order of records
-    - this column must be unique
-    - this column must correspond to the same "item" in both sheets
+    - needs a column with unique entries to use as key for comparison (specified by arg "uid")
+    - uid must have the same name in all files and sheets
 
     if uid=None:
-    - uses index instead of any given unique column
-    - uniqueness is guaranteed
-    - only works if all sheets have the same "items" in the same rows
+    - uses sequential index instead of any given unique column
+    - this guarantees uniqueness
+    - only works if all sheets have corresponding records in the same order
     """
 
     if isinstance(df_new, str) and isinstance(df_old, str) \
@@ -345,7 +344,7 @@ def _diff(
 
         if df_new.equals(df_old):
             df = df_new
-            summary = {}
+            summary = pd.DataFrame()
             string = 'both dataframes are identical'
         else:
             df, summary = _diff_df(
@@ -455,10 +454,10 @@ def _diff_df(
         'vals changed': None,
         }
     if not df_new.index.is_unique:
-        log(f'warning: index of {name_new} is not unique. "index_col=None" to use sequential numbering as index', 'qp.diff', verbosity)
+        log(f'warning: uid of {name_new} is not unique. choose a unique column as uid or set "uid=None" to use sequential numbering', 'qp.diff', verbosity)
         return pd.DataFrame(), summary_empty
     if not df_old.index.is_unique:
-        log(f'warning: index of {name_old} is not unique. "index_col=None" to use sequential numbering as index', 'qp.diff', verbosity)
+        log(f'warning: uid of {name_old} is not unique. choose a unique column as uid or set "uid=None" to use sequential numbering', 'qp.diff', verbosity)
         return pd.DataFrame(), summary_empty
 
 
@@ -656,8 +655,8 @@ def _diff_excel(
         'vals changed',
         f'is in "{filename_new}"',
         f'is in "{filename_old}"',
-        f'index_col is unique in "{filename_new}"',
-        f'index_col is unique in "{filename_old}"',
+        f'uid is unique in "{filename_new}"',
+        f'uid is unique in "{filename_old}"',
         ])
     results = {}
     
@@ -703,8 +702,8 @@ def _diff_excel(
             summary.loc[idx, 'sheet'] = sheet
             summary.loc[idx, f'is in "{filename_new}"'] = True
             summary.loc[idx, f'is in "{filename_old}"'] = True
-            summary.loc[idx, f'index_col is unique in "{filename_new}"'] = df_new.index.is_unique
-            summary.loc[idx, f'index_col is unique in "{filename_old}"'] = df_old.index.is_unique
+            summary.loc[idx, f'uid is unique in "{filename_new}"'] = df_new.index.is_unique
+            summary.loc[idx, f'uid is unique in "{filename_old}"'] = df_old.index.is_unique
             for key, val in changes.items():
                 summary.loc[idx, key] = val
             
@@ -718,7 +717,7 @@ def _diff_excel(
             summary.loc[idx, 'sheet'] = sheet
             summary.loc[idx, f'is in "{filename_new}"'] = True
             summary.loc[idx, f'is in "{filename_old}"'] = False
-            summary.loc[idx, f'index_col is unique in "{filename_new}"'] = df_new.index.is_unique
+            summary.loc[idx, f'uid is unique in "{filename_new}"'] = df_new.index.is_unique
     
     #wip
     string = 'no string version of differences available when comparing excel files'
