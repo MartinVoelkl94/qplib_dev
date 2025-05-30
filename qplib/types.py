@@ -3,7 +3,8 @@ import numpy as np
 import datetime
 import re
 
-#these are mostly wrappers for type conversions with extra features for dealing with errors
+#Mostly wrappers for pandas functions but with some additional functionality and generally more lenient handling of edge cases.
+
 
 def _int(x, errors='coerce', na=np.nan):
     try:
@@ -24,6 +25,7 @@ def _int(x, errors='coerce', na=np.nan):
         else:
             return errors
 
+
 def _float(x, errors='coerce', na=np.nan):
     try:
         return float(x)
@@ -42,7 +44,8 @@ def _float(x, errors='coerce', na=np.nan):
             return na
         else:
             return errors
-            
+
+
 def _num(x, errors='coerce', na=np.nan):
     try:
         return pd.to_numeric(x)
@@ -61,7 +64,8 @@ def _num(x, errors='coerce', na=np.nan):
             return na
         else:
             return errors
-            
+
+
 def _bool(x, errors='coerce', na=None):
     if str(x).lower() in ['y', 'yes', 'true', '1', '1.0', 'positive', 'pos']:
         return True
@@ -110,8 +114,6 @@ def _date(x, errors='coerce', na=pd.NaT):
         return na #pragma: no cover
     else:
         return errors
-
-    
 
 
 def _datetime(x, errors='coerce', na=pd.NaT):
@@ -191,6 +193,7 @@ def _na(x, errors='ignore', na=None):
         else:
             return errors
 
+
 def _nk(x, errors='ignore', nk='unknown', na=None):
     possible_nks = [
         'unk', 'unknown', 'not known', 'not known.',
@@ -215,6 +218,7 @@ def _nk(x, errors='ignore', nk='unknown', na=None):
             return na
         else:
             return errors
+
 
 def _yn(x, errors='coerce', yes='yes', no='no', na=None):
     if str(x).lower() in ['y', 'yes', 'true', '1', '1.0', 'positive', 'pos']:
@@ -302,7 +306,7 @@ def _convert(value, errors='coerce', na=None):
     else:
         result = value
     return result
-    
+
 
 class _dict(dict):
     """
@@ -336,4 +340,3 @@ class _dict(dict):
     
     def invert(self):
         return _dict({val:key for key,val in self.items()})
-

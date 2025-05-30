@@ -1013,8 +1013,8 @@ def test_returns_summary(tmpdir):
         'vals changed': [1],
         'is in "df_new.xlsx"': [True],
         'is in "df_old.xlsx"': [True],
-        'index_col is unique in "df_new.xlsx"': [True],
-        'index_col is unique in "df_old.xlsx"': [True],
+        'uid is unique in "df_new.xlsx"': [True],
+        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result.equals(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -1051,8 +1051,8 @@ def test_returns_summary_ignore(tmpdir):
         'vals changed': [0],
         'is in "df_new.xlsx"': [True],
         'is in "df_old.xlsx"': [True],
-        'index_col is unique in "df_new.xlsx"': [True],
-        'index_col is unique in "df_old.xlsx"': [True],
+        'uid is unique in "df_new.xlsx"': [True],
+        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result.equals(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -1089,8 +1089,8 @@ def test_returns_summary_ignore1(tmpdir):
         'vals changed': [1],
         'is in "df_new.xlsx"': [True],
         'is in "df_old.xlsx"': [True],
-        'index_col is unique in "df_new.xlsx"': [True],
-        'index_col is unique in "df_old.xlsx"': [True],
+        'uid is unique in "df_new.xlsx"': [True],
+        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result.equals(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -1127,8 +1127,8 @@ def test_returns_summary_ignore2(tmpdir):
         'vals changed': [0],
         'is in "df_new.xlsx"': [True],
         'is in "df_old.xlsx"': [True],
-        'index_col is unique in "df_new.xlsx"': [True],
-        'index_col is unique in "df_old.xlsx"': [True],
+        'uid is unique in "df_new.xlsx"': [True],
+        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result.equals(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -1307,8 +1307,8 @@ def test_returns_all(tmpdir):
         'vals changed': [1],
         'is in "df_new.xlsx"': [True],
         'is in "df_old.xlsx"': [True],
-        'index_col is unique in "df_new.xlsx"': [True],
-        'index_col is unique in "df_old.xlsx"': [True],
+        'uid is unique in "df_new.xlsx"': [True],
+        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result_df.equals(expected_df), f'failed test for returns="all".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_df}\nRESULT\n{result_df}'
     assert result_summary.equals(expected_summary)
@@ -1375,8 +1375,10 @@ def test_identical(tmpdir):
     df3 = df3.astype('object').fillna('')
     df3.index = df3['uid']
 
+
     assert df1.equals(df2), f"DataFrames are not equal:\n{df1}\n{df2}"
     assert df1.equals(df3), f"DataFrames are not equal:\n{df1}\n{df3}"
-    assert summary1 == summary3 == {}, f"Summaries are not equal:\n{summary1}\n{summary3}"
+    assert summary1.equals(pd.DataFrame()), f"Summary1 is not empty:\n{summary1}"
+    assert summary3.equals(pd.DataFrame()), f"Summary3 is not empty:\n{summary3}"
     assert str1 == str3 == 'both dataframes are identical', f"Strings are not equal:\n{str1}\n{str3}"
     assert str2 == 'no string version of differences available when comparing excel files'

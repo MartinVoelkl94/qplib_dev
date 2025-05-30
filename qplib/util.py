@@ -11,8 +11,8 @@ from IPython.display import display
 from IPython import get_ipython
 from .types import _num, _na, _nk, _date, _datetime
 
+
 GREEN = '#6dae51'
-ORANGE = 'orange'
 RED = '#f73434'
 
 GREY_LIGHT = '#d3d3d3'
@@ -27,7 +27,7 @@ def log(text=None, context='', verbosity=None, clear=False):
     """
     A very basic "logger" meant to be used in place of print() statements in jupyter notebooks. 
     For more extensive logging purposes use a logging module.
-    
+
 
     examples:
 
@@ -41,7 +41,7 @@ def log(text=None, context='', verbosity=None, clear=False):
 
     log(clear=True)  #clear all log entries
     log()  #return dataframe of log entries
-    qplib.util.logs  #location of dataframe containing log entries
+    qplib.util.logs  #location of list containing log entries
 
     """
     if verbosity == 0:
@@ -59,7 +59,7 @@ def log(text=None, context='', verbosity=None, clear=False):
     if text is None:
         return pd.DataFrame(logs)
 
-    
+
     levels = {
         'TRACE': 5,
         'DEBUG': 4,
@@ -74,7 +74,7 @@ def log(text=None, context='', verbosity=None, clear=False):
         'WARNING': ORANGE_LIGHT,
         'ERROR': RED_LIGHT,
         }
-    
+
     color = GREEN_LIGHT
     level = 'INFO'
     level_int = 3
@@ -93,7 +93,7 @@ def log(text=None, context='', verbosity=None, clear=False):
 
     if verbosity is None:
         verbosity = level_int
-    
+
     if len(logs) == 0:
         delta_ms = 0.0
     else:
@@ -131,9 +131,7 @@ def fetch(path, before='now', verbosity=3):
     """
     returns the path to the most recent version of a file (based on timestamp in filename)
 
-    
-    before:
-    defines recency of the file
+    "before" defines recency of the file:
     - now: most recent version
     - today: most recent version before today
     - this day: most recent version before today
@@ -170,7 +168,7 @@ def fetch(path, before='now', verbosity=3):
     folder = os.path.dirname(path)
     extension = ''
 
- 
+
     if folder == '':
         folder = os.getcwd()
 
@@ -204,7 +202,7 @@ def match(patterns, value, regex=True):
         
     if not isinstance(patterns, list):
         patterns = [patterns]
-    
+
     if regex and isinstance(value, str):
         for pattern in patterns:
             if re.fullmatch(pattern, value):
@@ -254,7 +252,7 @@ def header(word='header', slim=True, width=None, filler=' '): #pragma: no cover
         text = border + '\n'\
             + '#' + filler + word + filler + '#' + '\n'\
             + border
-    
+
     print(text)
 
 
@@ -274,8 +272,9 @@ def now(fmt='%Y_%m_%d'): #pragma: no cover
 
 def ls(path_or_object='', out='df', recursive=False, verbosity=3):
     """
+    when path is passed: list files and folders in path.
+    when python object is passed: list contents of the object.
     """
-
     if isinstance(path_or_object, str):
         return _list_files(path_or_object, out, recursive)
     else:
@@ -287,10 +286,13 @@ def ls(path_or_object='', out='df', recursive=False, verbosity=3):
         result = _ls_object(path_or_object, recursive, result, layers)
         return result
 
+
 def lsr(path_or_object='', out='df', recursive=True):
     """
+    alias for ls() with recursive=True
     """
     return ls(path_or_object, out, recursive)
+
 
 def _list_files(path, out, recursive):
     """
@@ -333,6 +335,7 @@ def _list_files(path, out, recursive):
 
         return files
 
+
 def _ls_object(py_object, recursive, result, layers):
     """
     used by ls() to check the type of python py_objects and open them
@@ -343,7 +346,6 @@ def _ls_object(py_object, recursive, result, layers):
         if f'layer{layer+1}' not in result.columns:
             result.insert(len(layers)-1, f'layer{layer+1}', '')
         result.loc[ind, f'layer{layer+1}'] = name
-    
 
 
     if isinstance(py_object, int):
@@ -415,11 +417,13 @@ def _ls_object(py_object, recursive, result, layers):
     return result.fillna('').replace(0, '')
 
 
+
 def pwd():
     """
     print working directory
     """
     return os.getcwd()
+
 
 
 def cd(path=None, verbosity=3):
@@ -441,6 +445,7 @@ def cd(path=None, verbosity=3):
     dir_new = os.getcwd()
     log(f'info: moved from<br>{dir_old}<br>to<br>{dir_new}', f'qp.cd("{path}")', verbosity)
     return
+
 
 
 def cp(src, dest, verbosity=3):
@@ -465,6 +470,7 @@ def cp(src, dest, verbosity=3):
     return
 
 
+
 def mv(src, dest, verbosity=3):
     """
     move file or directory
@@ -484,6 +490,7 @@ def mv(src, dest, verbosity=3):
     return
 
 
+
 def mkdir(name, verbosity=3):
     """
     create directory
@@ -496,13 +503,15 @@ def mkdir(name, verbosity=3):
     return
 
 
+
 def isdir(name):
     """
     check if directory exists
     """
     return os.path.isdir(name)
-  
-    
+
+
+
 def isfile(name):
     """
     check if file exists
@@ -510,17 +519,9 @@ def isfile(name):
     return os.path.isfile(name)
 
 
+
 def ispath(name):
     """
     check if path exists
     """
     return os.path.exists(name)
-
-
-
-
-
-
-
-
-

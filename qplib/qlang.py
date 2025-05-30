@@ -150,7 +150,7 @@ class Symbols:
 
 class Instruction:
     """
-    Each query is built from sequential instructions.
+    An instruction to filter/select or modify data/metadata.
     """
     def __init__(self, code='', line_num=None):
         #initial values
@@ -431,6 +431,9 @@ def scan(code, settings):
 
 
 def tokenize(instruction_raw, settings):
+    """
+    extracts syntax symbols from raw instruction strings.
+    """
     verbosity = settings.verbosity
     instruction_tokenized = instruction_raw
     code = instruction_raw.code
@@ -464,6 +467,9 @@ def extract_symbol(string, symbols, verbosity=3):
 
 
 def parse(instruction_tokenized, settings):
+    """
+    translates syntax symbols into actual instruction behaviour.
+    """
     verbosity = settings.verbosity
     instruction = instruction_tokenized
     code = instruction.code
@@ -846,6 +852,7 @@ def _save_selection(instruction, df_new, settings):
     """
     Save the current selection as a boolean mask.
     """
+
     masks = settings.masks
     value = instruction.value
 
@@ -860,7 +867,9 @@ def _save_selection(instruction, df_new, settings):
 
 def _load_selection(instruction, df_new, settings):
     """
+    loads a previously saved selection.
     """
+
     verbosity = settings.verbosity
     masks = settings.masks
     value = instruction.value
@@ -984,7 +993,9 @@ def _modify_metadata(instruction, df_new, settings):
 
 
 def _modify_format(instruction, df_new, settings):
-
+    """
+    changes visual formatting of the current selection.
+    """
 
     verbosity = settings.verbosity
     masks = settings.masks
