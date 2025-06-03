@@ -128,20 +128,20 @@ def _datetime(x, errors='coerce', na=pd.NaT):
         x = x.replace('_', '-')
     try:
         
-        if re.fullmatch(r'[012]\d\d\d[-\d\s:]+', x):
+        if re.fullmatch(r'[012]\d\d\d[-\d\s:]+.*', x):
             result = pd.to_datetime(x, dayfirst=False)
         
-        elif re.match(f'(\\d\\d\\d\\d)({months_txt})(\\d\\d)', x, flags=re.IGNORECASE):
-            x = re.sub(f'(\\d\\d\\d\\d)({months_txt})(\\d\\d)(.*)', r'\1-\2-\3\4', x, flags=re.IGNORECASE)
-            result = pd.to_datetime(x, dayfirst=False)
+        elif re.match(f'(\\d\\d\\d\\d)\\D?({months_txt})\\D?(\\d\\d)', x, flags=re.IGNORECASE):
+            x = re.sub(f'(\\d\\d\\d\\d)\\D?({months_txt})\\D?(\\d\\d)(.*)', r'\3-\2-\1\4', x, flags=re.IGNORECASE)
+            result = pd.to_datetime(x, dayfirst=True)
         
-        elif re.match(f'(\\d\\d)({months_txt})(\\d\\d\\d\\d)', x, flags=re.IGNORECASE):
-            x = re.sub(f'(\\d\\d)({months_txt})(\\d\\d\\d\\d)(.*)', r'\3-\2-\1\4', x, flags=re.IGNORECASE)
-            result = pd.to_datetime(x, dayfirst=False)
+        elif re.match(f'(\\d\\d)\\D?({months_txt})\\D?(\\d\\d\\d\\d)', x, flags=re.IGNORECASE):
+            x = re.sub(f'(\\d\\d)\\D?({months_txt})\\D?(\\d\\d\\d\\d)(.*)', r'\1-\2-\3\4', x, flags=re.IGNORECASE)
+            result = pd.to_datetime(x, dayfirst=True)
         
-        elif re.match(f'({months_txt})(\\d\\d)(\\d\\d\\d\\d)', x, flags=re.IGNORECASE):
-            x = re.sub(f'({months_txt})(\\d\\d)(\\d\\d\\d\\d)(.*)', r'\3-\1-\2\4', x, flags=re.IGNORECASE)
-            result = pd.to_datetime(x, dayfirst=False)
+        elif re.match(f'({months_txt})\\D?(\\d\\d)\\D?(\\d\\d\\d\\d)', x, flags=re.IGNORECASE):
+            x = re.sub(f'({months_txt})\\D?(\\d\\d)\\D?(\\d\\d\\d\\d)(.*)', r'\2-\1-\3\4', x, flags=re.IGNORECASE)
+            result = pd.to_datetime(x, dayfirst=True)
         
         else:
             result = pd.to_datetime(x, dayfirst=True)
