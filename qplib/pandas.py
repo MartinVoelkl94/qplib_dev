@@ -10,11 +10,11 @@ from pandas.api.extensions import register_dataframe_accessor
 
 from .util import log, GREEN, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
 from .types import _dict
-from .xlsx import hide
+from .xlsx import hide, format_excel
 
 
 
-def get_df(size='small'):
+def get_df():
     """
     Returns a small sample dataframe containing very messy fake medical data.
     """
@@ -172,7 +172,7 @@ def merge(left, right, on='uid', flatten=None, duplicates=True, prefix=None, lin
     - if prefix is not None, the prefix is added to all columns from right df
     - if verbosity > 0, log messages are printed
 
-    for nice excel formatting:
+    for nice excel formatting use format_excel() or:
     - open resulting excel file
     - select all
     - make all cols very wide
@@ -387,6 +387,7 @@ def _diff(
                     df.to_excel(writer, sheet_name=sheet, index=True)
         if mode=='new+':
             hide(output, axis='col', patterns=f'{prefix_old}.*', hide=True, verbosity=verbosity)
+        format_excel(output)
         log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
         return df, summary, string
     elif output.endswith('.xlsx'):

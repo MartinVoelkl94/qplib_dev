@@ -8,7 +8,7 @@ from .pandas import \
     merge, \
     _diff as diff
 
-from .xlsx import hide
+from .xlsx import hide, format_excel
 
 from .util import \
     log, \
