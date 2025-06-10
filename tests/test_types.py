@@ -3,6 +3,9 @@ import datetime
 import pandas as pd
 import numpy as np
 import qplib as qp
+from faker import Faker
+
+
 
 qp_types = [
     qp.int,
@@ -312,6 +315,17 @@ def test_date(input, expected):
         assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
 
 
+def test_date_random():
+    Faker.seed(1)
+    fake = Faker()
+
+    for i in range(1000):
+        date_str = fake.date()
+        result = qp.date(date_str)
+        expected = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        assert result == expected, f'Expected {expected}, but got {result}'
+
+
 @pytest.mark.parametrize("input, expected", [
     (0, pd.NaT),
 
@@ -366,6 +380,17 @@ def test_datetime(input, expected):
     else:
         expected = datetime.datetime(*expected)
         assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+
+
+def test_datetime_random():
+    Faker.seed(1)
+    fake = Faker()
+
+    for i in range(1000):
+        date_str = fake.date_time().strftime('%Y-%m-%d %H:%M:%S')
+        result = qp.datetime(date_str)
+        expected = datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+        assert result == expected, f'Expected {expected}, but got {result}'
 
 
 
