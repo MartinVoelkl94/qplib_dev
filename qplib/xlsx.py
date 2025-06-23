@@ -82,6 +82,10 @@ def format_excel(
     for sheet in wb.worksheets:
         data = pd.read_excel(filename, sheet_name=sheet.title)
         for col in sheet.columns:
+            if col[0].value is None:
+                log(f'warning: skipping column with no header in sheet "{sheet.title}"', 'qp.format_excel()', verbosity)
+                continue
+            
             colname = col[0].value
             col_letter = col[0].column_letter
 
