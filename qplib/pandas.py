@@ -259,8 +259,6 @@ def _diff(
     uid=None,     #None defaults to index
     ignore=None,  #col(s) to ignore for comparison
     rename=None,  #rename cols before comparison
-    max_cols=None,
-    max_rows=None,
     prefix_old='old: ',
     verbosity=3,
     ):
@@ -316,8 +314,6 @@ def _diff(
             uid,
             ignore,
             rename,
-            max_cols,
-            max_rows,
             prefix_old,
             verbosity,
             )
@@ -355,7 +351,6 @@ def _diff(
                 uid,
                 ignore,
                 rename,
-                max_cols, max_rows,
                 prefix_old,
                 name_new='new df',
                 name_old='old df',
@@ -409,8 +404,6 @@ def _diff_df(
     uid=None,
     ignore=None,
     rename=None,
-    max_rows=None,
-    max_cols=None, 
     prefix_old='old: ',
     name_new='new df',
     name_old='old df',
@@ -435,10 +428,6 @@ def _diff_df(
         df_new.index = df_new[uid]
         df_old.index = df_old[uid]
         ignore.append(uid)
-    if max_rows is None:
-        max_rows = 200
-    if max_cols is None:
-        max_cols = 50
     if output.endswith('.xlsx'):
         newline = '\n'
     else:
@@ -606,13 +595,12 @@ def _diff_df(
     if output.endswith('.xlsx'):
         result = df_diff.style.apply(lambda x: _apply_style(x, df_diff_style), axis=None) 
     else:
-        if max_cols is not None and max_cols < len(df_diff.columns):
-            log(f'warning: highlighting differences in {max_cols} out of {len(df_diff.columns)} columns. change with "max_cols="', 'qp.diff()', verbosity)
-        if max_rows is not None and max_rows < len(df_diff.index):
-            log(f'warning: highlighting differences in {max_rows} out of {len(df_diff.index)} rows. change with "max_rows="', 'qp.diff()', verbosity)
 
-        df_diff = df_diff.iloc[:max_rows, :max_cols]
-        df_diff_style = df_diff_style.iloc[:max_rows, :max_cols]
+        if len(df_diff.columns) * len(df_diff.index) > 100_000:
+            log(f'warning: more than 100 000 cells are being formatted.\
+                while this might not cause performance issues for formatting,\
+                the result might be slow to render, especially in jupyter notebooks.',
+                'qp.diff()', verbosity)
 
         #replace "<" and ">" with html entities to prevent them from being interpreted as html tags
         cols_no_metadata = [col for col in df_diff.columns if not col.startswith(prefix_old) and col != 'meta']
@@ -634,8 +622,6 @@ def _diff_excel(
     uid=None,
     ignore=None,
     rename=None,
-    max_rows=None,
-    max_cols=None,
     prefix_old='old: ',
     verbosity=3,
     ):
@@ -682,8 +668,6 @@ def _diff_excel(
                 uid,
                 ignore,
                 rename,
-                max_rows,
-                max_cols,
                 prefix_old,
                 name_new,
                 name_old,
@@ -774,20 +758,15 @@ def _diff_str(df_new, df_old, uid=None, ignore=None, rename=None, verbosity=3):
 
     #different values
 
-    if len(cols_shared) > 20 or len(idx_shared) > 200:
-        log('warning: too many shared columns or indices to show different values', 'qp.diff()', verbosity)
-        result += 'too many shared columns or indices to show different values'
+    df_new_shared = df_new.loc[idx_shared, cols_shared]
+    df_old_shared = df_old.loc[idx_shared, cols_shared]
+    diffs = df_new_shared != df_old_shared
 
-    else:
-        df_new_shared = df_new.loc[idx_shared, cols_shared]
-        df_old_shared = df_old.loc[idx_shared, cols_shared]
-        diffs = df_new_shared != df_old_shared
-
-        temp1 = df_new_shared[diffs].astype(str).fillna('')
-        temp2 = df_old_shared[diffs].astype(str).fillna('')
-        
-        result += f'\ndifferent values in df_new:\n{temp1}\n'
-        result += f'\ndifferent values in df_old:\n{temp2}\n'
+    temp1 = df_new_shared[diffs].astype(str).fillna('')
+    temp2 = df_old_shared[diffs].astype(str).fillna('')
+    
+    result += f'\ndifferent values in df_new:\n{temp1}\n'
+    result += f'\ndifferent values in df_old:\n{temp2}\n'
 
     return result
 
