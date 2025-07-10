@@ -23,7 +23,12 @@ RED_LIGHT = '#f7746a'
 
 
 logs = []
-def log(text=None, context='', verbosity=None, clear=False):
+def log(
+    text=None,
+    context='',
+    verbosity=None,
+    clear=False,
+    ):
     """
     A very basic "logger" meant to be used in place of print() statements in jupyter notebooks. 
     For more extensive logging purposes use a logging module.
@@ -214,7 +219,12 @@ def match(patterns, value, regex=True):
 
 
 
-def header(word='header', slim=True, width=None, filler=' '): #pragma: no cover
+def header(
+    word='header',
+    slim=True,
+    width=None,
+    filler=' ',
+    ): #pragma: no cover
     """
     Creates text headers for code sections or plain text.
 
@@ -271,7 +281,12 @@ def now(fmt='%Y_%m_%d'): #pragma: no cover
 
 #"bashlike" wrappers and aliases
 
-def ls(path_or_object='', out='df', recursive=False, verbosity=3):
+def ls(
+    path_or_object='',
+    out='df',
+    recursive=False,
+    verbosity=3,
+    ):
     """
     when path is passed: list files and folders in path.
     when python object is passed: list contents of the object.
@@ -288,7 +303,11 @@ def ls(path_or_object='', out='df', recursive=False, verbosity=3):
         return result
 
 
-def lsr(path_or_object='', out='df', recursive=True):
+def lsr(
+    path_or_object='',
+    out='df',
+    recursive=True,
+    ):
     """
     alias for ls() with recursive=True
     """

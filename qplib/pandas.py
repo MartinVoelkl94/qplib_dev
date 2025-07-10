@@ -116,7 +116,12 @@ class dfFormatExtension:
 
 
 
-def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
+def _format_df(
+    df,
+    fix_headers=True,
+    add_metadata=True,
+    verbosity=3,
+    ):
     """
     Formats dataframe to ensure compatibility with the query language used by df.q().
     """
@@ -144,7 +149,11 @@ def _format_df(df, fix_headers=True, add_metadata=True, verbosity=3):
 
 
 
-def _to_lines(x, line_start='#', line_stop=' ;\n'):
+def _to_lines(
+    x,
+    line_start='#',
+    line_stop=' ;\n',
+    ):
     if not isinstance(x, list):
         return x
     if len(x) == 1:
@@ -824,7 +833,14 @@ def _diff_excel(
     return results, summary, string
 
 
-def _diff_str(df_new, df_old, uid=None, ignore=None, rename=None, verbosity=3):
+def _diff_str(
+    df_new,
+    df_old,
+    uid=None,
+    ignore=None,
+    rename=None,
+    verbosity=3,
+    ):
     """"
     see _diff() for details
     """
