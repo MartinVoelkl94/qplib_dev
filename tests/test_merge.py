@@ -162,6 +162,262 @@ def test_line_stop():
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
+
+def test_include():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        include=['age', 'term', 'start'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '#1: 42 ;\n#2: 42 ;\n',
+            17,
+            '',
+            ],
+        '1_term': [
+            '#1: headache ;\n#2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        '1_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_include1():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        include='age',
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '#1: 42 ;\n#2: 42 ;\n',
+            17,
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_include2():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        include=['age'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '#1: 42 ;\n#2: 42 ;\n',
+            17,
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_include3():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        include=['age', 'start'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_age': [
+            '#1: 42 ;\n#2: 42 ;\n',
+            17,
+            '',
+            ],
+        '1_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_exclude():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        exclude='age',
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_term': [
+            '#1: headache ;\n#2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        '1_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_exclude():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        exclude=['age'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_term': [
+            '#1: headache ;\n#2: nausea ;\n',
+            'headache',
+            '',
+            ],
+        '1_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_exclude():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        exclude=['age', 'term', 'start'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+
+def test_include_exclude():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        include=['age', 'term', 'start'],
+        exclude=['age', 'term', 'start'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+
+def test_include_exclude1():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        include=['age', 'term', 'start'],
+        exclude=['age', 'term'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        '1_start': [
+            '#1: 2023-01-01 ;\n#2:  ;\n',
+            datetime.date(2021, 12, 3),
+            '',
+            ],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+def test_include_exclude2():
+    df1, df2, df3 = get_dfs()
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        include=['term', 'start'],
+        exclude=['age', 'term', 'start'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+    expected = pd.DataFrame({
+        'uid': [1, 2, 3],
+        'age': [42, 17, 55],
+        'IC': ['y', 'n', 'y'],
+        })
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
 def test_sequential():
     df1, df2, df3 = get_dfs()
     result1 = merge(df1, df2, on='uid', duplicates=False, prefix=None, verbosity=3)

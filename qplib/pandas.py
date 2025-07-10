@@ -156,23 +156,51 @@ def _to_lines(x, line_start='#', line_stop=' ;\n'):
     return x_str
 
 
-def merge(left, right, on='uid', flatten=None, duplicates=True, prefix=None, line_start='#', line_stop=' ;\n', verbosity=3):
+def merge(
+    left,
+    right,
+    on='uid',
+    include=None,
+    exclude=None,
+    flatten=None,
+    duplicates=True,
+    prefix=None,
+    line_start='#',
+    line_stop=' ;\n',
+    verbosity=3,
+    ):
     """
     Performs a modified left join on two dataframes:
-    - key-column specified by arg "on" in left df should be unique
-    - key-column specified by arg "on" in right df can be non-unique
     - if right df has multiple values for the same key:
         - they are aggregated into a string with multiple lines
         - aggregated string format: "#1: item1 ;\n#2: item2 ;\n#3: item3 ;"
-    - if flatten is not None, the specified columns are flattened into multiple columns
     - left join on key-column
-    - if duplicates=True, all columns from right df are kept
-    - if duplicates=False, only columns from right df that are not in left df are kept
-    - if prefix is None, a sequential integer prefix is generated automatically
-    - if prefix is not None, the prefix is added to all columns from right df
-    - if verbosity > 0, log messages are printed
 
-    for nice excel formatting use format_excel() or:
+    requirements:
+    - key-column specified by arg "on" in left df should be unique
+    - key-column specified by arg "on" in right df can be non-unique
+
+    include:
+    - all columns specified in include are kept from right df
+    - if include is None, all columns from right df are kept
+
+    exclude:
+    - all columns specified in exclude are removed from right df
+    - if exclude is None, no columns are removed from right df
+
+    flatten:
+    - all columns specified in flatten are not aggregated into a string when non-unique
+    - instead a new column for each value is created and merged into the result df
+
+    duplicates:
+    - True: all columns from right df are kept
+    - False: only columns from right df that are not in left df are kept
+
+    prefix:
+    - None: a sequential integer prefix is generated automatically
+    - any string: the prefix is added to all columns from right df
+
+    for nice excel formatting use qp.format_excel() or:
     - open resulting excel file
     - select all
     - make all cols very wide
@@ -196,6 +224,23 @@ def merge(left, right, on='uid', flatten=None, duplicates=True, prefix=None, lin
         log(f'warning: column "{on}" is not unique in left dataframe', 'qp.merge', verbosity=verbosity)
     if on not in right.columns:
         log(f'Error: "{on}" is not in right dataframe', 'qp.merge', verbosity=verbosity)
+
+
+    if include is None:
+        cols_right = right.columns
+    elif isinstance(include, list):
+        cols_right = [on] + [col for col in right.columns if col in include]  #faster options dont preserve order
+    else:
+        cols_right = [on] + [col for col in right.columns if col == include]
+        
+    if exclude is None:
+        pass
+    elif isinstance(exclude, list):
+        cols_right = [col for col in cols_right if col not in exclude]
+    else:
+        cols_right = [col for col in cols_right if col != exclude]
+
+    right = right[cols_right]
 
 
     #aggregate repeating rows into lists
