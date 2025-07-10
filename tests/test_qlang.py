@@ -849,7 +849,7 @@ def test_logging():
     log(clear=True, verbosity=1)
     qp.qlang.VERBOSITY = 0
     result = df.q(r'$verbosity=0')
-    qp.qlang.VERBOSITY = 1
+    qp.qlang.VERBOSITY = 3
     assert len(log()) == 0, 'log should be empty when verbosity is set to 0'
 
     log(clear=True, verbosity=1)

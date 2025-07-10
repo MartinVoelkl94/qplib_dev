@@ -106,9 +106,10 @@ def log(text=None, context='', verbosity=None, clear=False):
         'time': time,
         'delta_ms': delta_ms,
         }
-    logs.append(message)
 
     if level_int <= verbosity:
+        logs.append(message)
+        
         #make html friendly
         message['text'] = message['text'].replace('\n', '<br>').replace('\t', '&emsp;')
         message['context'] = message['context'].replace('\n', '<br>').replace('\t', '&emsp;')
