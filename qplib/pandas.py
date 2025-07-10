@@ -251,6 +251,75 @@ def merge(left, right, on='uid', flatten=None, duplicates=True, prefix=None, lin
 
 
 
+def embed(
+    df_dest,
+    key_dest,
+    df_src,
+    key_src='uid',
+    include=None,
+    exclude=None,
+    verbosity=3,
+    ):
+    """
+    Integrates rows from a source DataFrame into the destination DataFrame based on a key.
+    """
+
+    if key_dest not in df_dest.columns:
+        log(f'error: key "{key_dest}" not found in df_dest', 'qp.integrate', verbosity)
+        return df_dest
+    if key_src not in df_src.columns:
+        log(f'error: key "{key_src}" not found in df_src', 'qp.integrate', verbosity)
+        return df_src
+    
+    if not df_src[key_src].is_unique:
+        log(f'error: "{key_src}" in df_src is not unique.',
+            'qp.integrate', verbosity)
+        return df_dest
+       
+    vals_dest = set(df_dest[key_dest].dropna().unique())
+    vals_src = set(df_src[key_src].dropna().unique())
+    only_in_dest = vals_dest - vals_src
+    if len(only_in_dest) > 0:
+        log(f'warning: {len(only_in_dest)} value(s) in "{key_dest}" of df_dest not found in df_src: {only_in_dest}',
+            'qp.integrate', verbosity)
+
+
+    if include is None:
+        cols_src = df_src.columns
+    elif isinstance(include, list):
+        cols_src = [col for col in df_src.columns if col in include]  #faster options dont preserve order
+    else:
+        cols_src = [col for col in df_src.columns if col == include]
+        
+    if exclude is None:
+        pass
+    elif isinstance(exclude, list):
+        cols_src = [col for col in cols_src if col not in exclude]
+    else:
+        cols_src = [col for col in cols_src if col != exclude]
+
+
+    df_merged = pd.DataFrame({
+        key_src: df_src[key_src],
+        'merged': df_src[key_src].astype(str),
+        })
+    for col in cols_src:
+        df_merged.loc[:, 'merged'] = df_merged['merged'] + f'\n{col}: ' + df_src[col].astype(str).fillna('') + ' ;'
+    
+    result = df_dest.copy()
+    temp = df_dest.merge(
+        df_merged,
+        how='left',
+        left_on=key_dest,
+        right_on=key_src,
+        )
+    temp.index = df_dest.index
+    result.loc[:, key_dest] = temp['merged']
+    
+    return result
+
+
+
 def _diff(
     df_new: pd.DataFrame | str,
     df_old: pd.DataFrame | str,

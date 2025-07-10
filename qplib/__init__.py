@@ -6,6 +6,7 @@ from .pandas import \
     get_df, \
     get_dfs, \
     merge, \
+    embed, \
     _diff as diff
 
 from .xlsx import hide, format_excel
