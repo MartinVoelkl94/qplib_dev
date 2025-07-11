@@ -799,7 +799,7 @@ def _filter_series(series, instruction, settings, df_new=None):
             'datetime64[ns]', 'datetime64[ns, UTC]',
             'datetime64[s]', 'datetime64[s, UTC]',
             ]
-        string_dtypes = ['object', 'string']
+        string_dtypes = ['string']
 
         if value_type in ('int', 'float', 'num'):
             value = pd.to_numeric(value, errors='coerce')
