@@ -9,7 +9,7 @@ from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
 
 from .util import log, GREEN, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
-from .types import _dict
+from .types import _dict, _date
 from .xlsx import hide, format_excel
 
 
@@ -225,7 +225,7 @@ def merge(
     right = right.copy().fillna('')
     if flatten is None:
         flatten = []
-    if not isinstance(flatten, list):
+    if not isinstance(flatten, (list, tuple, set, pd.Index, pd.Series)):
         flatten = [flatten]
     if on not in left.columns:
         log(f'Error: "{on}" is not in left dataframe', 'qp.merge', verbosity=verbosity)
@@ -340,14 +340,14 @@ def embed(
 
     if include is None:
         cols_src = df_src.columns
-    elif isinstance(include, list):
+    elif isinstance(include, (list, tuple, set, pd.Index, pd.Series)):
         cols_src = [col for col in df_src.columns if col in include]  #faster options dont preserve order
     else:
         cols_src = [col for col in df_src.columns if col == include]
         
     if exclude is None:
         pass
-    elif isinstance(exclude, list):
+    elif isinstance(exclude, (list, tuple, set, pd.Index, pd.Series)):
         cols_src = [col for col in cols_src if col not in exclude]
     else:
         cols_src = [col for col in cols_src if col != exclude]
@@ -371,6 +371,48 @@ def embed(
     result.loc[:, key_dest] = temp['merged']
     
     return result
+
+
+
+def days_between(df, cols, reference_date=None, reference_col=None, verbosity=3):
+    df = df.copy()
+
+    if not isinstance(cols, (list, tuple, set, pd.Index, pd.Series)):
+        cols = [cols]
+    
+    if reference_date is None and reference_col is None:
+        log(f'ERROR: no reference date or column provided',
+            'qp.days_between', verbosity)
+        return df
+        
+    if reference_date is not None and reference_col is not None:
+        log(f'ERROR: both reference date and column provided',
+            'qp.days_between', verbosity)
+        return df
+    
+    if 'reference_date' in df.columns:
+        log(f'WARNING: column "reference_col" already exists, overwriting',
+            'qp.days_between', verbosity)
+    if reference_date is not None:
+        df['reference_date'] = _date(reference_date)
+        reference_col = str(reference_date)
+    else:
+        df['reference_date'] = df[reference_col].apply(_date)
+    
+    for col in cols:
+        if col not in df.columns:
+            log(f'ERROR: column {col} not found', 'qp.days_between', verbosity)
+            continue
+        
+        name = f'days_between_{reference_col}_and_{col}'
+        if name in df.columns:
+            log(f'WARNING: column "{name}" already exists, overwriting', 'qp.days_between', verbosity)
+
+        #difference only works with pd.NA, but x.days only works with pd.NaT
+        col_formatted = df[col].apply(_date).apply(lambda x: pd.NA if x is pd.NaT else x)
+        df[name] = (col_formatted - df['reference_date']).fillna(pd.NaT).apply(lambda x: x.days)
+
+    return df
 
 
 

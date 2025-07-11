@@ -7,6 +7,7 @@ from .pandas import \
     get_dfs, \
     merge, \
     embed, \
+    days_between, \
     _diff as diff
 
 from .xlsx import hide, format_excel
