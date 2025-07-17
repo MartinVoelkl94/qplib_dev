@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: qplib
-Version: 0.7.4
+Version: 0.7.5
 Summary: query language for pandas
 Author-email: martin v <martinv16248@gmail.com>
 License-Expression: MIT
@@ -23,6 +23,7 @@ Provides-Extra: dev
 Requires-Dist: build; extra == "dev"
 Requires-Dist: twine; extra == "dev"
 Requires-Dist: pytest; extra == "dev"
+Requires-Dist: faker; extra == "dev"
 Requires-Dist: ipykernel; extra == "dev"
 Dynamic: license-file
 

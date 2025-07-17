@@ -20,8 +20,8 @@ __pycache__/logger.cpython-311.pyc
 __pycache__/logger.cpython-312.pyc
 __pycache__/pandas_extensions.cpython-311.pyc
 __pycache__/util.cpython-311.pyc
-dist/qplib-0.7.3-py3-none-any.whl
-dist/qplib-0.7.3.tar.gz
+dist/qplib-0.7.4-py3-none-any.whl
+dist/qplib-0.7.4.tar.gz
 qplib/__init__.py
 qplib/pandas.py
 qplib/qlang.py
@@ -69,7 +69,9 @@ qplib/__pycache__/util.cpython-313.pyc
 qplib/__pycache__/xlsx.cpython-313.pyc
 qplib/data/symbols.csv
 qplib/data/symbols.xlsx
+tests/test_days_between.py
 tests/test_diff.py
+tests/test_embed.py
 tests/test_fetch.py
 tests/test_format.py
 tests/test_log.py
@@ -80,11 +82,13 @@ tests/test_report.xml
 tests/test_shell_wrappers.py
 tests/test_types.py
 tests/__pycache__/test_1.cpython-312-pytest-8.3.2.pyc
+tests/__pycache__/test_days_between.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_diff.cpython-312-pytest-8.3.2.pyc
 tests/__pycache__/test_diff.cpython-312-pytest-8.3.3.pyc
 tests/__pycache__/test_diff.cpython-313-pytest-8.3.3.pyc
 tests/__pycache__/test_diff.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_diff.cpython-313-pytest-8.3.5.pyc
+tests/__pycache__/test_embed.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_fetch.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_fetch.cpython-313-pytest-8.3.5.pyc
 tests/__pycache__/test_format.cpython-312-pytest-8.3.2.pyc

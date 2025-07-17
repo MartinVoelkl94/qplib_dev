@@ -11,4 +11,5 @@ tomli
 build
 twine
 pytest
+faker
 ipykernel
