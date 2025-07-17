@@ -63,6 +63,7 @@ def hide(
         log(f'error: unknown axis "{axis}"', 'qp.hide', verbosity)
 
     wb.save(filename)
+    wb.close()
 
 
 def format_excel(
@@ -105,4 +106,5 @@ def format_excel(
                     )
 
     wb.save(filename)
+    wb.close()
 
