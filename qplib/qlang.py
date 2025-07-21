@@ -596,8 +596,11 @@ def _select_cols(instruction, df_new, settings):
         if FLAGS.NEGATE in instruction.flags:
             cols_mask = ~cols_mask
         cols_new = cols_all[cols_mask]
+    elif instruction.operator == OPERATORS.INVERT:
+        cols_new = cols_all[~cols]
     else:
         cols_new = _filter_series(cols_all, instruction, settings, df_new)
+
 
     if cols_new.any() == False:
         log(f'warning: no columns fulfill the condition in "{instruction.code}"',
@@ -611,6 +614,7 @@ def _select_cols(instruction, df_new, settings):
         cols &= cols_new
     elif instruction.connector == CONNECTORS.OR_SELECT_COLS:
         cols |= cols_new
+
 
     if cols.any() == False and instruction.connector == CONNECTORS.AND_SELECT_COLS:
         log(f'warning: no columns fulfill the condition in "{instruction.code}" and the previous condition(s)',
@@ -650,7 +654,9 @@ def _select_rows(instruction, df_new, settings):
             return df_new, settings
 
 
-    if FLAGS.IDX in flags:
+    if instruction.operator == OPERATORS.INVERT:
+        mask.loc[:, cols] = ~masks[0].loc[:, cols]
+    elif FLAGS.IDX in flags:
         rows = _filter_series(rows_all, instruction, settings, df_new)
         mask.loc[rows, :] = True
     else: #corresponds to behaviour of FLAGS.EACH

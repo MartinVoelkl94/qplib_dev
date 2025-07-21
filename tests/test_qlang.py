@@ -803,9 +803,30 @@ def test_header():
 
 
 
+def test_invert():
+
+    df = get_df()
+
+    result = df.q(r'id  %invert;')
+    expected = df.loc[:,['name', 'date of birth', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
+    result = df.q(r'name  /gender  %invert;')
+    expected = df.loc[:,['ID', 'date of birth', 'age', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    
+    result = df.q(r'name  %%?j  %%invert;')
+    expected = df.loc[3:8, ['name']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    
+    result = df.q(r'name  %%each?j  %%invert;')
+    expected = df.loc[3:8, ['name']]
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+
 
 
 def test_logging():
+    
     df = get_df()
 
     #wip: does not work in older python versions
@@ -1398,6 +1419,7 @@ def test_to_yn():
 
 
 def test_trim():
+    df = get_df()
 
     result = df.q(r'%%each is na;  %trim;')
     expected = df.loc[[1,2,3,4,6,7,8,9,10], ['age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]
