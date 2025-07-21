@@ -589,7 +589,15 @@ def _select_cols(instruction, df_new, settings):
     verbosity = settings.verbosity
     cols = settings.cols
     cols_all = df_new.columns.to_series()
-    cols_new = _filter_series(cols_all, instruction, settings, df_new)
+
+
+    if instruction.operator == OPERATORS.TRIM:
+        cols_mask = settings.masks[0].loc[:, cols_all].any()
+        if FLAGS.NEGATE in instruction.flags:
+            cols_mask = ~cols_mask
+        cols_new = cols_all[cols_mask]
+    else:
+        cols_new = _filter_series(cols_all, instruction, settings, df_new)
 
     if cols_new.any() == False:
         log(f'warning: no columns fulfill the condition in "{instruction.code}"',
@@ -681,7 +689,7 @@ def _filter_series(series, instruction, settings, df_new=None):
     operator = instruction.operator
     value = instruction.value
     filtered = None
-
+    
 
     #regex comparisone
     if FLAGS.REGEX in flags:
@@ -691,11 +699,6 @@ def _filter_series(series, instruction, settings, df_new=None):
             filtered = series.astype(str).str.contains(value)
         else: #pragma: no cover (covered by validate())
             log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._filter_series', verbosity)
-
-
-    #only for column filtering
-    elif operator == OPERATORS.TRIM:
-        filtered = settings.masks[0].loc[:, series].any()
 
 
     #eval python expression
