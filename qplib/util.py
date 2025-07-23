@@ -11,6 +11,7 @@ from IPython.display import display
 from IPython import get_ipython
 from .types import _num, _na, _nk, _date, _datetime
 
+ITERABLES = (list, tuple, set, pd.Index, pd.Series)
 
 GREEN = '#6dae51'
 RED = '#f73434'
@@ -132,6 +133,17 @@ def log(
 
 
 
+def _arg_to_list(arg):
+    """
+    converts an argument to a list, if it is not already a list or tuple
+    """
+    if arg is None:
+        return []
+    elif isinstance(arg, ITERABLES):
+        return list(arg)
+    else:
+        return [arg]
+
 
 def fetch(path, before='now', verbosity=3):
     """
@@ -206,8 +218,7 @@ def fetch(path, before='now', verbosity=3):
 
 def match(patterns, value, regex=True):
         
-    if not isinstance(patterns, list):
-        patterns = [patterns]
+    patterns = _arg_to_list(patterns)
 
     if regex and isinstance(value, str):
         for pattern in patterns:

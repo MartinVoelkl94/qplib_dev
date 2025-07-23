@@ -8,7 +8,7 @@ from IPython.display import display
 from ipywidgets import interact, widgets
 from pandas.api.extensions import register_dataframe_accessor
 
-from .util import log, GREEN, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
+from .util import log, _arg_to_list, GREEN, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
 from .types import _dict, _date
 from .xlsx import hide, format_excel
 
@@ -165,6 +165,7 @@ def _to_lines(
     return x_str
 
 
+
 def merge(
     left,
     right,
@@ -218,15 +219,13 @@ def merge(
     - align text to top
     """
 
-
-
-    #prepare and validate
+    #process args
     left = left.copy().fillna('')
     right = right.copy().fillna('')
-    if flatten is None:
-        flatten = []
-    if not isinstance(flatten, (list, tuple, set, pd.Index, pd.Series)):
-        flatten = [flatten]
+    include = _arg_to_list(include)
+    exclude = _arg_to_list(exclude)
+    flatten = _arg_to_list(flatten)
+
     if on not in left.columns:
         log(f'Error: "{on}" is not in left dataframe', 'qp.merge', verbosity=verbosity)
     elif not left[on].is_unique:
@@ -235,19 +234,14 @@ def merge(
         log(f'Error: "{on}" is not in right dataframe', 'qp.merge', verbosity=verbosity)
 
 
-    if include is None:
+    #get relevant columns from right df
+    if include:
+        cols_right = [on] + [col for col in right.columns if col in include and col!=on] #faster options dont preserve order
+    else:
         cols_right = right.columns
-    elif isinstance(include, list):
-        cols_right = [on] + [col for col in right.columns if col in include]  #faster options dont preserve order
-    else:
-        cols_right = [on] + [col for col in right.columns if col == include]
-        
-    if exclude is None:
-        pass
-    elif isinstance(exclude, list):
+
+    if exclude:
         cols_right = [col for col in cols_right if col not in exclude]
-    else:
-        cols_right = [col for col in cols_right if col != exclude]
 
     right = right[cols_right]
 
@@ -318,6 +312,10 @@ def embed(
     Integrates rows from a source DataFrame into the destination DataFrame based on a key.
     """
 
+    include = _arg_to_list(include)
+    exclude = _arg_to_list(exclude)
+
+
     if key_dest not in df_dest.columns:
         log(f'error: key "{key_dest}" not found in df_dest', 'qp.integrate', verbosity)
         return df_dest
@@ -338,19 +336,12 @@ def embed(
             'qp.integrate', verbosity)
 
 
-    if include is None:
-        cols_src = df_src.columns
-    elif isinstance(include, (list, tuple, set, pd.Index, pd.Series)):
+    if include:
         cols_src = [col for col in df_src.columns if col in include]  #faster options dont preserve order
     else:
-        cols_src = [col for col in df_src.columns if col == include]
-        
-    if exclude is None:
-        pass
-    elif isinstance(exclude, (list, tuple, set, pd.Index, pd.Series)):
+        cols_src = df_src.columns
+    if exclude:
         cols_src = [col for col in cols_src if col not in exclude]
-    else:
-        cols_src = [col for col in cols_src if col != exclude]
 
 
     df_merged = pd.DataFrame({
@@ -374,11 +365,19 @@ def embed(
 
 
 
-def days_between(df, cols, reference_date=None, reference_col=None, verbosity=3):
+def days_between(
+        df,
+        cols,
+        reference_date=None,
+        reference_col=None,
+        verbosity=3,
+        ):
+    """
+    Calculates the number of days between a reference date or column and the specified columns in a DataFrame.
+    """
+    
+    cols = _arg_to_list(cols)
     df = df.copy()
-
-    if not isinstance(cols, (list, tuple, set, pd.Index, pd.Series)):
-        cols = [cols]
     
     if reference_date is None and reference_col is None:
         log(f'ERROR: no reference date or column provided',
