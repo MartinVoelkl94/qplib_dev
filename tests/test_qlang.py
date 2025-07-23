@@ -359,6 +359,7 @@ df = get_df()
         None
     ),
     (
+        #different in qlang_v2
         r"""
         ID  %%regex=1....
         diabetes  &&is yes;
@@ -368,6 +369,7 @@ df = get_df()
         None
     ),
     (
+        #different in qlang_v2
         r"""
         diabetes  %%is yes;
         ID  &&regex=1....
@@ -377,6 +379,7 @@ df = get_df()
         None
     ),
     (
+        #different in qlang_v2
         r"""
         diabetes %%is yes;
         / ID &&regex=1....
@@ -385,6 +388,7 @@ df = get_df()
         None
     ),
     (
+        #different in qlang_v2
         r"""
         ID  %%regex=1....  //regex=2....  %%save1
         gender  %%=m  //=male  &&load1
@@ -394,6 +398,7 @@ df = get_df()
         None
     ),
     (
+        #different in qlang_v2
         r"""
         ID  %%regex=1.... // regex=2....  // save 1
         gender %%=m // =male  &&load1
@@ -419,6 +424,7 @@ df = get_df()
         None
     ),
     (
+        #different in qlang_v2
         r"""
         gender  %%=f // =female
         age  &&>30
@@ -427,6 +433,7 @@ df = get_df()
         None
     ),
     (
+        #different in qlang_v2
         r"""
         gender  %%=f  //=female  %%save a
         age  %%>30  && load a 
@@ -458,6 +465,7 @@ df = get_df()
         None
     ),
     (
+        #different in qlang_v2
         r"""
         weight  %%<70  &&>40  %%save=between 40 and 70
         diabetes %%is yes;  &&load=between 40 and 70   
@@ -557,6 +565,7 @@ def test_col_eval():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
+        #different in qlang_v2
         r"""
         id / age %%is num; $ col~ df["name"]
         """)

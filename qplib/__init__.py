@@ -1,6 +1,6 @@
 
 from .qlang import query, DataFrameQuery, DataFrameQueryInteractiveMode
-
+from .qlang_v2 import query as query_v2
 
 from .pandas import \
     get_df, \
