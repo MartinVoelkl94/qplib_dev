@@ -1,7 +1,7 @@
 
 from .qlang_v3 import query as query_v3
-from .qlang_v2 import query as query_v2
-from .qlang import query, DataFrameQuery, DataFrameQueryInteractiveMode
+# from .qlang_v2 import query as query_v2
+# from .qlang import query, DataFrameQuery, DataFrameQueryInteractiveMode
 
 
 from .pandas import \

@@ -11,19 +11,24 @@ import qplib as qp
 df = qp.get_df()
 
 
-#"%" selects columns
-#"%%" selects rows
+#"%"    selects columns
+#"%%"   selects rows
+#"%%%"  selects values
+#"$"    modifies values, metadata, settings
 #show all patients with ID > 20000
-df.q(r'%id  %%>20000')
+df.q(r'%id      %%>20000')
 
 #select all patients whose name contains "j"
-df.q(r'%name  %%?j')
+df.q(r'%name    %%?j')
 
 #select all patients whose name contains "j" and "a"
-df.q(r'%name  %%?j  &&?a')
+df.q(r'%name    %%?j        &&?a')
 
 #select all patients whose name contains "j" or "a"
-df.q(r'%name  %%?j  //?a')
+df.q(r'%name    %%?j        //?a')
+
+#select values between 0 and 100 and highlight them red
+df.q(r'%%%>0;   &&&<100     $color=red')
 ```
 
 An interactive wrapper can be called with df.qi() to help with query creation and for exploring the syntax.  
