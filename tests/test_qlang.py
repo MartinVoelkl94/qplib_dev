@@ -758,6 +758,7 @@ def test_eval():
     assert result.equals(expected), 'failed test9: convert all entries to python expression\n' + qp.diff(result, expected, output='str')
 
 
+
 params = [   
     (r'id  $header id',                                                                 get_df().rename(columns={'ID': 'id'}).loc[:, ['id']]),
     (r'id  $header id   %name  $header n   %date of birth  $header dob  %is any;',      get_df().rename(columns={'ID': 'id', 'name': 'n', 'date of birth': 'dob'})),
@@ -1057,6 +1058,23 @@ def test_new_col1():
     df2['new1'] = 'a'
     expected = df2.loc[[0],['new1']]
     assert result.equals(expected), 'failed test7: check if selection saving and loading works correctly with new col creation\n' + qp.diff(result, expected, output='str')
+
+
+
+def test_previous_bugs():
+    try:
+        df.q(
+            r"""
+            %age ///!is num;
+            is any;
+            $bg=orange
+            """
+            )
+    except Exception as e:
+        assert False, f'failed test0: check if previous bug is fixed: {e}'
+    
+    
+
 
 
 params = [

@@ -254,6 +254,12 @@ def query(df_old, code=''):
         index=df_new.index
         )
     
+    settings.vals_blank = pd.DataFrame(
+        np.zeros(df_new.shape, dtype=bool),
+        columns=df_new.columns,
+        index=df_new.index
+        )
+    
     settings.saved = {}
     settings.verbosity = VERBOSITY
     settings.diff = DIFF
@@ -279,6 +285,8 @@ def query(df_old, code=''):
         log(f'debug: applying instruction:\n{instruction}', 'qp.qlang.query', settings.verbosity)
         df_new, settings  = instruction.function(instruction, df_new, settings)
         log(f'trace: instruction applied', 'qp.qlang.query', settings.verbosity)
+        # display(instruction)
+        # display(settings.vals)
 
 
 
@@ -710,11 +718,7 @@ def _select_vals(instruction, df_new, settings):
     rows = settings.rows
     vals = settings.vals
     selection = df_new.loc[rows, cols]
-    vals_zeroes = pd.DataFrame(
-        np.ones(df_new.shape, dtype=bool),
-        columns=df_new.columns,
-        index=df_new.index
-        )
+    vals_blank = settings.vals_blank
 
     if cols.any() == False:
         log(f'error: val selection cannot be applied when no cols where selected', 'qp.qlang._select_vals', verbosity)
@@ -738,9 +742,9 @@ def _select_vals(instruction, df_new, settings):
     if instruction.operator == OPERATORS.INVERT:
         vals_new = ~vals
     else:
-        vals_new = vals_zeroes.loc[rows, cols]
+        vals_new = vals_blank
         for col in df_new.columns[cols]:
-            vals_new[col] = _filter_series(selection[col], instruction, settings, selection)
+            vals_new.loc[rows, col] = _filter_series(selection[col], instruction, settings, selection)
 
 
     if instruction.connector == CONNECTORS.AND_SELECT_VALS:
@@ -749,6 +753,7 @@ def _select_vals(instruction, df_new, settings):
         vals = vals | vals_new
     elif instruction.connector == CONNECTORS.NEW_SELECT_VALS:
         vals = vals_new
+
 
     settings.cols = cols
     settings.rows = rows
@@ -1366,6 +1371,7 @@ def _new_col(instruction, df_new, settings):
     cols = pd.Series([True if col == header else False for col in df_new.columns])
     cols.index = df_new.columns
     vals[header] = False
+    settings.vals_blank[header] = False
     for selection in settings.saved.values():
         selection['cols'] = pd.concat((selection['cols'], pd.Series({header: False})))
         selection['vals'][header] = False
@@ -1647,6 +1653,6 @@ def _interactive_mode(**kwargs): #pragma: no cover (dynamic UI is not tested)
     code = kwargs.pop('code')
     result = query(df, code)
     display(result)
-    return result 
+    return result
 
 
