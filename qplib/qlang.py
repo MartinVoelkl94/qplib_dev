@@ -285,8 +285,6 @@ def query(df_old, code=''):
         log(f'debug: applying instruction:\n{instruction}', 'qp.qlang.query', settings.verbosity)
         df_new, settings  = instruction.function(instruction, df_new, settings)
         log(f'trace: instruction applied', 'qp.qlang.query', settings.verbosity)
-        # display(instruction)
-        # display(settings.vals)
 
 
 
@@ -506,9 +504,10 @@ def parse(instruction_tokenized, settings):
             log(f'trace: no operator found in "{code}". using default "{OPERATORS.SET}"', 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.SET
 
-    if instruction.connector in CONNECTORS.by_trait['select_rows'] \
-        and FLAGS.SAVE_SELECTION not in flags \
-        and FLAGS.LOAD_SELECTION not in flags \
+    if FLAGS.SAVE_SELECTION in flags or FLAGS.LOAD_SELECTION in flags:
+        pass #no defaults needed here
+    
+    elif instruction.connector in CONNECTORS.by_trait['select_rows'] \
         and not flags.intersection(FLAGS.by_trait['select_rows_scope']):
         log(f'trace: no row selection scope flag found in "{code}". using default "{FLAGS.ANY}"', 'qp.qlang.parse', verbosity)
         instruction.flags.add(FLAGS.ANY)
@@ -731,7 +730,7 @@ def _select_vals(instruction, df_new, settings):
 
     if value.startswith('@'):
         col = value[1:]
-        if col in df_new.cols:
+        if col in df_new.columns:
             instruction.value = df_new.loc[rows, col]
         else:
             log(f'error: col "{col}" not found in dataframe. cannot use "@{col}" for val selection',
@@ -742,10 +741,9 @@ def _select_vals(instruction, df_new, settings):
     if instruction.operator == OPERATORS.INVERT:
         vals_new = ~vals
     else:
-        vals_new = vals_blank
+        vals_new = vals_blank.copy()
         for col in df_new.columns[cols]:
             vals_new.loc[rows, col] = _filter_series(selection[col], instruction, settings, selection)
-
 
     if instruction.connector == CONNECTORS.AND_SELECT_VALS:
         vals = vals & vals_new
@@ -1104,11 +1102,7 @@ def _modify_format(instruction, df_new, settings):
     cols = settings.cols
     rows = settings.rows
     vals = settings.vals
-    vals_temp = pd.DataFrame(
-        np.zeros(df_new.shape, dtype=bool),
-        columns=df_new.columns,
-        index=df_new.index
-        )
+    vals_temp = settings.vals_blank.copy()
     vals_temp.loc[rows, cols] = vals.loc[rows, cols]
 
     style = settings.style
@@ -1170,6 +1164,7 @@ def _modify_headers(instruction, df_new, settings):
     verbosity = settings.verbosity
     cols = settings.cols
     vals = settings.vals
+    vals_blank = settings.vals_blank.copy()
     operator = instruction.operator
     value = instruction.value
 
@@ -1198,6 +1193,7 @@ def _modify_headers(instruction, df_new, settings):
     df_new.rename(columns=col_mapping, inplace=True)
     cols.index = df_new.columns
     vals.rename(columns=col_mapping, inplace=True)
+    vals_blank.rename(columns=col_mapping, inplace=True)
     for selection in settings.saved.values():
         selection['cols'].index = df_new.columns
         selection['vals'].rename(columns=col_mapping, inplace=True)
@@ -1205,6 +1201,7 @@ def _modify_headers(instruction, df_new, settings):
 
     settings.cols = cols
     settings.vals = vals
+    settings.vals_blank = vals_blank
     return df_new, settings
 
 
@@ -1217,11 +1214,7 @@ def _modify_vals(instruction, df_new, settings):
     cols = settings.cols
     rows = settings.rows
     vals = settings.vals
-    vals_temp = pd.DataFrame(
-        np.zeros(df_new.shape, dtype=bool),
-        columns=df_new.columns,
-        index=df_new.index
-        )
+    vals_temp = settings.vals_blank.copy()
     vals_temp.loc[rows, cols] = vals.loc[rows, cols]
 
     if vals_temp.any().any() == False:
@@ -1230,6 +1223,16 @@ def _modify_vals(instruction, df_new, settings):
 
     operator = instruction.operator
     value = instruction.value
+
+    if value.startswith('@'):
+        col = value[1:]
+        if col in df_new.columns:
+            value = df_new.loc[rows, col]
+        else:
+            log(f'error: col "{col}" not found in dataframe. cannot use "@{col}" for val modification',
+                'qp.qlang._modify_vals', verbosity)
+            return df_new, settings
+
     type_conversions = {
         OPERATORS.TO_STR: str,
         OPERATORS.TO_INT: _int,
@@ -1253,13 +1256,22 @@ def _modify_vals(instruction, df_new, settings):
         OPERATORS.TO_NK: 'object',
         OPERATORS.TO_YN: 'object',
         }
+    
 
     #data modification  
     if operator == OPERATORS.SET:
-        df_new[vals_temp] = value
+        if isinstance(value, pd.Series):
+            df_temp = pd.DataFrame({colname: value for colname in df_new.columns})
+            df_new[vals_temp] = df_temp
+        else:
+            df_new[vals_temp] = value
 
     elif operator == OPERATORS.ADD:
-        df_new[vals_temp] = df_new[vals_temp].astype(str) + value
+        if isinstance(value, pd.Series):
+            df_temp = pd.DataFrame({colname: value for colname in df_new.columns})
+            df_new[vals_temp] = df_new.astype(str) + df_temp.astype(str)
+        else:
+            df_new[vals_temp] = df_new[vals_temp].astype(str) + value
 
     elif FLAGS.COL_EVAL in instruction.flags:
         if operator == OPERATORS.EVAL:
@@ -1336,6 +1348,7 @@ def _new_col(instruction, df_new, settings):
     cols = settings.cols
     rows = settings.rows
     vals = settings.vals
+    vals_blank = settings.vals_blank
     operator = instruction.operator
     value = instruction.value
 
@@ -1371,13 +1384,14 @@ def _new_col(instruction, df_new, settings):
     cols = pd.Series([True if col == header else False for col in df_new.columns])
     cols.index = df_new.columns
     vals[header] = False
-    settings.vals_blank[header] = False
+    vals_blank[header] = False
     for selection in settings.saved.values():
         selection['cols'] = pd.concat((selection['cols'], pd.Series({header: False})))
         selection['vals'][header] = False
 
     settings.cols = cols
     settings.vals = vals
+    settings.vals_blank = vals_blank
     return df_new, settings
 
 
@@ -1654,5 +1668,6 @@ def _interactive_mode(**kwargs): #pragma: no cover (dynamic UI is not tested)
     result = query(df, code)
     display(result)
     return result
+
 
 
