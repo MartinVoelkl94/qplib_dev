@@ -6,7 +6,6 @@ import qplib as qp
 from qplib import log
 
 
-
 def get_df_simple_tagged():
     df = pd.DataFrame({
         'meta': ['', '', ''],
@@ -43,7 +42,7 @@ def check_message(expected_message):
 
 
 df = get_df()
-@pytest.mark.parametrize("code, expected_cols, message", [
+params = [
 
     #using operator: set/equals
     ('', df.columns, None),
@@ -111,12 +110,12 @@ df = get_df()
     ('!==date of birth', ['ID', 'name', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose'], None),
    
     #strictness flag
-    ('strict=', [], 'WARNING: no columns fulfill the condition in "%strict="'),
+    ('strict=', [], 'WARNING: no cols fulfill the condition in "%strict="'),
     ('strict=ID', ['ID'], None),
     ('strict =ID', ['ID'], None),
     ('strict= ID', ['ID'], None),
     ('strict = ID', ['ID'], None),
-    ('strict=id', [], 'WARNING: no columns fulfill the condition in "%strict=id"'),
+    ('strict=id', [], 'WARNING: no cols fulfill the condition in "%strict=id"'),
     ('strict=date of birth / age', ['date of birth', 'age'], None),
     ('strict=date of birth / =age', ['date of birth', 'age'], None),
 
@@ -132,7 +131,7 @@ df = get_df()
     #using operator: regex equality
     ('regex=ID´$', ['ID'], None),
     ('regex=ID', ['ID'], None),
-    ('regex=.', [], r'WARNING: no columns fulfill the condition in "%regex=."'),
+    ('regex=.', [], r'WARNING: no cols fulfill the condition in "%regex=."'),
     ('regex=..', ['ID'], None),
 
     #using operator: regex strict equality
@@ -149,8 +148,8 @@ df = get_df()
     ('?bp & !?systole & ?diastole', ['bp diastole'], None),
     ('?bp & !?systole / ?ID', ['ID', 'bp diastole'], None),
 
-    ])
-
+    ]
+@pytest.mark.parametrize('code, expected_cols, message', params)
 def test_col_selection(code, expected_cols, message):
     result = df.q(code)
     expected = df.loc[:, expected_cols]
@@ -163,7 +162,7 @@ def test_col_selection(code, expected_cols, message):
 
 
 df = get_df()
-@pytest.mark.parametrize('code, expected, message', [
+params = [
 
     #numeric comparison
     (r'age  %%=30',             df.loc[[1], ['age']], None),
@@ -284,7 +283,7 @@ df = get_df()
     (r'%%idx ?1',                                    df.iloc[[1, 10], :], None),
 
 
-    #comparison between columns
+    #comparison between cols
     (r'id  %%=@ID',                                  df.loc[:, ['ID']], None),
     (r'age / height  $to num;   %height  %%>@age',   df.loc[[0, 10], ['height']], None),
     (r'age / height  $to num;   %height  %%<@age',   df.loc[[], ['height']], None),
@@ -359,7 +358,6 @@ df = get_df()
         None
     ),
     (
-        #different in qlang_v2
         r"""
         ID  %%regex=1....
         diabetes  &&is yes;
@@ -369,7 +367,6 @@ df = get_df()
         None
     ),
     (
-        #different in qlang_v2
         r"""
         diabetes  %%is yes;
         ID  &&regex=1....
@@ -379,7 +376,6 @@ df = get_df()
         None
     ),
     (
-        #different in qlang_v2
         r"""
         diabetes %%is yes;
         / ID &&regex=1....
@@ -388,7 +384,6 @@ df = get_df()
         None
     ),
     (
-        #different in qlang_v2
         r"""
         ID  %%regex=1....  //regex=2....  %%save1
         gender  %%=m  //=male  &&load1
@@ -398,7 +393,6 @@ df = get_df()
         None
     ),
     (
-        #different in qlang_v2
         r"""
         ID  %%regex=1.... // regex=2....  // save 1
         gender %%=m // =male  &&load1
@@ -424,7 +418,6 @@ df = get_df()
         None
     ),
     (
-        #different in qlang_v2
         r"""
         gender  %%=f // =female
         age  &&>30
@@ -433,7 +426,6 @@ df = get_df()
         None
     ),
     (
-        #different in qlang_v2
         r"""
         gender  %%=f  //=female  %%save a
         age  %%>30  && load a 
@@ -465,7 +457,6 @@ df = get_df()
         None
     ),
     (
-        #different in qlang_v2
         r"""
         weight  %%<70  &&>40  %%save=between 40 and 70
         diabetes %%is yes;  &&load=between 40 and 70   
@@ -484,7 +475,8 @@ df = get_df()
         None
     ),
 
-    ])
+    ]
+@pytest.mark.parametrize('code, expected, message', params)
 def test_row_selection(code, expected, message):
     df = get_df()
     temp = df.q(code)
@@ -503,14 +495,14 @@ def test_check_df():
     log(clear=True, verbosity=1)
     df.check()
     check_message('ERROR: index is not unique')
-    check_message('ERROR: columns are not unique')
-    check_message('WARNING: the following column headers contain "%" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
-    check_message('WARNING: the following column headers contain "&" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
-    check_message('WARNING: the following column headers contain "/" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
-    check_message('WARNING: the following column headers contain "$" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
-    check_message("WARNING: the following column headers contain leading whitespace which should be removed:<br>&emsp;[' a']")
-    check_message("WARNING: the following column headers contain trailing whitespace which should be removed:<br>&emsp;['a ']")
-    check_message("WARNING: the following column headers start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:<br>['=']<br>explicitely use a valid operator to avoid conflicts.")
+    check_message('ERROR: cols are not unique')
+    check_message('WARNING: the following col headers contain "%" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following col headers contain "&" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following col headers contain "/" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following col headers contain "$" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message("WARNING: the following col headers contain leading whitespace which should be removed:<br>&emsp;[' a']")
+    check_message("WARNING: the following col headers contain trailing whitespace which should be removed:<br>&emsp;['a ']")
+    check_message("WARNING: the following col headers start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:<br>['=']<br>explicitely use a valid operator to avoid conflicts.")
 
 
 
@@ -565,7 +557,6 @@ def test_col_eval():
     df = qp.get_df()
     df1 = qp.get_df()
     result = df.q(
-        #different in qlang_v2
         r"""
         id / age %%is num; $ col~ df["name"]
         """)
@@ -591,7 +582,7 @@ def test_col_eval():
     df1 = qp.get_df()
     result = df.q(
         r"""
-        id / age %%each is num; $ col~ df["name"]
+        id / age %%%is num; $ col~ df["name"]
         """)
     df1['ID'] = df1['name']
     df1.loc[[0,1,2,3,4,8,10], 'age'] = df1.loc[[0,1,2,3,4,8,10], 'name']
@@ -750,7 +741,7 @@ def test_eval():
     df1 = qp.get_df()
     result = df.q(
         r"""
-        id / age %%each is num; $ ~ 10
+        id / age %%%is num; $ ~ 10
         """)
     df1['ID'] = 10
     df1.loc[[0,1,2,3,4,8,10], 'age'] = 10
@@ -767,47 +758,17 @@ def test_eval():
     assert result.equals(expected), 'failed test9: convert all entries to python expression\n' + qp.diff(result, expected, output='str')
 
 
-
-def test_header():
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('id  $header id')
-    expected = df2.rename(columns={'ID': 'id'}).loc[:, ['id']]
-    assert result.equals(expected), 'failed test0: rename col header\n' + qp.diff(result, expected, output='str')
-
-
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q(r'id  $header id   %name  $header n   %date of birth  $header dob  %is any;')
-    expected = df2.rename(columns={'ID': 'id', 'name': 'n', 'date of birth': 'dob'})
-    assert result.equals(expected), 'failed test1: rename multiple col headers\n' + qp.diff(result, expected, output='str')
-
-
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('id  $header += abc')
-    expected = df2.rename(columns={'ID': 'IDabc'}).loc[:, ['IDabc']]
-    assert result.equals(expected), 'failed test2: append to col header\n' + qp.diff(result, expected, output='str')
-
-
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('id / name / date of birth   $header += abc  %is any;')
-    expected = df2.rename(columns={'ID': 'IDabc', 'name': 'nameabc', 'date of birth': 'date of birthabc'})
-    assert result.equals(expected), 'failed test3: append to multiple col headers\n' + qp.diff(result, expected, output='str')
-
-
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('id  $header ~ x.lower() + str(len(x))   %is any;')
-    expected = df2.rename(columns={'ID': 'id2'})
-    assert result.equals(expected), 'failed test4: rename col header with eval\n' + qp.diff(result, expected, output='str')
-
-
-    df1 = get_df()
-    df2 = get_df()
-    result = df1.q('id / weight / diabetes    $header ~ x.lower() + str(len(x))   %is any;')
-    expected = df2.rename(columns={'ID': 'id2', 'weight': 'weight6', 'diabetes': 'diabetes8'})
+params = [   
+    (r'id  $header id',                                                                 get_df().rename(columns={'ID': 'id'}).loc[:, ['id']]),
+    (r'id  $header id   %name  $header n   %date of birth  $header dob  %is any;',      get_df().rename(columns={'ID': 'id', 'name': 'n', 'date of birth': 'dob'})),
+    (r'id  $header += abc',                                                             get_df().rename(columns={'ID': 'IDabc'}).loc[:, ['IDabc']]),
+    (r'id / name / date of birth   $header += abc  %is any;',                           get_df().rename(columns={'ID': 'IDabc', 'name': 'nameabc', 'date of birth': 'date of birthabc'})),
+    (r'id  $header ~ x.lower() + str(len(x))   %is any;',                               get_df().rename(columns={'ID': 'id2'})),
+    (r'id / weight / diabetes    $header ~ x.lower() + str(len(x))   %is any;',         get_df().rename(columns={'ID': 'id2', 'weight': 'weight6', 'diabetes': 'diabetes8'})),
+    ]
+@pytest.mark.parametrize('code, expected', params)
+def test_header(code, expected):
+    result = get_df().q(code)
     assert result.equals(expected), 'failed test5: rename multiple col headers with eval\n' + qp.diff(result, expected, output='str')
 
 
@@ -828,8 +789,8 @@ def test_invert():
     expected = df.loc[3:8, ['name']]
     assert result.equals(expected), qp.diff(result, expected, output='str')
     
-    result = df.q(r'name  %%each?j  %%invert;')
-    expected = df.loc[3:8, ['name']]
+    result = df.q(r'name  %%%?j  %%%invert;')
+    expected = df.loc[:, ['name']]
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -856,16 +817,16 @@ def test_logging():
 
     log(clear=True, verbosity=1)
     result = df.q(r'test  %%is na;')
-    expected = pd.DataFrame()
+    expected = pd.DataFrame(index=df.index)
     assert result.equals(expected), qp.diff(result, expected, output='str')
-    check_message('WARNING: no columns fulfill the condition in "%test  "')
-    check_message('WARNING: row filter cannot be applied when no columns where selected')
+    check_message('WARNING: no cols fulfill the condition in "%test  "')
+    check_message('ERROR: row selection cannot be applied when no cols where selected')
 
     log(clear=True, verbosity=1)
     result = df.q(r'id %%=@test')
     expected = df.copy().loc[:, ['ID']]
     assert result.equals(expected), qp.diff(result, expected, output='str')
-    check_message('ERROR: column "test" not found in dataframe. cannot use "@test" as value for row selection')
+    check_message('ERROR: col "test" not found in dataframe. cannot use "@test" for row selection')
 
     log(clear=True, verbosity=1)
     with pytest.raises(AttributeError):
@@ -895,28 +856,28 @@ def test_logging():
     
     log(clear=True, verbosity=1)
     result = df.q(r'test  $header=abc')
-    check_message('WARNING: header modification cannot be applied when no columns where selected')
+    check_message('ERROR: header modification cannot be applied when no cols where selected')
     
     log(clear=True, verbosity=1)
     result = df.q(r'$new=@test')
-    check_message('ERROR: column "test" not found in dataframe. cannot add a new column thats a copy of it')
+    check_message('ERROR: col "test" not found in dataframe. cannot add a new col thats a copy of it')
 
 
 
 
-df = get_df()
-@pytest.mark.parametrize("code, metadata", [
-    (r'a %%>0  $meta = >0  %is any;  %%is any;', ['', '', '>0']),
-    (r'a %%>0  $meta += >0  %is any;  %%is any;', ['', '', '>0']),
-    (r'=a   %%>0   $meta +=>0  %is any;  %%is any;', [ '', '', '>0']),
-    (r'=a%%>0     $meta+= >0  %is any;  %%is any;', [ '', '', '>0']),
-    (r'=a   %%>0   $meta ~ x + ">0"  %is any;  %%is any;', [ '', '', '>0']),
-    (r'=a   %%>0   $meta ~ ">" + str(0)  %is any;  %%is any;', [ '', '', '>0']),
-    (r'=a   %%>0   $meta col~ col + ">0"  %is any;  %%is any;', [ '', '', '>0']),
-    (r'=a%%>0     $tag   %is any;  %%is any;', [ '', '', '\n@a: ']),
-    (r'=a%%>0  /b     $tag  %is any;  %%is any;', [ '', '', '\n@a@b: ']),
-    (r'=a%%>0  /b     $tag=value >0   %is any;  %%is any;', [ '', '', '\n@a@b: value >0']),
-    ])
+params = [
+    (r'a    %%>0            $meta = >0  %is any;        %%is any;',                             ['', '', '>0']),
+    (r'a    %%>0            $meta += >0  %is any;       %%is any;',                             ['', '', '>0']),
+    (r'=a   %%>0            $meta +=>0  %is any;        %%is any;',                             [ '', '', '>0']),
+    (r'=a   %%>0            $meta+= >0  %is any;        %%is any;',                             [ '', '', '>0']),
+    (r'=a   %%>0            $meta ~ x + ">0"            %is any;            %%is any;',         [ '', '', '>0']),
+    (r'=a   %%>0            $meta ~ ">" + str(0)        %is any;            %%is any;',         [ '', '', '>0']),
+    (r'=a   %%>0            $meta col~ col + ">0"       %is any;            %%is any;',         [ '', '', '>0']),
+    (r'=a   %%>0            $tag   %is any;             %%is any;',                             [ '', '', '\n@a: ']),
+    (r'=a   %%>0    /b      $tag  %is any;              %%is any;',                             [ '', '', '\n@a@b: ']),
+    (r'=a   %%>0    /b      $tag=value >0               %is any;            %%is any;',         [ '', '', '\n@a@b: value >0']),
+    ]
+@pytest.mark.parametrize('code, metadata', params)
 def test_metadata(code, metadata):
     df = get_df_simple_tagged()
     df = df.q(code)
@@ -963,27 +924,6 @@ def test_metadata_continous():
     df = df.q(r'=a     $meta=   %is any;  %%is any;')
     assert df.equals(df1), 'failed test5: continous metadata tagging\n' + qp.diff(df, df1, output='str')
 
-
-
-@pytest.mark.parametrize("code, content, cols", [
-    (r'$new', '', ['new1']),
-    (r'$new a', 'a', ['new1']),
-    (r'$newa', 'a', ['new1']),
-    (r'$new =a', 'a', ['new1']),
-    (r'$new= a', 'a', ['new1']),
-    (r'$new = a', 'a', ['new1']),
-    (r'$new ~ "a"', 'a', ['new1']),
-    (r'$new ~ df["ID"]', qp.get_df()['ID'], ['new1']),
-    (r'$new @ID', qp.get_df()['ID'].astype(str), ['new1']),
-    (r'$new  %id', '', ['ID']),
-    ])
-def test_new_col(code, content, cols):
-    df1 = get_df()
-    result = df1.q(code)
-    df2 = get_df()
-    df2['new1'] = content
-    expected = df2.loc[:, cols]
-    assert result.equals(expected), 'failed test0: creating new col\n' + qp.diff(result, expected, output='str')
 
 
 def test_modify_val():
@@ -1037,6 +977,28 @@ def test_modify_val():
     assert result.equals(expected), 'failed test3: appending to values\n' + qp.diff(result, expected, output='str')
 
 
+params = [
+    (r'$new',               '',                     ['new1']),
+    (r'$new a',             'a',                    ['new1']),
+    (r'$newa',              'a',                    ['new1']),
+    (r'$new =a',            'a',                    ['new1']),
+    (r'$new= a',            'a',                    ['new1']),
+    (r'$new = a',           'a',                    ['new1']),
+    (r'$new ~ "a"',         'a',                    ['new1']),
+    (r'$new ~ df["ID"]',    qp.get_df()['ID'],      ['new1']),
+    (r'$new @ID',           qp.get_df()['ID'],      ['new1']),
+    (r'$new  %id',          '',                     ['ID']),
+    ]
+@pytest.mark.parametrize('code, content, cols', params)
+def test_new_col(code, content, cols):
+    df1 = get_df()
+    result = df1.q(code)
+    df2 = get_df()
+    df2['new1'] = content
+    expected = df2.loc[:, cols]
+    assert result.equals(expected), 'failed test0: creating new col\n' + qp.diff(result, expected, output='str')
+
+
 def test_new_col1():
     df1 = get_df()
     result = df1.q('$new a  $header = new col')
@@ -1052,7 +1014,7 @@ def test_new_col1():
     df2['new1'] = 'a'
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), 'failed test2: creating new col\n' + qp.diff(result, expected, output='str')
-    check_message('WARNING: no columns fulfill the condition in "/=new2"')
+    check_message('WARNING: no cols fulfill the condition in "/=new2"')
 
 
     df1 = get_df()
@@ -1061,7 +1023,7 @@ def test_new_col1():
     df2['new1'] = 'a'
     expected = df2.loc[:,['new1']]
     assert result.equals(expected), 'failed test3: creating new col\n' + qp.diff(result, expected, output='str')
-    check_message('WARNING: no columns fulfill the condition in "/=new2"')
+    check_message('WARNING: no cols fulfill the condition in "/=new2"')
 
 
     df1 = get_df()
@@ -1097,15 +1059,17 @@ def test_new_col1():
     assert result.equals(expected), 'failed test7: check if selection saving and loading works correctly with new col creation\n' + qp.diff(result, expected, output='str')
 
 
-
-@pytest.mark.parametrize('code, expected, message', [
-    (r'id %%?1  %%save1   %%is any;  %%load1',                   df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?1  %%save=1   %%is any;  %%load=1',                 df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%any?1  %%save1   %%is any;  %%load1',                df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%all?1  %%save1   %%is any;  %%load1',                df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%each?1  %%save1   %%is any;  %%load1',               df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?1  %%save1   %is any;  %%is any;   %id  %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?2  %%save1  %%?1  %%save1  %%is any;  %%load1',     df.loc[[0,1,2,3,6],['ID']], None),
+params = [
+    (r'id %%?1      %%save1     %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?1      %%save=1    %%is any;   %%load=1',                          df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%any?1   %%save1     %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%all?1   %%save1     %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?1      %%%save1    %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?1      %save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?1      $save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?1      %%save1     %is any;    %%is any;   %id         %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?2      %%save1     %%?1        %%save1     %%is any;   %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%%?1     %%%save1    %%is any;   %%load1',                           df.loc[:,['ID']], None),
     
     (
         r"""
@@ -1139,14 +1103,15 @@ def test_new_col1():
     
     (
         r"""
-        id   %%!?1   %%save1
-        id   %%!?2   %%save2
-        id   %%load1   &&load2
+        id   %%!?1      %%save1
+        id   %%!?2      %%save2
+        id   %%load1    &&load2
         """,
         df.loc[[8,9,10],['ID']],
         None
     ),
-    ])
+    ]
+@pytest.mark.parametrize('code, expected, message', params)
 def test_save_load(code, expected, message):
     result = get_df().q(code)
     assert result.equals(expected), qp.diff(result, expected, output='str')
@@ -1181,7 +1146,7 @@ def test_selection_scopes():
 
 
     df1 = qp.get_df()
-    result = df1.q(r'%%each is na; $')
+    result = df1.q(r'%%%is na; $')
     df2 = qp.get_df()
     df2.loc[[2,3,6], 'age'] = ''
     df2.loc[[7,8], 'gender'] = ''
@@ -1192,11 +1157,10 @@ def test_selection_scopes():
     df2.loc[[2,4,7], 'cholesterol'] = ''
     df2.loc[[2,7,8], 'diabetes'] = ''
     df2.loc[[1,6,7], 'dose'] = ''
-    expected = df2.loc[[1,2,3,4,6,7,8,9,10], :]
-    assert result.equals(expected), 'failed test3: check selection scope "each"\n' + qp.diff(result, expected, output='str')
+    expected = df2
+    assert result.equals(expected), 'failed test3: check val selection\n' + qp.diff(result, expected, output='str')
 
-
-@pytest.mark.parametrize("code, expected_cols", [
+params = [
     (
         r"""
         id  $sort;   %is any;
@@ -1246,7 +1210,8 @@ def test_selection_scopes():
         """,
         ['ID', 'name']
     ),
-    ])
+    ]
+@pytest.mark.parametrize('code, expected_cols', params)
 def test_sort(code, expected_cols):
     df = qp.get_df()
     result = df.q(code)
@@ -1260,7 +1225,7 @@ def test_sort(code, expected_cols):
 def test_style():
     df = get_df()
     result = df.q(r'$color=red')
-    isinstance(result, pd.io.formats.style.Styler)
+    assert isinstance(result, pd.io.formats.style.Styler)
 
     #updating the style
     result = df.q(
@@ -1285,7 +1250,7 @@ def test_symbols():
     assert sym1 != sym2, f'symbol {sym1} should not be equal to {sym2}'
     assert sym1 < sym2, f'symbol {sym1} should be less than {sym2}'
 
-    details = 'symbol:\n\tname: SET\n\tsymbol: =\n\tdescription: set values\n\ttraits:\n\t\tmodify\n\t\tsettings\n\t\tmetadata\n\t'
+    details = 'symbol:\n\tname: SET\n\tsymbol: =\n\tdescription: set values\n\ttraits:\n\t\tselect\n\t\tselect_vals\n\t\tselect_rows\n\t\tselect_cols\n\t\tmodify\n\t\tsettings\n\t\tmetadata\n\t'
     assert sym1.details() == details, f'symbol {sym1} should have details:\n{details}'
 
     symbols_modify1 = qp.qlang.OPERATORS.modify
@@ -1297,7 +1262,7 @@ def test_symbols():
     check_message('ERROR: symbol "x" not found in "OPERATORS"')
 
     connectors = qp.qlang.CONNECTORS.__str__()
-    expected = 'CONNECTORS:\n\t<"%%": NEW_SELECT_ROWS>\n\t<"&&": AND_SELECT_ROWS>\n\t<"//": OR_SELECT_ROWS>\n\t<"%": NEW_SELECT_COLS>\n\t<"&": AND_SELECT_COLS>\n\t<"/": OR_SELECT_COLS>\n\t<"$": MODIFY>'
+    expected = 'CONNECTORS:\n\t<"%%%": NEW_SELECT_VALS>\n\t<"&&&": AND_SELECT_VALS>\n\t<"///": OR_SELECT_VALS>\n\t<"%%": NEW_SELECT_ROWS>\n\t<"&&": AND_SELECT_ROWS>\n\t<"//": OR_SELECT_ROWS>\n\t<"%": NEW_SELECT_COLS>\n\t<"&": AND_SELECT_COLS>\n\t<"/": OR_SELECT_COLS>\n\t<"$": MODIFY>'
     assert connectors == expected, f'CONNECTORS should be:\n{expected}'
 
 
@@ -1427,24 +1392,22 @@ def test_to_yn():
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
-def test_trim():
-    df = get_df()
 
-    result = df.q(r'%%each is na;  %trim;')
-    expected = df.loc[[1,2,3,4,6,7,8,9,10], ['age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]
+params = [
+    (r'%%%is na;  %trim;',                  df.loc[:, ['age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]),
+    (r'%%%is na;  %%trim;',                 df.loc[[1,2,3,4,6,7,8,9,10], :]),
+    (r'%%%is na;  %trim;  %%trim;',         df.loc[[1,2,3,4,6,7,8,9,10], ['age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]),
+    (r'%%%is na;  %!trim;',                 df.loc[:, ['ID', 'name', 'date of birth']]),
+    (r'%%%is na;  %is any;  %trim;',        df.loc[:, ['age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]),
+    (r'%%%is na;  %is any;  %!trim;',       df.loc[:, ['ID', 'name', 'date of birth']]),
+    ]
+@pytest.mark.parametrize('code, expected', params)
+def test_trim(code, expected):
+    df = get_df()
+    temp = df.q(code)
+    result = df.loc[temp.index, temp.columns]
     assert result.equals(expected), qp.diff(result, expected, output='str')
-    
-    result = df.q(r'%%each is na;  %!trim;')
-    expected = df.loc[[1,2,3,4,6,7,8,9,10], ['ID', 'name', 'date of birth']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
-    
-    result = df.q(r'%%each is na;  %is any;  %trim;')
-    expected = df.loc[[1,2,3,4,6,7,8,9,10], ['age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
-    
-    result = df.q(r'%%each is na;  %is any;  %!trim;')
-    expected = df.loc[[1,2,3,4,6,7,8,9,10], ['ID', 'name', 'date of birth']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+
 
 
 def test_type_inference():
