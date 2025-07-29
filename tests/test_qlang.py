@@ -52,20 +52,20 @@ def test_check_df():
     df.check()
     check_message('ERROR: index is not unique')
     check_message('ERROR: cols are not unique')
-    check_message('WARNING: the following col headers contain "%" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
-    check_message('WARNING: the following col headers contain "&" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
-    check_message('WARNING: the following col headers contain "/" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
-    check_message('WARNING: the following col headers contain "$" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
-    check_message("WARNING: the following col headers contain leading whitespace which should be removed:<br>&emsp;[' a']")
-    check_message("WARNING: the following col headers contain trailing whitespace which should be removed:<br>&emsp;['a ']")
-    check_message("WARNING: the following col headers start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:<br>['=']<br>explicitely use a valid operator to avoid conflicts.")
+    check_message('WARNING: the following colnames contain "%" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following colnames contain "&" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following colnames contain "/" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message('WARNING: the following colnames contain "$" which is used by the query syntax, use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']')
+    check_message("WARNING: the following colnames contain leading whitespace which should be removed:<br>&emsp;[' a']")
+    check_message("WARNING: the following colnames contain trailing whitespace which should be removed:<br>&emsp;['a ']")
+    check_message("WARNING: the following colnames start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:<br>['=']<br>explicitely use a valid operator to avoid conflicts.")
 
 
 
 def test_col_eval():
     result = get_df().q(
         r"""
-        id $ col~ df["name"]
+        id $rows col~ df["name"]
         is any;
         """)
     expected = get_df()
@@ -74,7 +74,7 @@ def test_col_eval():
 
     result = get_df().q(
         r"""
-        id $ col~ df["name"]
+        id $rows col~ df["name"]
         is any; %%is any;
         """)
     expected = get_df()
@@ -84,7 +84,7 @@ def test_col_eval():
 
     result = df.q(
         r"""
-        id / age $ col~ df["name"]
+        id / age $rows col~ df["name"]
         is any;
         """)
     expected = get_df()
@@ -98,6 +98,7 @@ def test_col_eval():
         $ col~ df["name"]
         """)
     expected = get_df()
+    expected['ID'] = expected['ID'].astype('object')
     for col in expected.columns:
         expected[col] = expected['name']
     assert result.equals(expected), 'failed test3: copy col contents to all cols\n' + qp.diff(result, expected, output='str')
@@ -179,7 +180,7 @@ def test_diff_new_plus():
     df = pd.DataFrame({
         'a': [1,2,3],
         })
-    result = df.q(r'$val=b   $diff=new+').data
+    result = df.q(r'$vals=b   $diff=new+').data
     expected = pd.DataFrame({
             'meta': ['<br>vals changed: 1', '<br>vals changed: 1', '<br>vals changed: 1'],
             'a': ['b', 'b', 'b'],
@@ -207,7 +208,7 @@ def test_diff_retain_meta():
 def test_eval():
     result = get_df().q(
         r"""
-        name $ ~ x.lower()
+        name $vals ~ x.lower()
         is any; %%is any;
         """)
     expected = get_df()
@@ -226,7 +227,7 @@ def test_eval():
 
     result = get_df().q(
         r"""
-        gender  $to str;  $~ x.lower()
+        gender  %%is any; $to str;  $~ x.lower()
         is any;
         """)
     expected = get_df()
@@ -236,7 +237,7 @@ def test_eval():
 
     result = get_df().q(
         r"""
-        id %%10001  $ ~ str(10001)
+        id  %%10001  $ ~ str(10001)
         """)
     expected = get_df().loc[[0], ['ID']]
     expected.loc[0, 'ID'] = '10001'
@@ -245,7 +246,7 @@ def test_eval():
 
     result = get_df().q(
         r"""
-        id / age %%is num; $ ~ str(0)
+        id / age  %%is num;  $ ~ str(0)
         """)
     expected = get_df().loc[:, ['ID', 'age']]
     expected['ID'] = str(0)
@@ -255,7 +256,7 @@ def test_eval():
 
     result = get_df().q(
         r"""
-        id / age %%all is num; $ ~ 0
+        id / age  %%all is num;  $ ~ 0
         """)
     rows = [0,1,2,3,4,8,10]
     expected = get_df().loc[rows, ['ID', 'age']]
@@ -266,7 +267,7 @@ def test_eval():
 
     result = get_df().q(
         r"""
-        id / age %%%is num; $ ~ 10
+        id / age  %%%is num;  $ ~ 10
         """)
     expected = get_df().loc[:, ['ID', 'age']]
     expected['ID'] = 10
@@ -276,7 +277,7 @@ def test_eval():
     assert result.equals(expected), 'failed test8: conditionally convert multiple entries to str\n' + qp.diff(result, expected, output='str')
 
 
-    result = get_df().q('name  $~str(1)')
+    result = get_df().q(r'name  %%is any;  $~str(1)')
     expected = get_df().loc[:, ['name']]
     expected['name'] = '1'
     assert result.equals(expected), 'failed test9: convert all entries to python expression\n' + qp.diff(result, expected, output='str')
@@ -284,17 +285,17 @@ def test_eval():
 
 
 params = [   
-    (r'id  $header id',                                                                 get_df().rename(columns={'ID': 'id'}).loc[:, ['id']]),
-    (r'id  $header id   %name  $header n   %date of birth  $header dob  %is any;',      get_df().rename(columns={'ID': 'id', 'name': 'n', 'date of birth': 'dob'})),
-    (r'id  $header += abc',                                                             get_df().rename(columns={'ID': 'IDabc'}).loc[:, ['IDabc']]),
-    (r'id / name / date of birth   $header += abc  %is any;',                           get_df().rename(columns={'ID': 'IDabc', 'name': 'nameabc', 'date of birth': 'date of birthabc'})),
-    (r'id  $header ~ x.lower() + str(len(x))   %is any;',                               get_df().rename(columns={'ID': 'id2'})),
-    (r'id / weight / diabetes    $header ~ x.lower() + str(len(x))   %is any;',         get_df().rename(columns={'ID': 'id2', 'weight': 'weight6', 'diabetes': 'diabetes8'})),
+    (r'id  $cols id',                                                                 get_df().rename(columns={'ID': 'id'}).loc[:, ['id']]),
+    (r'id  $cols id   %name  $cols n   %date of birth  $cols dob  %is any;',      get_df().rename(columns={'ID': 'id', 'name': 'n', 'date of birth': 'dob'})),
+    (r'id  $cols += abc',                                                             get_df().rename(columns={'ID': 'IDabc'}).loc[:, ['IDabc']]),
+    (r'id / name / date of birth   $cols += abc  %is any;',                           get_df().rename(columns={'ID': 'IDabc', 'name': 'nameabc', 'date of birth': 'date of birthabc'})),
+    (r'id  $cols ~ x.lower() + str(len(x))   %is any;',                               get_df().rename(columns={'ID': 'id2'})),
+    (r'id / weight / diabetes    $cols ~ x.lower() + str(len(x))   %is any;',         get_df().rename(columns={'ID': 'id2', 'weight': 'weight6', 'diabetes': 'diabetes8'})),
     ]
 @pytest.mark.parametrize('code, expected', params)
-def test_header(code, expected):
+def test_cols(code, expected):
     result = get_df().q(code)
-    assert result.equals(expected), 'failed test5: rename multiple col headers with eval\n' + qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test5: rename multiple col cols with eval\n' + qp.diff(result, expected, output='str')
 
 
 
@@ -380,8 +381,8 @@ def test_logging():
     assert result1.equals(result3), qp.diff(result1, result3, output='str')
     
     log(clear=True, verbosity=1)
-    result = df.q(r'test  $header=abc')
-    check_message('ERROR: header modification cannot be applied when no cols where selected')
+    result = df.q(r'test  $cols=abc')
+    check_message('ERROR: colname modification cannot be applied when no cols where selected')
     
     log(clear=True, verbosity=1)
     result = df.q(r'$new=@test')
@@ -451,12 +452,12 @@ def test_metadata_continous():
 
 
 
-def test_modify_vals():
+def test_modify_rows_vals():
     
     result = get_df().q(
         r"""
-        name $ a
-        is any; %%is any;
+        name  $vals a
+        is any;  %%is any;
         """)
     expected = get_df()
     expected['name'] = 'a'
@@ -465,7 +466,7 @@ def test_modify_vals():
 
     result = get_df().q(
         r"""
-        name $ =a
+        name %%is any; $ =a
         is any; %%is any;
         """)
     expected = get_df()
@@ -475,8 +476,8 @@ def test_modify_vals():
 
     result = get_df().q(
         r"""
-        name $ a
-        gender $ b
+        name  %%%is any; $ a
+        gender $rows b
         is any; %%is any;
         """)
     expected = get_df()
@@ -487,7 +488,7 @@ def test_modify_vals():
 
     result = df.q(
         r"""
-        name $=a $+=a
+        name  $rows=a   %%%is any;  $+=a
         is any; %%is any;
         """)
     expected = get_df()
@@ -533,13 +534,13 @@ def test_modify_vals():
 
     result = get_df().q(
         r"""
-        $new=___ERROR  $header=error code
-            %%%is any;  $val+=@ID
+        $new=___ERROR  $cols=error code
+            %%%is any;  $vals+=@ID
 
         %age  /gender
             %%idx>5  &&idx<=8
                 %%%is na;
-                    $val+=@error code
+                    $vals+=@error code
                     $bg=orange
 
         is any;  %%is any;
@@ -591,11 +592,11 @@ def test_new_col(code, content, cols):
 
 
 def test_new_col1():
-    result = get_df().q('$new a  $header = new col')
+    result = get_df().q('$new a  $cols = new col')
     expected = get_df()
     expected['new col'] = 'a'
     expected = expected.loc[:,['new col']]
-    assert result.equals(expected), 'failed test1: creating new col with header\n' + qp.diff(result, expected, output='str')
+    assert result.equals(expected), 'failed test1: creating new col with colname\n' + qp.diff(result, expected, output='str')
 
 
     result = get_df().q('$new a   &newb   /=new1 /=new2')
@@ -879,22 +880,22 @@ params = [
     (r'age  %%strict==40.0',    df.loc[[4], ['age']], None),
     
     #date comparison
-    (r'date of birth  %%=1995-01-02',                                df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%==1995-01-02',                               df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%=1995.01.02',                                df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%=1995_01_02',                                df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%=1995´/01´/02',                              df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%==1995 01 02',                               df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%=1995-Jan-02',                               df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%=02-01-1995',                                df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%=02-Jan-1995',                               df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%==Jan-02-1995',                              df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%=02-01.1995',                                df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%=02 Jan-1995',                               df.loc[[0], ['date of birth']], None),
-    (r'date of birth  %%==Jan´/02_1995',                             df.loc[[0], ['date of birth']], None),
-    (r'date of birth  $to datetime;  %%=05-11-2007',                 df.loc[[4], ['date of birth']], None),
-    (r'date of birth  $to datetime;  %%>1990-01-01',                 df.loc[[0,1,4], ['date of birth']], None),
-    (r'date of birth  $to datetime;  %%>1990-01-01  &&<2000-01-01',  df.loc[[0,1], ['date of birth']], None),
+    (r'date of birth  %%=1995-01-02',                                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%==1995-01-02',                                              df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=1995.01.02',                                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=1995_01_02',                                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=1995´/01´/02',                                             df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%==1995 01 02',                                              df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=1995-Jan-02',                                              df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=02-01-1995',                                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=02-Jan-1995',                                              df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%==Jan-02-1995',                                             df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=02-01.1995',                                               df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%=02 Jan-1995',                                              df.loc[[0], ['date of birth']], None),
+    (r'date of birth  %%==Jan´/02_1995',                                            df.loc[[0], ['date of birth']], None),
+    (r'date of birth  $rows to datetime;        %%=05-11-2007',                     df.loc[[4], ['date of birth']], None),
+    (r'date of birth  $vals to datetime;        %%>1990-01-01',                     df.loc[[0,1,4], ['date of birth']], None),
+    (r'date of birth  %%is any;  $to datetime;  %%>1990-01-01  &&<2000-01-01',      df.loc[[0,1], ['date of birth']], None),
 
 
     #using type operators
@@ -970,10 +971,10 @@ params = [
 
 
     #comparison between cols
-    (r'id  %%=@ID',                                  df.loc[:, ['ID']], None),
-    (r'age / height  $to num;   %height  %%>@age',   df.loc[[0, 10], ['height']], None),
-    (r'age / height  $to num;   %height  %%<@age',   df.loc[[], ['height']], None),
-    (r'cholesterol   %%=@bp systole',                df.loc[[2], ['cholesterol']], None),
+    (r'id  %%=@ID',                                         df.loc[:, ['ID']], None),
+    (r'age / height  $rows to num;   %height  %%>@age',     df.loc[[0, 10], ['height']], None),
+    (r'age / height  $vals to num;   %height  %%<@age',     df.loc[[], ['height']], None),
+    (r'cholesterol   %%=@bp systole',                       df.loc[[2], ['cholesterol']], None),
 
 
     #apply row filter condition on multiple cols
@@ -1017,7 +1018,7 @@ params = [
     (r'age  %%~ isinstance(x, int)', df.loc[[0, 10], ['age']], None),
     (
         r"""
-        age / height  $to num;
+        age / height  %%is any;  $to num;
         age  %%col~ col < df["height"]
         """,
         df.loc[[0, 10], ['age']],
@@ -1025,9 +1026,9 @@ params = [
     ),
     (
         r"""
-        age / height  $to num;
+        age / height  %%%is any;  $to num;
         age  %%col~ col == df["age"].max()
-        age  $to str;
+        age  $valsto str;
         """,
         df.loc[[4], ['age']],
         None
@@ -1187,7 +1188,7 @@ def test_select_rows_scopes():
     result = get_df().q(r'%%all is na; $')
     expected = get_df().loc[[], :]
     assert result.equals(expected), 'failed test2: check selection scope "all"\n' + qp.diff(result, expected, output='str')
-    check_message('WARNING: value modification cannot be applied when no values where selected')
+    check_message('WARNING: modification cannot be applied when no values where selected')
 
 
 
@@ -1222,7 +1223,7 @@ def test_select_vals():
             %%invert;  ///is any;
 
         is any;  %%is any;
-        $FOUND
+        $vals=FOUND
         """
         )
     expected = get_df()
