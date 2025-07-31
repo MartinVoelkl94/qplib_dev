@@ -260,7 +260,7 @@ def query(df_old, code=''):
         index=df_new.index
         )
     
-    settings.last_selection = 'vals'
+    settings.last_selection = 'vals' #default selection scope for modification instructions
     settings.saved = {}
     settings.verbosity = VERBOSITY
     settings.diff = DIFF
@@ -538,50 +538,37 @@ def parse(instruction_tokenized, settings):
         elif instruction.connector in CONNECTORS.by_trait['select_vals']:
             instruction.function = _select_vals
 
+
+    elif FLAGS.NEW_COL in flags:
+        instruction.function = _new_col
+
+    elif flags.intersection(FLAGS.by_trait['settings']):
+        instruction.function = _modify_settings
+
+    elif flags.intersection(FLAGS.by_trait['metadata']):
+        instruction.function = _modify_metadata
+
     else:
 
-        if flags.intersection(FLAGS.by_trait['settings']):
-            instruction.function = _modify_settings
+        if not flags.intersection(FLAGS.by_trait['modify_scope']):
+            log(f'trace: no scope flag found for modification instruction "{code}". using flag based on last selection instruction "{settings.last_selection}"',
+                'qp.qlang.parse', verbosity)
+            instruction.flags.add(FLAGS[settings.last_selection])
 
-        elif flags.intersection(FLAGS.by_trait['metadata']):
-            instruction.function = _modify_metadata
+        if instruction.operator == OPERATORS.SORT:
+            instruction.function = _modify_rows_vals
+
+        elif instruction.operator in OPERATORS.by_trait['conversion']:
+            instruction.function = _modify_rows_vals
 
         elif flags.intersection(FLAGS.by_trait['format']):
             instruction.function = _modify_format
-
-        elif FLAGS.NEW_COL in flags:
-            instruction.function = _new_col
 
         elif FLAGS.COLS in flags:
             instruction.function = _modify_cols
 
         else:
-            
-            if FLAGS.ROWS in flags:
-                pass
-
-            elif FLAGS.VALS in flags:
-                pass
-
-            elif settings.last_selection == 'rows':
-                instruction.flags.add(FLAGS.ROWS)
-
-            elif settings.last_selection == 'vals':
-                instruction.flags.add(FLAGS.VALS)
-            
-            elif instruction.operator == OPERATORS.SORT:
-                log(f'trace: no modification scope flag found in "{code}". using default "{FLAGS.ROWS}" for sorting instruction',
-                    'qp.qlang.parse', verbosity)
-                instruction.flags.add(FLAGS.ROWS)
-            
-            elif instruction.operator in OPERATORS.by_trait['conversion']:
-                log(f'trace: no modification scope flag found in "{code}". using default "{FLAGS.VALS}" for conversion instruction',
-                    'qp.qlang.parse', verbosity)
-                instruction.flags.add(FLAGS.VALS)
-
             instruction.function = _modify_rows_vals
-
-        
 
 
     #general checks
@@ -1125,6 +1112,7 @@ def _modify_metadata(instruction, df_new, settings):
     return df_new, settings
 
 
+
 def _modify_format(instruction, df_new, settings):
     """
     changes visual formatting of the current selection.
@@ -1248,13 +1236,17 @@ def _modify_rows_vals(instruction, df_new, settings):
     rows = settings.rows
     vals = settings.vals
     vals_temp = settings.vals_blank.copy()
-
+            
     if FLAGS.ROWS in flags:
         vals_temp.loc[rows, cols] = True
 
     elif FLAGS.VALS in flags:
         vals_temp.loc[rows, cols] = vals.loc[rows, cols]
-
+    
+    else:
+        log(f'trace: no row or val modification flag found in "{instruction.code}". defaulting to val modification',
+            'qp.qlang._modify_rows_vals', verbosity)
+        vals_temp.loc[rows, cols] = vals.loc[rows, cols]
 
 
     if vals_temp.any().any() == False:
@@ -1318,7 +1310,8 @@ def _modify_rows_vals(instruction, df_new, settings):
             changed = df_new.loc[rows, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
             df_new = df_new.mask(vals_temp, changed)
         else: #pragma: no cover (covered by validate())
-            log(f'error: operator "{operator}" is not compatible with COL_EVAL flag', 'qp.qlang._modify_rows_vals', verbosity)
+            log(f'error: operator "{operator}" is not compatible with COL_EVAL flag',
+                'qp.qlang._modify_rows_vals', verbosity)
 
     #wip: reintroduce/change regex flag?
     # elif FLAGS.REGEX in instruction.flags:

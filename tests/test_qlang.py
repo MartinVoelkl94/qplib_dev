@@ -637,7 +637,7 @@ def test_new_col1():
     assert result.equals(expected), 'failed test6: creating new col and select with index\n' + qp.diff(result, expected, output='str')
 
 
-    result = get_df().q(r'%%idx = 0   %%save1  %%is any;   $new a  %%load1')
+    result = get_df().q(r'%%idx = 0   $save1  %%is any;   $new a  %%load1')
     expected = get_df()
     expected['new1'] = 'a'
     expected = expected.loc[[0],['new1']]
@@ -668,21 +668,18 @@ def test_previous_bugs():
 
 df = get_df()
 params = [
-    (r'id %%?1      %%save1     %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?1      %%save=1    %%is any;   %%load=1',                          df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%any?1   %%save1     %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%all?1   %%save1     %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?1      %%%save1    %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?1      %save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
     (r'id %%?1      $save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?1      %%save1     %is any;    %%is any;   %id         %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?2      %%save1     %%?1        %%save1     %%is any;   %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%%?1     %%%save1    %%is any;   %%load1',                           df.loc[:,['ID']], None),
+    (r'id %%?1      $save=1     %%is any;   %%load=1',                          df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%any?1   $save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%all?1   $save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?1      $save1      %is any;    %%is any;   %id         %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%?2      $save1      %%?1        $save1      %%is any;   %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
+    (r'id %%%?1     $save1      %%is any;   %%load1',                           df.loc[:,['ID']], None),
     
     (
         r"""
-        id   %%?1   %%save1
-        id   %%?2   %%save2
+        id   %%?1   $save1
+        id   %%?2   $save2
         id   %%load1   &&load2
         """,
         df.loc[[1,3],['ID']],
@@ -691,8 +688,8 @@ params = [
 
     (
         r"""
-        id   %%?1   %%save1
-        id   %%?2   %%save2
+        id   %%?1   $save1
+        id   %%?2   $save2
         id   %%load1   //load2
         """,
         df.loc[[0,1,2,3,4,5,6,7],['ID']],
@@ -701,8 +698,8 @@ params = [
     
     (
         r"""
-        id   %%!?1   %%save1
-        id   %%?2   %%save2
+        id   %%!?1   $save1
+        id   %%?2   $save2
         id   %%load1   &&load2
         """,
         df.loc[[4,5,7],['ID']],
@@ -711,8 +708,8 @@ params = [
     
     (
         r"""
-        id   %%!?1      %%save1
-        id   %%!?2      %%save2
+        id   %%!?1      $save1
+        id   %%!?2      $save2
         id   %%load1    &&load2
         """,
         df.loc[[8,9,10],['ID']],
@@ -1072,7 +1069,7 @@ params = [
     ),
     (
         r"""
-        ID  %%regex=1....  //regex=2....  %%save1
+        ID  %%regex=1....  //regex=2....  $save1
         gender  %%=m  //=male  &&load1
         ID / gender
         """,
@@ -1081,7 +1078,7 @@ params = [
     ),
     (
         r"""
-        ID  %%regex=1.... // regex=2....  // save 1
+        ID  %%regex=1.... // regex=2....  $save1
         gender %%=m // =male  &&load1
         """,
         df.loc[[0,3,5], ['gender']],
@@ -1089,7 +1086,7 @@ params = [
     ), 
     (
         r"""
-        ID  %%regex=1.... // regex=2....  &&save1
+        ID  %%regex=1.... // regex=2....  $save1
         gender %%=m // =m // =male  // load 1
         """,
         df.loc[[0,1,2,3,4,5], ['gender']],
@@ -1097,7 +1094,7 @@ params = [
     ),
     (
         r"""
-        ID  %%regex=1.... // regex=2....   %%save1
+        ID  %%regex=1.... // regex=2....   $save1
         gender %%=f // =f // =female  // load 1
         ID
         """,
@@ -1114,7 +1111,7 @@ params = [
     ),
     (
         r"""
-        gender  %%=f  //=female  %%save a
+        gender  %%=f  //=female  $save a
         age  %%>30  && load a 
         """,
         df.loc[[10], ['age']],
@@ -1130,7 +1127,7 @@ params = [
     ),
     (
         r"""
-        age  %%>30  %%save=a
+        age  %%>30  $save=a
         age  %%<18  //load=a
         """,
         df.loc[[0,4,10], ['age']],
@@ -1145,7 +1142,7 @@ params = [
     ),
     (
         r"""
-        weight  %%<70  &&>40  %%save=between 40 and 70
+        weight  %%<70  &&>40  $save=between 40 and 70
         diabetes %%is yes;  &&load=between 40 and 70   
         """,
         df.loc[[1], ['diabetes']],
@@ -1153,8 +1150,8 @@ params = [
     ),
     (
         r"""
-        weight  %%<70  &&save1
-        &weight  %%>40  &&save2
+        weight  %%<70  $save1
+        &weight  %%>40  $save2
         diabetes  %%is no;  &&load1
         weight  / diabetes
         """,
