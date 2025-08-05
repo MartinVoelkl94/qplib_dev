@@ -944,24 +944,49 @@ def _filter_series(series, instruction, settings, df_new=None):
     return filtered
 
 
+
 def _save_selection(instruction, df_new, settings):
     """
     Save the current col, row, val selections as boolean masks.
     """
 
     value = instruction.value
-    if value in settings.saved.keys():
-        log(f'warning: a selection was already saved as "{value}". overwriting it',
-            'qp.qlang._save_selection', settings.verbosity)
-
+    operator = instruction.operator
     selection = {
         'rows': settings.rows.copy(),
         'cols': settings.cols.copy(),
-        'vals': settings.vals.copy()
+        'vals': settings.vals.copy(),
         }
-    settings.saved[value] = selection
+
+    if operator == OPERATORS.SET:
+        if value in settings.saved.keys():
+            log(f'warning: a selection was already saved as "{value}". overwriting it',
+                'qp.qlang._save_selection', settings.verbosity)
+        else:
+            settings.saved[value] = {}
+        
+        if FLAGS.COLS in instruction.flags:
+            settings.saved[value]['cols'] = selection['cols']
+        if FLAGS.ROWS in instruction.flags:
+            settings.saved[value]['rows'] = selection['rows']
+        if FLAGS.VALS in instruction.flags:
+            settings.saved[value]['vals'] = selection['vals']
+        else:
+            settings.saved[value] = selection
+
+    elif operator == OPERATORS.ADD:
+        if value in settings.saved.keys():
+            settings.saved[value]['rows'] |= settings.rows
+            settings.saved[value]['cols'] |= settings.cols
+            settings.saved[value]['vals'] |= settings.vals
+
+        elif value not in settings.saved.keys():
+            log(f'trace: no selection was saved as "{value}" yet, saving current selection',
+                'qp.qlang._save_selection', settings.verbosity)
+            settings.saved[value] = selection
 
     return df_new, settings
+
 
 
 def _load_selection(instruction, df_new, settings):
