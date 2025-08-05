@@ -210,7 +210,8 @@ def test_eval():
         r"""
         name $vals ~ x.lower()
         is any; %%is any;
-        """)
+        """
+        )
     expected = get_df()
     expected['name'] = expected['name'].str.lower()
     assert result.equals(expected), 'failed test0: change to lowercase\n' + qp.diff(result, expected, output='str')
@@ -220,7 +221,8 @@ def test_eval():
         r"""
         name  %%!~ x == x.lower()  $ ~ x.lower()
         is any; %%is any;
-        """)
+        """
+        )
     expected = get_df()
     expected['name'] = expected['name'].str.lower()
     assert result.equals(expected), 'failed test1: conditionally change to lowercase\n' + qp.diff(result, expected, output='str')
@@ -229,7 +231,8 @@ def test_eval():
         r"""
         gender  %%is any; $to str;  $~ x.lower()
         is any;
-        """)
+        """
+        )
     expected = get_df()
     expected['gender'] = expected['gender'].astype(str).str.lower()
     assert result.equals(expected), 'failed test2: convert and change to lowercase\n' + qp.diff(result, expected, output='str')
@@ -238,7 +241,8 @@ def test_eval():
     result = get_df().q(
         r"""
         id  %%10001  $ ~ str(10001)
-        """)
+        """
+        )
     expected = get_df().loc[[0], ['ID']]
     expected.loc[0, 'ID'] = '10001'
     assert result.equals(expected), 'failed test3: convert single entry to str\n' + qp.diff(result, expected, output='str')
@@ -247,7 +251,8 @@ def test_eval():
     result = get_df().q(
         r"""
         id / age  %%is num;  $ ~ str(0)
-        """)
+        """
+        )
     expected = get_df().loc[:, ['ID', 'age']]
     expected['ID'] = str(0)
     expected['age'] = str(0)
@@ -257,7 +262,8 @@ def test_eval():
     result = get_df().q(
         r"""
         id / age  %%all is num;  $ ~ 0
-        """)
+        """
+        )
     rows = [0,1,2,3,4,8,10]
     expected = get_df().loc[rows, ['ID', 'age']]
     expected.loc[rows, 'ID'] = 0
@@ -268,7 +274,8 @@ def test_eval():
     result = get_df().q(
         r"""
         id / age  %%%is num;  $ ~ 10
-        """)
+        """
+        )
     expected = get_df().loc[:, ['ID', 'age']]
     expected['ID'] = 10
     expected.loc[[0,1,2,3,4,8,10], 'age'] = 10
@@ -458,7 +465,8 @@ def test_modify_rows_vals():
         r"""
         name  $vals a
         is any;  %%is any;
-        """)
+        """
+        )
     expected = get_df()
     expected['name'] = 'a'
     assert result.equals(expected), 'failed test0: set values\n' + qp.diff(result, expected, output='str')
@@ -468,7 +476,8 @@ def test_modify_rows_vals():
         r"""
         name %%is any; $ =a
         is any; %%is any;
-        """)
+        """
+        )
     expected = get_df()
     expected['name'] = 'a'
     assert result.equals(expected), 'failed test1: set values\n' + qp.diff(result, expected, output='str')
@@ -479,7 +488,8 @@ def test_modify_rows_vals():
         name  %%%is any; $ a
         gender $rows b
         is any; %%is any;
-        """)
+        """
+        )
     expected = get_df()
     expected['name'] = 'a'
     expected['gender'] = 'b'
@@ -490,7 +500,8 @@ def test_modify_rows_vals():
         r"""
         name  $rows=a   %%%is any;  $+=a
         is any; %%is any;
-        """)
+        """
+        )
     expected = get_df()
     expected['name'] = 'aa'
     assert result.equals(expected), 'failed test3: appending to values\n' + qp.diff(result, expected, output='str')
@@ -668,19 +679,78 @@ def test_previous_bugs():
 
 df = get_df()
 params = [
-    (r'id %%?1      $save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?1      $save=1     %%is any;   %%load=1',                          df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%any?1   $save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%all?1   $save1      %%is any;   %%load1',                           df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?1      $save1      %is any;    %%is any;   %id         %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%?2      $save1      %%?1        $save1      %%is any;   %%load1',   df.loc[[0,1,2,3,6],['ID']], None),
-    (r'id %%%?1     $save1      %%is any;   %%load1',                           df.loc[:,['ID']], None),
+    #saving col selections
+
+    (r'id           $save1              %is any;    %load1',                                    df.loc[:, ['ID']],                  None),
+    (r'id /name     $save1              %is any;    %load1',                                    df.loc[:, ['ID', 'name']],          None),
+    (r'id           $save1              %name       /load1',                                    df.loc[:, ['ID', 'name']],          None),
+    (r'id           $cols save = 1      %is any;    %load1',                                    df.loc[:, ['ID']],                  None),
+    (r'id           $cols save = 1      %name       $save1          %is any;    %load1',        df.loc[:, ['name']],                'WARNING: a selection was already saved as "1". overwriting it'),
+    (r'id           $cols save = 1      %name       $cols save1     %is any;    %load1',        df.loc[:, ['name']],                'WARNING: a selection was already saved as "1". overwriting it'),
+    (r'id           $cols save = 1      %name       $rows save1     %is any;    %load1',        df.loc[:, ['ID']],                  'WARNING: a selection was already saved as "1". overwriting it'),
+
+
+
+    #saving row selections
+
+    (r'id   %%?1          $save1      %%is any;       %%load1',                                       df.loc[[0,1,2,3,6], ['ID']],        None),
+    (r'id   %%?1          $save=1     %%is any;       %%load=1',                                df.loc[[0,1,2,3,6], ['ID']],        None),
+    (r'id   %%any?1       $save1      %%is any;       %%load1',                                 df.loc[[0,1,2,3,6], ['ID']],        None),
+    (r'id   %%all?1       $save1      %%is any;       %%load1',                                 df.loc[[0,1,2,3,6], ['ID']],        None),
+    (r'id   %%?1          $save1      %is any;        %%is any;       %id         %%load1',     df.loc[[0,1,2,3,6], ['ID']],        None),
+    (r'id   %%?2          $save1      %%?1            $save1          %%is any;   %%load1',     df.loc[[0,1,2,3,6], ['ID']],        'WARNING: a selection was already saved as "1". overwriting it'),
+    (r'id   %%%?1         $save1      %%is any;       %%load1',                                 df.loc[:,['ID']],                   None),
+
+    (
+        r"""
+        id      %%?1    $save1
+        %name           $save1
+        %%is any;
+        %%load1
+        """,
+        df.loc[[0,1,2,3,6], ['name']],
+        'WARNING: a selection was already saved as "1". overwriting it'
+    ),
+
+    (
+        r"""
+        id      %%?1    $save1
+        %name   %%?j    $save1
+        %%is any;
+        %%load1
+        """,
+        df.loc[[0,1,2,9,10], ['name']],
+        'WARNING: a selection was already saved as "1". overwriting it'
+    ),
+
+    (
+        r"""
+        id      %%?1    $save1
+        %name   %%?j    $cols save1
+        %%is any;
+        %%load1
+        """,
+        df.loc[[0,1,2,3,6], ['name']],
+        'WARNING: a selection was already saved as "1". overwriting it'
+    ),
+
+    (
+        r"""
+        id      %%?1    $save1
+        %name   %%?j    $rows save=1
+        %%is any;
+        %load1  %%load1
+        """,
+        df.loc[[0,1,2,9,10], ['ID']],
+        'WARNING: a selection was already saved as "1". overwriting it'
+    ),
+
     
     (
         r"""
-        id   %%?1   $save1
-        id   %%?2   $save2
-        id   %%load1   &&load2
+        id   %%?1       $save1
+        id   %%?2       $save2
+        id   %%load1    &&load2
         """,
         df.loc[[1,3],['ID']],
         None
@@ -705,10 +775,10 @@ params = [
         df.loc[[4,5,7],['ID']],
         None
     ),
-    
+
     (
         r"""
-        id   %%!?1      $save1
+        id   %%!?1      $rows save = 1
         id   %%!?2      $save2
         id   %%load1    &&load2
         """,
@@ -755,39 +825,56 @@ params = [
     ('date of birth / =age', ['date of birth', 'age'], None),
     ('!=date of birth', ['ID', 'name', 'age', 'gender', 'height', 'weight', 'bp systole', 'bp diastole', 'cholesterol', 'diabetes', 'dose'], None),
     ("""ID""", ['ID'], None),
+
     (
-        """ID
-        """,
-        ['ID']
-    , None),
+    """ID
+    """,
+    ['ID'],
+    None
+    ),
+
     (
-        """
-        ID""",
-        ['ID']
-    , None),
+    """
+    ID""",
+    ['ID'],
+    None
+    ),
+
     (
-        """
-        ID
-        """,
-        ['ID']
-    , None),
-    (r"""ID""", ['ID'], None),
+    """
+    ID
+    """,
+    ['ID'],
+    None
+    ),
+
     (
-        r"""ID
-        """,
-        ['ID']
-    , None),
+    r"""ID""",
+    ['ID'],
+    None
+    ),
+
     (
-        r"""
-        ID""",
-        ['ID']
-    , None),
+    r"""ID
+    """,
+    ['ID'],
+    None
+    ),
+
     (
-        r"""
-        ID
-        """,
-        ['ID']
-    , None),
+    r"""
+    ID""",
+    ['ID'],
+    None
+    ),
+
+    (
+    r"""
+    ID
+    """,
+    ['ID'],
+    None
+    ),
 
 
     #negation flag
@@ -1238,55 +1325,14 @@ def test_select_vals():
 
 
 params = [
-    (
-        r"""
-        id  $sort;   %is any;
-        """,
-        'ID'
-    ),
-    (
-        r"""
-        name  $sort;   %is any;
-        """,
-        'name'
-    ),
-    (
-        r"""
-        id /name  $sort;   %is any;
-        """,
-        ['ID', 'name']
-    ),
-    (
-        r"""
-        name /id  $sort;   %is any;
-        """,
-        ['ID', 'name']
-    ),
-
-    (
-        r"""
-        id  $!sort;   %is any;
-        """,
-        'ID'
-    ),
-    (
-        r"""
-        name  $!sort;   %is any;
-        """,
-        'name'
-    ),
-    (
-        r"""
-        id /name  $!sort;   %is any;
-        """,
-        ['ID', 'name']
-    ),
-    (
-        r"""
-        name /id  $!sort;   %is any;
-        """,
-        ['ID', 'name']
-    ),
+    ('id            $sort;      %is any;',      'ID'),
+    ('name          $sort;      %is any;',      'name'),
+    ('id /name      $sort;      %is any;',      ['ID', 'name']),
+    ('name /id      $sort;      %is any;',      ['ID', 'name']),
+    ('id            $!sort;     %is any;',      'ID'),
+    ('name          $!sort;     %is any;',      'name'),
+    ('id /name      $!sort;     %is any;',      ['ID', 'name']),
+    ('name /id      $!sort;     %is any;',      ['ID', 'name']),
     ]
 @pytest.mark.parametrize('code, expected_cols', params)
 def test_sort(code, expected_cols):

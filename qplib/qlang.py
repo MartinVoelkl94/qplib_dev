@@ -967,9 +967,9 @@ def _save_selection(instruction, df_new, settings):
         
         if FLAGS.COLS in instruction.flags:
             settings.saved[value]['cols'] = selection['cols']
-        if FLAGS.ROWS in instruction.flags:
+        elif FLAGS.ROWS in instruction.flags:
             settings.saved[value]['rows'] = selection['rows']
-        if FLAGS.VALS in instruction.flags:
+        elif FLAGS.VALS in instruction.flags:
             settings.saved[value]['vals'] = selection['vals']
         else:
             settings.saved[value] = selection
