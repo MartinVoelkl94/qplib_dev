@@ -475,7 +475,8 @@ params = [
 @pytest.mark.parametrize('code, expected_rows', params)
 def test_modify_format(code, expected_rows):
     qp.qlang.APPLY_STYLE = False
-    result = get_df().q(code)
+    df = get_df()
+    result = df.q(code)
     expected = pd.DataFrame('', index=df.index, columns=['age'])
     expected.loc[expected_rows, 'age'] = 'background-color: orange;'
     assert result.equals(expected), qp.diff(result, expected, output='str')
@@ -682,6 +683,7 @@ def test_new_col1():
 
 def test_previous_bugs():
     try:
+        df = get_df()
         df.q(
             r"""
             %age ///!is num;
@@ -691,11 +693,33 @@ def test_previous_bugs():
             )
     except Exception as e:
         assert False, f'failed test0: check if previous bug is fixed: {e}'
-    
+
+
     #from v0.7.5
     result = get_df().q(r'%%%>0    &&&<50  %trim;  $bg=orange').data
     expected = get_df().loc[:, ['age', 'height', 'bp systole', 'dose']]
     assert result.equals(expected), qp.diff(result, expected, output='str')
+
+
+    #from v0.8.0 prototype
+    #inverting a selection was applied to all selected values,
+    #not just those in the current row/col selection
+    qp.qlang.APPLY_STYLE = False
+    df = get_df()
+    result = df.q(
+        r"""
+        %%%?j
+        %name   %%%invert;
+        %date of birth
+        $vals=replaced
+        is any;
+        """
+        )
+    expected = df
+    expected.loc[8, 'date of birth'] = 'replaced'
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    qp.qlang.APPLY_STYLE = True
+
 
     
     

@@ -845,7 +845,8 @@ def _select_vals(instruction, df_new, settings):
     
 
     if instruction.operator == OPERATORS.INVERT:
-        vals_new = ~vals
+        vals_new = vals.copy()
+        vals_new.loc[rows, cols] = ~vals.loc[rows, cols]
     else:
         vals_new = vals_blank.copy()
         for col in df_new.columns[cols]:
