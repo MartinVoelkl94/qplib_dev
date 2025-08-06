@@ -2,8 +2,8 @@
 .gitignore
 LICENSE
 README.md
+dev.ipynb
 interactive_demo.ipynb
-prototyping.ipynb
 pyproject.toml
 readme.md
 .github/workflows/run_tests.yml
@@ -20,8 +20,8 @@ __pycache__/logger.cpython-311.pyc
 __pycache__/logger.cpython-312.pyc
 __pycache__/pandas_extensions.cpython-311.pyc
 __pycache__/util.cpython-311.pyc
-dist/qplib-0.7.4-py3-none-any.whl
-dist/qplib-0.7.4.tar.gz
+dist/qplib-0.7.5-py3-none-any.whl
+dist/qplib-0.7.5.tar.gz
 qplib/__init__.py
 qplib/pandas.py
 qplib/qlang.py
@@ -59,7 +59,10 @@ qplib/__pycache__/pd_util.cpython-313.pyc
 qplib/__pycache__/qlang.cpython-312.pyc
 qplib/__pycache__/qlang.cpython-313.pyc
 qplib/__pycache__/qlang_mask.cpython-313.pyc
+qplib/__pycache__/qlang_new.cpython-313.pyc
 qplib/__pycache__/qlang_old.cpython-312.pyc
+qplib/__pycache__/qlang_v2.cpython-313.pyc
+qplib/__pycache__/qlang_v3.cpython-313.pyc
 qplib/__pycache__/types.cpython-311.pyc
 qplib/__pycache__/types.cpython-312.pyc
 qplib/__pycache__/types.cpython-313.pyc
@@ -111,6 +114,7 @@ tests/__pycache__/test_qlang.cpython-313-pytest-8.3.3.pyc
 tests/__pycache__/test_qlang.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_qlang.cpython-313-pytest-8.3.5.pyc
 tests/__pycache__/test_qlang_mask.cpython-313-pytest-8.3.3.pyc
+tests/__pycache__/test_qlang_v3.cpython-313-pytest-8.3.4.pyc
 tests/__pycache__/test_save_load.cpython-312-pytest-8.3.2.pyc
 tests/__pycache__/test_save_load.cpython-312-pytest-8.3.3.pyc
 tests/__pycache__/test_save_load.cpython-313-pytest-8.3.3.pyc

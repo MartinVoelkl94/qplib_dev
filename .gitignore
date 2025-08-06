@@ -12,5 +12,6 @@
 #not needed
 **/*.bkp
 **/~$*
-**temp**
-**.venv**
+**/temp/**
+**/.venv/**
+**/__pycache__/
