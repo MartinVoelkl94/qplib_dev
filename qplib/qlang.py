@@ -20,6 +20,7 @@ from .pandas import _diff
 VERBOSITY = 3
 DIFF = None
 INPLACE = False
+APPLY_STYLE = True
 
 TYPES_INT = (
     int,
@@ -312,13 +313,15 @@ def query(df_old, code=''):
     elif settings.style is not None:
         rows_shared = df_filtered.index.intersection(settings.style.index)
         cols_shared = df_filtered.columns.intersection(settings.style.columns)
-        def f(x, style): #pragma: no cover
-            return style
-        result = df_filtered.style.apply(lambda x: f(x, settings.style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
-
+        if APPLY_STYLE:
+            def f(x, style): #pragma: no cover
+                return style
+            result = df_filtered.style.apply(lambda x: f(x, settings.style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
+        else:
+            result = settings.style.loc[rows_shared, cols_shared]
     else:
         result = df_filtered
-
+    
     return result
 
 
@@ -491,37 +494,30 @@ def parse(instruction_tokenized, settings):
     """
     verbosity = settings.verbosity
     instruction = instruction_tokenized
-    code = instruction.code
     flags = instruction.flags
 
 
-    #set defaults
-
+    #set default operator
     if instruction.operator is None:
         if FLAGS.TAG_METADATA in flags:
-            log(f'trace: no operator found in "{code}". using default "{OPERATORS.ADD}" for tagging metadata', 'qp.qlang.parse', verbosity)
+            log(f'trace: no operator found in "{instruction.code}". using default "{OPERATORS.ADD}" for tagging metadata',
+                'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.ADD
         else:
-            log(f'trace: no operator found in "{code}". using default "{OPERATORS.SET}"', 'qp.qlang.parse', verbosity)
+            log(f'trace: no operator found in "{instruction.code}". using default "{OPERATORS.SET}"',
+                'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.SET
 
-    if FLAGS.SAVE_SELECTION in flags or FLAGS.LOAD_SELECTION in flags:
-        pass #no defaults needed here
-    
-    elif instruction.connector in CONNECTORS.by_trait['select_rows'] \
-        and not flags.intersection(FLAGS.by_trait['select_rows_scope']):
-        log(f'trace: no row selection scope flag found in "{code}". using default "{FLAGS.ANY}"', 'qp.qlang.parse', verbosity)
-        instruction.flags.add(FLAGS.ANY)
 
+    #set function for instruction
 
-
-    #set function
-
+    #save load selections
     if FLAGS.SAVE_SELECTION in flags:
         instruction.function = _save_selection
     elif FLAGS.LOAD_SELECTION in flags:
         instruction.function = _load_selection
 
+    #select data
     elif instruction.connector in CONNECTORS.by_trait['select']:
 
         if instruction.operator == OPERATORS.SET:
@@ -538,9 +534,12 @@ def parse(instruction_tokenized, settings):
         elif instruction.connector in CONNECTORS.by_trait['select_vals']:
             instruction.function = _select_vals
 
-
+    #miscellaneous modifications
     elif FLAGS.NEW_COL in flags:
         instruction.function = _new_col
+
+    elif instruction.operator == OPERATORS.SORT:
+        instruction.function = _sort_rows
 
     elif flags.intersection(FLAGS.by_trait['settings']):
         instruction.function = _modify_settings
@@ -548,21 +547,19 @@ def parse(instruction_tokenized, settings):
     elif flags.intersection(FLAGS.by_trait['metadata']):
         instruction.function = _modify_metadata
 
+    #modify selection
     else:
 
         if not flags.intersection(FLAGS.by_trait['modify_scope']):
-            log(f'trace: no scope flag found for modification instruction "{code}". using flag based on last selection instruction "{settings.last_selection}"',
+            log(f'trace: no scope flag found for modification instruction "{instruction.code}". using flag based on last selection instruction "{settings.last_selection}"',
                 'qp.qlang.parse', verbosity)
             instruction.flags.add(FLAGS[settings.last_selection])
 
-        if instruction.operator == OPERATORS.SORT:
-            instruction.function = _modify_rows_vals
+        if flags.intersection(FLAGS.by_trait['format']):
+            instruction.function = _modify_format
 
         elif instruction.operator in OPERATORS.by_trait['conversion']:
             instruction.function = _modify_rows_vals
-
-        elif flags.intersection(FLAGS.by_trait['format']):
-            instruction.function = _modify_format
 
         elif FLAGS.COLS in flags:
             instruction.function = _modify_cols
@@ -582,9 +579,7 @@ def parse(instruction_tokenized, settings):
         settings.copy_df = True
 
 
-    log(f'trace: parsed instruction: "{instruction.code}"',
-        'qp.qlang.parse', verbosity)
-
+    log(f'trace: parsed instruction: "{instruction.code}"', 'qp.qlang.parse', verbosity)
     return instruction, settings
 
 
@@ -608,6 +603,102 @@ def validate(instruction, settings):
 
 
 ##############     selection instructions     ##############
+
+
+
+def _save_selection(instruction, df_new, settings):
+    """
+    Save the current col, row, val selections as boolean masks.
+    """
+
+    value = instruction.value
+    operator = instruction.operator
+    selection = {
+        'rows': settings.rows.copy(),
+        'cols': settings.cols.copy(),
+        'vals': settings.vals.copy(),
+        }
+
+    if operator == OPERATORS.SET:
+        if value in settings.saved.keys():
+            log(f'warning: a selection was already saved as "{value}". overwriting it',
+                'qp.qlang._save_selection', settings.verbosity)
+        else:
+            settings.saved[value] = {}
+        
+        if FLAGS.COLS in instruction.flags:
+            settings.saved[value]['cols'] = selection['cols']
+        elif FLAGS.ROWS in instruction.flags:
+            settings.saved[value]['rows'] = selection['rows']
+        elif FLAGS.VALS in instruction.flags:
+            settings.saved[value]['vals'] = selection['vals']
+        else:
+            settings.saved[value] = selection
+
+    elif operator == OPERATORS.ADD:
+        if value in settings.saved.keys():
+            settings.saved[value]['rows'] |= settings.rows
+            settings.saved[value]['cols'] |= settings.cols
+            settings.saved[value]['vals'] |= settings.vals
+
+        elif value not in settings.saved.keys():
+            log(f'trace: no selection was saved as "{value}" yet, saving current selection',
+                'qp.qlang._save_selection', settings.verbosity)
+            settings.saved[value] = selection
+
+    return df_new, settings
+
+
+
+def _load_selection(instruction, df_new, settings):
+    """
+    loads a previously saved col, row, valselection.
+    """
+
+    verbosity = settings.verbosity
+    saved = settings.saved
+    value = instruction.value
+    connector = instruction.connector
+
+    if value in saved.keys():
+        selection = saved[value]
+    else:
+        log(f'error: selection "{value}" is not in saved selections',
+            'qp.qlang._load_selection', verbosity)
+        return None, settings
+
+    if connector == CONNECTORS.NEW_SELECT_COLS:
+        settings.cols = selection['cols']
+    elif connector == CONNECTORS.AND_SELECT_COLS:
+        settings.cols = settings.cols & selection['cols']
+    elif connector == CONNECTORS.OR_SELECT_COLS:
+        settings.cols = settings.cols | selection['cols']
+
+    elif connector == CONNECTORS.NEW_SELECT_ROWS:
+        settings.rows = selection['rows']
+    elif connector == CONNECTORS.AND_SELECT_ROWS:
+        settings.rows = settings.rows & selection['rows']
+    elif connector == CONNECTORS.OR_SELECT_ROWS:
+        settings.rows = settings.rows | selection['rows']
+    
+    elif connector == CONNECTORS.NEW_SELECT_VALS:
+        settings.vals = selection['vals']
+    elif connector == CONNECTORS.AND_SELECT_VALS:
+        settings.vals = settings.vals & selection['vals']
+    elif connector == CONNECTORS.OR_SELECT_VALS:
+        settings.vals = settings.vals | selection['vals']
+
+
+    if connector in CONNECTORS.by_trait['select_cols']:
+        settings.last_selection = 'cols'
+    elif connector in CONNECTORS.by_trait['select_rows']:
+        settings.last_selection = 'rows'
+    elif connector in CONNECTORS.by_trait['select_vals']:
+        settings.last_selection = 'vals'
+
+    settings.saved = saved
+    return df_new, settings
+
 
 
 def _select_cols(instruction, df_new, settings):
@@ -666,11 +757,15 @@ def _select_rows(instruction, df_new, settings):
     rows = settings.rows
     rows_all = df_new.index.to_series()
     settings.last_selection = 'rows'
+        
+    if not flags.intersection(FLAGS.by_trait['select_rows_scope']):
+        log(f'trace: no row selection scope flag found in "{instruction.code}". using default "{FLAGS.ANY}"',
+            'qp.qlang._select_rows', verbosity)
+        instruction.flags.add(FLAGS.ANY)
 
     if cols.any() == False:
         log(f'error: row selection cannot be applied when no cols where selected', 'qp.qlang._select_rows', verbosity)
         return df_new, settings
-
 
     if value.startswith('@'):
         col = value[1:]
@@ -945,102 +1040,80 @@ def _filter_series(series, instruction, settings, df_new=None):
 
 
 
-def _save_selection(instruction, df_new, settings):
-    """
-    Save the current col, row, val selections as boolean masks.
-    """
-
-    value = instruction.value
-    operator = instruction.operator
-    selection = {
-        'rows': settings.rows.copy(),
-        'cols': settings.cols.copy(),
-        'vals': settings.vals.copy(),
-        }
-
-    if operator == OPERATORS.SET:
-        if value in settings.saved.keys():
-            log(f'warning: a selection was already saved as "{value}". overwriting it',
-                'qp.qlang._save_selection', settings.verbosity)
-        else:
-            settings.saved[value] = {}
-        
-        if FLAGS.COLS in instruction.flags:
-            settings.saved[value]['cols'] = selection['cols']
-        elif FLAGS.ROWS in instruction.flags:
-            settings.saved[value]['rows'] = selection['rows']
-        elif FLAGS.VALS in instruction.flags:
-            settings.saved[value]['vals'] = selection['vals']
-        else:
-            settings.saved[value] = selection
-
-    elif operator == OPERATORS.ADD:
-        if value in settings.saved.keys():
-            settings.saved[value]['rows'] |= settings.rows
-            settings.saved[value]['cols'] |= settings.cols
-            settings.saved[value]['vals'] |= settings.vals
-
-        elif value not in settings.saved.keys():
-            log(f'trace: no selection was saved as "{value}" yet, saving current selection',
-                'qp.qlang._save_selection', settings.verbosity)
-            settings.saved[value] = selection
-
-    return df_new, settings
-
-
-
-def _load_selection(instruction, df_new, settings):
-    """
-    loads a previously saved col, row, valselection.
-    """
-
-    verbosity = settings.verbosity
-    saved = settings.saved
-    value = instruction.value
-    connector = instruction.connector
-
-    if value in saved.keys():
-        selection = saved[value]
-    else:
-        log(f'error: selection "{value}" is not in saved selections',
-            'qp.qlang._load_selection', verbosity)
-        return None, settings
-
-    if connector == CONNECTORS.NEW_SELECT_COLS:
-        settings.cols = selection['cols']
-    elif connector == CONNECTORS.AND_SELECT_COLS:
-        settings.cols = settings.cols & selection['cols']
-    elif connector == CONNECTORS.OR_SELECT_COLS:
-        settings.cols = settings.cols | selection['cols']
-
-    elif connector == CONNECTORS.NEW_SELECT_ROWS:
-        settings.rows = selection['rows']
-    elif connector == CONNECTORS.AND_SELECT_ROWS:
-        settings.rows = settings.rows & selection['rows']
-    elif connector == CONNECTORS.OR_SELECT_ROWS:
-        settings.rows = settings.rows | selection['rows']
-    
-    elif connector == CONNECTORS.NEW_SELECT_VALS:
-        settings.vals = selection['vals']
-    elif connector == CONNECTORS.AND_SELECT_VALS:
-        settings.vals = settings.vals & selection['vals']
-    elif connector == CONNECTORS.OR_SELECT_VALS:
-        settings.vals = settings.vals | selection['vals']
-
-
-    if connector in CONNECTORS.by_trait['select_cols']:
-        settings.last_selection = 'cols'
-    elif connector in CONNECTORS.by_trait['select_rows']:
-        settings.last_selection = 'rows'
-    elif connector in CONNECTORS.by_trait['select_vals']:
-        settings.last_selection = 'vals'
-
-    settings.saved = saved
-    return df_new, settings
-
 
 
 #############     modification instructions     #############
+
+
+
+def _sort_rows(instruction, df_new, settings):
+    cols = settings.cols
+    
+    if FLAGS.NEGATE in instruction.flags:
+        df_new.sort_values(by=list(df_new.columns[cols]), axis=0, ascending=False, inplace=True)
+    else:
+        df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
+
+    return df_new, settings
+
+
+
+def _new_col(instruction, df_new, settings):
+    """
+    An Instruction to add a new col.
+    """
+
+    verbosity = settings.verbosity
+    cols = settings.cols
+    rows = settings.rows
+    vals = settings.vals
+    vals_blank = settings.vals_blank
+    operator = instruction.operator
+    value = instruction.value
+
+    if value.startswith('@'):
+        col = value[1:]
+        if col in df_new.columns:
+            value = df_new[col]
+        else:
+            log(f'error: col "{col}" not found in dataframe. cannot add a new col thats a copy of it',
+                'qp.qlang._new_col', verbosity)
+
+    for i in range(1, 1001):
+        if i == 1000: #pragma: no cover (unlikely to happen)
+            log(f'error: could not add new col. too many cols named "new<x>"',
+                'qp.qlang._new_col', verbosity)
+            return df_new, settings
+        colname = 'new' + str(i)
+        if colname not in df_new.columns:
+            df_new[colname] = pd.NA
+            break
+
+    if operator == OPERATORS.SET:
+        pass
+
+    elif operator == OPERATORS.EVAL:
+        value = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
+
+    if isinstance(value, pd.Series):
+        df_new[colname] = value
+    else:
+        df_new.loc[rows, colname] = value
+
+    cols = pd.Series([True if col == colname else False for col in df_new.columns])
+    cols.index = df_new.columns
+    vals[colname] = False
+    vals_blank[colname] = False
+    for selection in settings.saved.values():
+        selection['cols'] = pd.concat((selection['cols'], pd.Series({colname: False})))
+        selection['vals'][colname] = False
+
+    settings.cols = cols
+    settings.vals = vals
+    settings.vals_blank = vals_blank
+    return df_new, settings
+
+
 
 def _modify_settings(instruction, df_new, settings):
     """
@@ -1143,18 +1216,20 @@ def _modify_format(instruction, df_new, settings):
     changes visual formatting of the current selection.
     """
 
+    flags = instruction.flags
+    value = instruction.value
+
     verbosity = settings.verbosity
+    style = settings.style
     cols = settings.cols
     rows = settings.rows
     vals = settings.vals
     vals_temp = settings.vals_blank.copy()
-    vals_temp.loc[rows, cols] = vals.loc[rows, cols]
 
-    style = settings.style
-    flags = instruction.flags
-    value = instruction.value
-
-
+    if FLAGS.COLS in flags or FLAGS.ROWS in flags:
+        vals_temp.loc[rows, cols] = True
+    elif FLAGS.VALS in flags:
+        vals_temp.loc[rows, cols] = vals.loc[rows, cols]
 
     if not isinstance(style, pd.DataFrame):
         style = pd.DataFrame('', columns=df_new.columns, index=df_new.index)
@@ -1199,6 +1274,7 @@ def _modify_format(instruction, df_new, settings):
 
     settings.style = style
     return df_new, settings
+
 
 
 def _modify_cols(instruction, df_new, settings):
@@ -1250,9 +1326,10 @@ def _modify_cols(instruction, df_new, settings):
     return df_new, settings
 
 
+
 def _modify_rows_vals(instruction, df_new, settings):
     """
-    An Instruction to modify the selected values.
+    An Instruction to modify the selected rows or values.
     """
 
     verbosity = settings.verbosity
@@ -1347,13 +1424,6 @@ def _modify_rows_vals(instruction, df_new, settings):
     #     else: #pragma: no cover (covered by validate())
     #         log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._modify_rows_vals', verbosity)
 
-    elif operator == OPERATORS.SORT:
-        if FLAGS.NEGATE in instruction.flags:
-            df_new.sort_values(by=list(df_new.columns[cols]), axis=0, ascending=False, inplace=True)
-        else:
-            df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
-
-
     elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
         #data modification
         if operator == OPERATORS.EVAL:
@@ -1394,62 +1464,6 @@ def _modify_rows_vals(instruction, df_new, settings):
             log(f'error: operator "{operator}" is not compatible with modification',
                 'qp.qlang._modify_rows_vals', verbosity)
 
-    return df_new, settings
-
-
-def _new_col(instruction, df_new, settings):
-    """
-    An Instruction to add a new col.
-    """
-
-    verbosity = settings.verbosity
-    cols = settings.cols
-    rows = settings.rows
-    vals = settings.vals
-    vals_blank = settings.vals_blank
-    operator = instruction.operator
-    value = instruction.value
-
-    if value.startswith('@'):
-        col = value[1:]
-        if col in df_new.columns:
-            value = df_new[col]
-        else:
-            log(f'error: col "{col}" not found in dataframe. cannot add a new col thats a copy of it',
-                'qp.qlang._new_col', verbosity)
-
-    for i in range(1, 1001):
-        if i == 1000: #pragma: no cover (unlikely to happen)
-            log(f'error: could not add new col. too many cols named "new<x>"',
-                'qp.qlang._new_col', verbosity)
-            return df_new, settings
-        colname = 'new' + str(i)
-        if colname not in df_new.columns:
-            df_new[colname] = pd.NA
-            break
-
-    if operator == OPERATORS.SET:
-        pass
-
-    elif operator == OPERATORS.EVAL:
-        value = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
-
-    if isinstance(value, pd.Series):
-        df_new[colname] = value
-    else:
-        df_new.loc[rows, colname] = value
-
-    cols = pd.Series([True if col == colname else False for col in df_new.columns])
-    cols.index = df_new.columns
-    vals[colname] = False
-    vals_blank[colname] = False
-    for selection in settings.saved.values():
-        selection['cols'] = pd.concat((selection['cols'], pd.Series({colname: False})))
-        selection['vals'][colname] = False
-
-    settings.cols = cols
-    settings.vals = vals
-    settings.vals_blank = vals_blank
     return df_new, settings
 
 

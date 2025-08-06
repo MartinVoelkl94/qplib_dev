@@ -5,7 +5,6 @@ import numpy as np
 import qplib as qp
 from qplib import log
 
-
 def get_df_simple_tagged():
     df = pd.DataFrame({
         'meta': ['', '', ''],
@@ -456,6 +455,31 @@ def test_metadata_continous():
     result = result.q(r'=a     $meta=   %is any;  %%is any;')
     expected['meta'] = [ '', '', '']
     assert result.equals(expected), 'failed test5: continous metadata tagging\n' + qp.diff(result, expected, output='str')
+
+
+
+params = [
+    (r'%age                             $bg=orange',                        qp.get_df().index),
+    (r'%age                             $cols bg=orange',                   qp.get_df().index),
+    (r'%age                             $rows bg=orange',                   qp.get_df().index),
+    (r'%age                             $vals bg=orange',                   qp.get_df().index),
+    (r'%age     %%>20                   $bg=orange          %%is any;',     [1, 4, 10]),
+    (r'%age     %%>20                   $cols bg=orange     %%is any;',     [1, 4, 10]),
+    (r'%age     %%>20                   $rows bg=orange     %%is any;',     [1, 4, 10]),
+    (r'%age     %%>20                   $vals bg=orange     %%is any;',     [1, 4, 10]),
+    (r'%age     %%>20       %%%>30      $bg=orange          %%is any;',     [4, 10]),
+    (r'%age     %%>20       %%%>30      $vals bg=orange     %%is any;',     [4, 10]),
+    (r'%age     %%>20       %%%>30      $rows bg =orange    %%is any;',     [1, 4, 10]),
+    (r'%age     %%>20       %%%>30      $cols bg = orange   %%is any;',     [1, 4, 10]),
+    ]
+@pytest.mark.parametrize('code, expected_rows', params)
+def test_modify_format(code, expected_rows):
+    qp.qlang.APPLY_STYLE = False
+    result = get_df().q(code)
+    expected = pd.DataFrame('', index=df.index, columns=['age'])
+    expected.loc[expected_rows, 'age'] = 'background-color: orange;'
+    assert result.equals(expected), qp.diff(result, expected, output='str')
+    qp.qlang.APPLY_STYLE = True
 
 
 
