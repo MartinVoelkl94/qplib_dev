@@ -200,17 +200,17 @@ def fetch(path, before='now', verbosity=3):
                 timestamp_str = timestamp_str_full.replace(f'{extension}', '')
                 timestamp = _datetime(timestamp_str)
                 if timestamp < _datetime(cutoff):  #type: ignore  (turns off pylance for this line)
-                    timestamps[timestamp] = timestamp_str
+                    timestamps[timestamp] = (timestamp_str, extension)
             except: #pragma: no cover
                 pass
-
     if len(timestamps) == 0:
         log(f'error: no timestamped files starting with "{name}" found in "{folder}" before {cutoff}',
             'qp.fetch()', verbosity)
         raise FileNotFoundError(f'no timestamped files starting with "{name}" found in "{folder}" before {cutoff}')
     else:
         timestamps = timestamps.sort_index()
-        latest = timestamps.iloc[len(timestamps) - 1]
+        latest = timestamps.iloc[len(timestamps) - 1][0]
+        extension = timestamps.iloc[len(timestamps) - 1][1]
         path = f'{folder}/{name}{latest}{extension}'
         log(f'info: found file "{path}"', 'qp.fetch()', verbosity)
         return path
