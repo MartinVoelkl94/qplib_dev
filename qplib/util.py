@@ -135,7 +135,7 @@ def log(
 
 def _arg_to_list(arg):
     """
-    converts an argument to a list, if it is not already a list or tuple
+    converts a non interable argument to a list
     """
     if arg is None:
         return []

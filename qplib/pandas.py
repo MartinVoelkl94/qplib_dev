@@ -137,7 +137,7 @@ def _format_df(
 
     if 'meta' in df.columns:
         log('debug: ensuring column "meta" is string', 'df.format()', verbosity)
-        df.loc[:, 'meta'] = df.loc[:, 'meta'].astype(str)
+        df.loc[:, 'meta'] = df.loc[:, 'meta'].astype(str).replace('nan', '')
     elif add_metadata is True:
         log('info: adding column "meta" at position 0', 'df.format()', verbosity)
         metadata_col = pd.Series('', index=df.index, name='meta')
@@ -424,6 +424,7 @@ def _diff(
     ignore=None,  #col(s) to ignore for comparison
     rename=None,  #rename cols before comparison
     prefix_old='old: ',
+    write_index=False,  #write index to excel file
     verbosity=3,
     ):
     """
@@ -460,7 +461,7 @@ def _diff(
     requirements for the excel sheets:
     - only sheets with the same name are compared
     - needs a column with unique entries to use as key for comparison (specified by arg "uid")
-    - uid must have the same name in all files and sheets
+    - when a list is passed as uid the first column name thats present and unique in both sheets is used as uid
 
     if uid=None:
     - uses sequential index instead of any given unique column
@@ -468,6 +469,7 @@ def _diff(
     - only works if all sheets have corresponding records in the same order
     """
 
+    #compare 2 excel files
     if isinstance(df_new, str) and isinstance(df_old, str) \
         and df_new.endswith('.xlsx') and df_old.endswith('.xlsx'):
         df, summary, string = _diff_excel(
@@ -483,6 +485,7 @@ def _diff(
             )
         
     
+    #compare 2 dfs or 1 df and 1 csv/excel file
     else:
         if isinstance(df_new, str):
             if df_new.endswith('.csv'):
@@ -523,42 +526,55 @@ def _diff(
             string = _diff_str(df_new, df_old, uid, ignore, rename, verbosity)
 
 
+    #return python results
     if output == 'df':
         return df
-    if output == 'str':
+    elif output == 'str':
         return string
-    if output == 'summary':
+    elif output == 'summary':
         return summary
-    if output == 'all':
+    elif output == 'all':
         return df, summary, string
-    if output == 'print':
+    elif output == 'print':
         print(string)
         return None
+
+
+    #write multiple dfs to excel file
     elif output.endswith('.xlsx') and isinstance(df, dict): 
         with pd.ExcelWriter(output) as writer:
-            summary.to_excel(writer, sheet_name='diff_summary', index=False)
+            summary.to_excel(writer, sheet_name='diff_summary', index=write_index)
             for sheet, df in df.items():
                 if sheet == 'diff_summary':
                     log(f'warning: comparison for sheet "diff_summary" will not be written to file since this name is reserved', 'qp.diff()', verbosity)
                     continue
                 if hasattr(df, 'data'):
                     df.data['meta'] = df.data['meta'].str.replace('<br>', '\n')
-                    df.to_excel(writer, sheet_name=sheet, index=True)
+                    df.to_excel(writer, sheet_name=sheet, index=write_index)
+
+        if mode=='new+':
+            hide(output, axis='col', patterns=f'{prefix_old}.*', hide=True, verbosity=verbosity)
+        format_excel(output)
+
+        log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
+        return df, summary, string
+    
+
+    #write single df to excel file
+    elif output.endswith('.xlsx'):
+        df.to_excel(output, index=write_index)
         if mode=='new+':
             hide(output, axis='col', patterns=f'{prefix_old}.*', hide=True, verbosity=verbosity)
         format_excel(output)
         log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
         return df, summary, string
-    elif output.endswith('.xlsx'):
-        df.to_excel(output, index=uid)
-        if mode=='new+':
-            hide(output, axis='col', patterns=f'{prefix_old}.*', hide=True, verbosity=verbosity)
-        log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
-        return df, summary, string
+    
+
     else:
         log(f'error: unknown return value: {output}', 'qp.diff()', verbosity)
         return None
-   
+
+
 
 def _diff_df(
     df_new,
@@ -577,11 +593,9 @@ def _diff_df(
     see _diff() for details
     '''
 
-    if ignore is None:
-        ignore = []
-    elif isinstance(ignore, str):
-        ignore = [ignore]
+    ignore = _arg_to_list(ignore)
     ignore.append('meta')
+
     if uid:
         if uid not in df_new.columns:
             log(f'error: "{uid}" is not in new dataframe', 'qp.diff', verbosity)
@@ -608,10 +622,12 @@ def _diff_df(
         'vals changed': None,
         }
     if not df_new.index.is_unique:
-        log(f'warning: uid of {name_new} is not unique. choose a unique column as uid or set "uid=None" to use sequential numbering', 'qp.diff', verbosity)
+        log(f'warning: uid of {name_new} is not unique. choose a unique column as uid or set "uid=None" to use sequential numbering',
+            'qp.diff', verbosity)
         return pd.DataFrame(), summary_empty
     if not df_old.index.is_unique:
-        log(f'warning: uid of {name_old} is not unique. choose a unique column as uid or set "uid=None" to use sequential numbering', 'qp.diff', verbosity)
+        log(f'warning: uid of {name_old} is not unique. choose a unique column as uid or set "uid=None" to use sequential numbering',
+            'qp.diff', verbosity)
         return pd.DataFrame(), summary_empty
 
 
@@ -622,12 +638,13 @@ def _diff_df(
     elif isinstance(rename, dict):
         if 'meta' in rename:
             log('warning: it is not advised to rename the "meta" column', 'qp.diff()', verbosity)
-        if 'uid' in rename:
+        if uid in rename:
             log('warning: it is not advised to rename the "uid" column', 'qp.diff()', verbosity)
         df_new = df_new.rename(columns=rename)
         df_old = df_old.rename(columns=rename)
     else:
         log('error: rename argument must be a dictionary', 'qp.diff()', verbosity)
+
 
     df_new = _format_df(df_new, fix_headers=False, add_metadata=True, verbosity=2)
     df_old = _format_df(df_old, fix_headers=False, add_metadata=True, verbosity=2)
@@ -668,7 +685,6 @@ def _diff_df(
                     cols_new.append(col)
                     if col != uid:
                         cols_new.append(prefix_old + col)
-
                         if prefix_old + col not in df_diff.columns:
                             cols_add.append(prefix_old + col)
 
@@ -792,11 +808,15 @@ def _diff_excel(
     '''
     see _diff() for details
     '''
+
+    uids = _arg_to_list(uid)
     filename_new = os.path.basename(file_new)
     filename_old = os.path.basename(file_old)
 
     summary = pd.DataFrame(columns=[
         'sheet',
+        'in both files',
+        'uid column',
         'cols added',
         'cols removed',
         'rows added',
@@ -804,10 +824,6 @@ def _diff_excel(
         'vals added',
         'vals removed',
         'vals changed',
-        f'is in "{filename_new}"',
-        f'is in "{filename_old}"',
-        f'uid is unique in "{filename_new}"',
-        f'uid is unique in "{filename_old}"',
         ])
     results = {}
     
@@ -821,15 +837,23 @@ def _diff_excel(
         if sheet in sheets_old:
             df_new = pd.read_excel(file_new, sheet_name=sheet)
             df_old = pd.read_excel(file_old, sheet_name=sheet)
-
             name_new=f'sheet "{sheet}" in file "{file_new}"'
             name_old=f'sheet "{sheet}" in file "{file_old}"'
+            uid_col = _get_uid(df_new, df_old, uids, verbosity)
+
+            if uid_col:
+                log(f'debug: found uid column "{uid_col}" in sheet "{sheet}" of file "{file_new}" and "{file_old}".',
+                    'qp.diff()', verbosity)
+            else:
+                log(f'warning: no uid column found in sheet "{sheet}" of file "{file_new}" and "{file_old}". using sequential index instead.',
+                    'qp.diff()', verbosity)
+
             result, changes = _diff_df(
                 df_new,
                 df_old,
                 mode,
                 output,
-                uid,
+                uid_col,
                 ignore,
                 rename,
                 prefix_old,
@@ -842,31 +866,24 @@ def _diff_excel(
             if isinstance(result, pd.DataFrame) and result.empty:
                 log(f'error: comparison was not possible for sheet "{sheet}"', 'qp.diff', verbosity)
             else:
-                log(f'info: compared sheet "{sheet}" from both files', 'qp.diff()', verbosity)
+                log(f'debug: compared sheet "{sheet}" from both files', 'qp.diff()', verbosity)
             
             results[sheet] = result
-        
+
 
             idx = len(summary)
             summary.loc[idx, 'sheet'] = sheet
-            summary.loc[idx, f'is in "{filename_new}"'] = True
-            summary.loc[idx, f'is in "{filename_old}"'] = True
-            summary.loc[idx, f'uid is unique in "{filename_new}"'] = df_new.index.is_unique
-            summary.loc[idx, f'uid is unique in "{filename_old}"'] = df_old.index.is_unique
+            summary.loc[idx, 'in both files'] = 'y'
+            summary.loc[idx, 'uid column'] = uid_col
             for key, val in changes.items():
                 summary.loc[idx, key] = val
             
         else:
             log(f'warning: sheet "{sheet}" is only in new file. nothing to compare', 'qp.diff()', verbosity)
-            if uid is None:
-                df_new = pd.read_excel(file_new, sheet_name=sheet)
-            else:
-                df_new = pd.read_excel(file_new, sheet_name=sheet, index_col=uid)
             idx = len(summary)
             summary.loc[idx, 'sheet'] = sheet
-            summary.loc[idx, f'is in "{filename_new}"'] = True
-            summary.loc[idx, f'is in "{filename_old}"'] = False
-            summary.loc[idx, f'uid is unique in "{filename_new}"'] = df_new.index.is_unique
+            summary.loc[idx, 'in both files'] = ''
+            summary.loc[idx, 'uid column'] = ''
     
     #wip
     string = 'no string version of differences available when comparing excel files'
@@ -949,7 +966,21 @@ def _try_replace_gt_lt(x):
         return str(x).replace('<', '&lt;').replace('>', '&gt;')
     else:
         return x
-    
+
+
 def _apply_style(x, df_style):
     return df_style
  
+
+def _get_uid(df_new, df_old, uids, verbosity=3):
+    """
+    returns the first column that is present in both dataframes and is unique in both dataframes
+    if no such column is found, returns None
+    """
+    for uid in uids:
+        if uid in df_new.columns \
+            and uid in df_old.columns \
+            and df_new[uid].is_unique \
+            and df_old[uid].is_unique:
+            return uid
+    return None

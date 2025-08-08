@@ -311,7 +311,7 @@ def test_mode_newplus_ignore(tmpdir):
 
 
 
-def test_mode_newplus_ingnore1(tmpdir):
+def test_mode_newplus_ignore1(tmpdir):
     df_new, df_old = qp.get_dfs()
     df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
 
@@ -1004,6 +1004,8 @@ def test_returns_summary(tmpdir):
     result = qp.diff(df_new_file, df_old_file, uid='uid', output='summary')
     expected = pd.DataFrame({
         'sheet': ['Sheet1'],
+        'in both files': ['y'],
+        'uid column': ['uid'],
         'cols added': [1],
         'cols removed': [1],
         'rows added': [1],
@@ -1011,10 +1013,6 @@ def test_returns_summary(tmpdir):
         'vals added': [1],
         'vals removed': [1],
         'vals changed': [1],
-        'is in "df_new.xlsx"': [True],
-        'is in "df_old.xlsx"': [True],
-        'uid is unique in "df_new.xlsx"': [True],
-        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result.equals(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -1042,6 +1040,8 @@ def test_returns_summary_ignore(tmpdir):
     result = qp.diff(df_new_file, df_old_file, uid='uid', ignore='a', output='summary')
     expected = pd.DataFrame({
         'sheet': ['Sheet1'],
+        'in both files': ['y'],
+        'uid column': ['uid'],
         'cols added': [1],
         'cols removed': [1],
         'rows added': [1],
@@ -1049,10 +1049,6 @@ def test_returns_summary_ignore(tmpdir):
         'vals added': [1],
         'vals removed': [0],
         'vals changed': [0],
-        'is in "df_new.xlsx"': [True],
-        'is in "df_old.xlsx"': [True],
-        'uid is unique in "df_new.xlsx"': [True],
-        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result.equals(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -1080,6 +1076,8 @@ def test_returns_summary_ignore1(tmpdir):
     result = qp.diff(df_new_file, df_old_file, uid='uid', ignore=['b'], output='summary')
     expected = pd.DataFrame({
         'sheet': ['Sheet1'],
+        'in both files': ['y'],
+        'uid column': ['uid'],
         'cols added': [1],
         'cols removed': [1],
         'rows added': [1],
@@ -1087,10 +1085,6 @@ def test_returns_summary_ignore1(tmpdir):
         'vals added': [0],
         'vals removed': [1],
         'vals changed': [1],
-        'is in "df_new.xlsx"': [True],
-        'is in "df_old.xlsx"': [True],
-        'uid is unique in "df_new.xlsx"': [True],
-        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result.equals(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -1118,6 +1112,8 @@ def test_returns_summary_ignore2(tmpdir):
     result = qp.diff(df_new_file, df_old_file, uid='uid', ignore=['a','b'], output='summary')
     expected = pd.DataFrame({
         'sheet': ['Sheet1'],
+        'in both files': ['y'],
+        'uid column': ['uid'],
         'cols added': [1],
         'cols removed': [1],
         'rows added': [1],
@@ -1125,10 +1121,6 @@ def test_returns_summary_ignore2(tmpdir):
         'vals added': [0],
         'vals removed': [0],
         'vals changed': [0],
-        'is in "df_new.xlsx"': [True],
-        'is in "df_old.xlsx"': [True],
-        'uid is unique in "df_new.xlsx"': [True],
-        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result.equals(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'
 
@@ -1298,6 +1290,8 @@ def test_returns_all(tmpdir):
     result_df = result_dfs['Sheet1'].data.astype('object')
     expected_summary = pd.DataFrame({
         'sheet': ['Sheet1'],
+        'in both files': ['y'],
+        'uid column': ['uid'],
         'cols added': [1],
         'cols removed': [1],
         'rows added': [1],
@@ -1305,10 +1299,6 @@ def test_returns_all(tmpdir):
         'vals added': [1],
         'vals removed': [1],
         'vals changed': [1],
-        'is in "df_new.xlsx"': [True],
-        'is in "df_old.xlsx"': [True],
-        'uid is unique in "df_new.xlsx"': [True],
-        'uid is unique in "df_old.xlsx"': [True],
         }).astype('object')
     assert result_df.equals(expected_df), f'failed test for returns="all".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected_df}\nRESULT\n{result_df}'
     assert result_summary.equals(expected_summary)
