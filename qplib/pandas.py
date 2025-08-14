@@ -179,37 +179,48 @@ def merge(
     line_stop=' ;\n',
     verbosity=3,
     ):
-    """
-    Performs a modified left join on two dataframes:
-    - if right df has multiple values for the same key:
-        - they are aggregated into a string with multiple lines
-        - aggregated string format: "#1: item1 ;\n#2: item2 ;\n#3: item3 ;"
-    - left join on key-column
+    r"""
+    Performs a modified left join on two dataframes.
+    If the right df has multiple values for the same key,
+    they are aggregated into a string with multiple lines:  
+        *"#1: item1 ;\n#2: item2 ;\n#3: item3 ;"*
 
-    requirements:
-    - key-column specified by arg "on" in left df should be unique
-    - key-column specified by arg "on" in right df can be non-unique
 
-    include:
+    ## Requirements:
+    - key-column specified by arg *"on"* in left df should be unique
+    - key-column specified by arg *"on"* in right df can be non-unique
+
+
+    ## Args:
+
+    #### left, right:
+    - dfs to join
+
+    #### on:
+    - key column(s) to join on
+
+    #### include:
     - all columns specified in include are kept from right df
     - if include is None, all columns from right df are kept
 
-    exclude:
+    #### exclude:
     - all columns specified in exclude are removed from right df
     - if exclude is None, no columns are removed from right df
 
-    flatten:
+    #### flatten:
     - all columns specified in flatten are not aggregated into a string when non-unique
     - instead a new column for each value is created and merged into the result df
 
-    duplicates:
+    #### duplicates:
     - True: all columns from right df are kept
     - False: only columns from right df that are not in left df are kept
 
-    prefix:
+    #### prefix:
     - None: a sequential integer prefix is generated automatically
     - any string: the prefix is added to all columns from right df
 
+
+    ## Notes:
     for nice excel formatting use qp.format_excel() or:
     - open resulting excel file
     - select all
@@ -309,7 +320,23 @@ def embed(
     verbosity=3,
     ):
     """
-    Integrates rows from a source DataFrame into the destination DataFrame based on a key.
+    Embeds rows from a source DataFrame into the destination DataFrame based on a key.
+
+    ## Args:
+
+    #### df_dest, df_src:
+    - destination and source dfs
+
+    #### key_dest, key_src:
+    - key columns to identify which source rows to embed into which destination values
+
+    #### include:
+    - all columns specified in include are kept from the source df
+    - if include is None, all columns from the source df are kept
+
+    #### exclude:
+    - all columns specified in exclude are removed from the source df
+    - if exclude is None, no columns are removed from the source df
     """
 
     include = _arg_to_list(include)
@@ -317,15 +344,15 @@ def embed(
 
 
     if key_dest not in df_dest.columns:
-        log(f'error: key "{key_dest}" not found in df_dest', 'qp.integrate', verbosity)
+        log(f'error: key "{key_dest}" not found in df_dest', 'qp.embed', verbosity)
         return df_dest
     if key_src not in df_src.columns:
-        log(f'error: key "{key_src}" not found in df_src', 'qp.integrate', verbosity)
+        log(f'error: key "{key_src}" not found in df_src', 'qp.embed', verbosity)
         return df_src
-    
+
     if not df_src[key_src].is_unique:
         log(f'error: "{key_src}" in df_src is not unique.',
-            'qp.integrate', verbosity)
+            'qp.embed', verbosity)
         return df_dest
        
     vals_dest = set(df_dest[key_dest].dropna().unique())
@@ -333,7 +360,7 @@ def embed(
     only_in_dest = vals_dest - vals_src
     if len(only_in_dest) > 0:
         log(f'warning: {len(only_in_dest)} value(s) in "{key_dest}" of df_dest not found in df_src: {only_in_dest}',
-            'qp.integrate', verbosity)
+            'qp.embed', verbosity)
 
 
     if include:
@@ -428,45 +455,56 @@ def _diff(
     verbosity=3,
     ):
     """
-    compares two dataframes/csv/excel files and returns differences
+    compares two dfs/csv/excel files and returns differences
 
-    mode (not needed for output="summary" or "str" or "print"):
-    - 'new': creates new dataframe with highlighted value additions, removals and changes
+    ## Args:
+
+    #### df_new, df_old:
+    - the new and old df versions to compare
+
+    #### mode:
+    - not needed for output="summary" or "str" or "print"
+    - 'new': creates new df with highlighted value additions, removals and changes
     - 'new+': also shows old values in columns next to new values (old values are hidden when saved to excel)
-    - 'old': creates old dataframe with highlighted value additions, removals and changes
-    - 'mix': creates mixture of new and old dataframe with highlighted value additions, removals and changes
+    - 'old': creates old df with highlighted value additions, removals and changes
+    - 'mix': creates mixture of new and old df with highlighted value additions, removals and changes
     
-    output:
-    - 'df': returns dataframe(s) with highlighted differences (using the given mode argument). multiple dfs are returned in a dict.
+    #### output:
+    - 'df': returns df(s) with highlighted differences (using the given mode argument). multiple dfs are returned in a dict.
     - 'summary': returns a df containing the number of added, removed and changed values and columns for each sheet
     - 'str': returns a string containing a summary of the differences
-    - 'all': returns a tuple containing the dataframe, the summary df and the string
+    - 'all': returns a tuple containing the df, the summary df and the string
     - 'print': prints a string containing a summary of the differences and returns None
     - '<filename.xlsx>': saves the differences to an excel file with the given name and returns as with 'all'
 
-    ignore:
+    #### uid:
+    - column(s) to use as unique identifier(s) for comparison
+    - None: use index (only works if all sheets have corresponding records in the same order)
+
+    #### ignore:
     - column(s) to ignore for comparison
 
-    rename:
+    #### rename:
     - dictionary to rename columns before comparison
-    - is applied to both dataframes
+    - is applied to both dfs
 
+    #### prefix_old:
+    - prefix to distinguish between columns from old and new df
 
-    Excel comparison:
+    #### write_index:
+    - if an excel output is created, this determines whether to write the index to the excel file
+
+    
+    ## Excel comparison:
 
     when two excel files are compared, all sheets with the same name in both files are compared, meaning that 'df'
     will return a dictionary containing multiple dfs with highlighted differences. 'summary' will return a df containing
     the summary of differences for each sheet.
 
-    requirements for the excel sheets:
+    #### Requirements:
     - only sheets with the same name are compared
     - needs a column with unique entries to use as key for comparison (specified by arg "uid")
     - when a list is passed as uid the first column name thats present and unique in both sheets is used as uid
-
-    if uid=None:
-    - uses sequential index instead of any given unique column
-    - this guarantees uniqueness
-    - only works if all sheets have corresponding records in the same order
     """
 
     #compare 2 excel files
