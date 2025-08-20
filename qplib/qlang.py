@@ -1,16 +1,37 @@
-
+import re
 import numpy as np
 import pandas as pd
-import re
 import qplib as qp
 
-from IPython.display import display
-from ipywidgets import widgets, interactive_output, HBox, VBox, fixed, Layout
 from importlib.resources import files
+from IPython.display import display
+from ipywidgets import (
+    widgets,
+    interactive_output,
+    HBox,
+    fixed,
+    Layout,
+    )
 
 from .util import log
-from .types import _dict, _int, _float, _num, _bool, _datetime, _date, _na, _nk, _yn, _type
 from .pandas import _diff
+from .types import (
+    _dict,
+    _int,
+    _float,
+    _num,
+    _bool,
+    _datetime,
+    _date,
+    _na,
+    _nk,
+    _yn,
+    _type,
+    TYPES_INT,
+    TYPES_FLOAT,
+    TYPES_NUM,
+    TYPES_BOOL,
+    )
 
 
 
@@ -21,49 +42,6 @@ VERBOSITY = 3
 DIFF = None
 INPLACE = False
 APPLY_STYLE = True
-
-TYPES_INT = (
-    int,
-    np.int64,
-    np.int32,
-    np.int16,
-    np.int8,
-    pd.Int64Dtype,
-    pd.Int32Dtype,
-    pd.Int16Dtype,
-    pd.Int8Dtype,
-    )
-TYPES_FLOAT = (
-    float,
-    np.float64,
-    np.float32,
-    np.float16,
-    pd.Float64Dtype,
-    pd.Float32Dtype,
-    )
-TYPES_NUM = (
-    int,
-    float,
-    np.int64,
-    np.float64,
-    np.int32,
-    np.float32,
-    np.int16,
-    np.float16,
-    np.int8,
-    np.number,
-    pd.Int64Dtype,
-    pd.Float64Dtype,
-    pd.Int32Dtype,
-    pd.Float32Dtype,
-    pd.Int16Dtype,
-    pd.Int8Dtype,
-    )
-TYPES_BOOL = (
-    bool,
-    np.bool_,
-    pd.BooleanDtype,
-    )
 
 
 

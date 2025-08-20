@@ -1,17 +1,28 @@
 
 import numpy as np
 import pandas as pd
-import copy
 import re
 import os
-import sys
 import shutil
 import datetime
 from IPython.display import display
 from IPython import get_ipython
-from .types import _num, _na, _nk, _date, _datetime
+from .types import (
+    _num,
+    _na,
+    _nk,
+    _date,
+    _datetime,
+    )
 
-ITERABLES = (list, tuple, set, pd.Index, pd.Series)
+
+TYPES_ITERABLE = (
+    list,
+    tuple,
+    set,
+    pd.Index,
+    pd.Series,
+    )
 
 GREEN = '#6dae51'
 RED = '#f73434'
@@ -139,7 +150,7 @@ def _arg_to_list(arg):
     """
     if arg is None:
         return []
-    elif isinstance(arg, ITERABLES):
+    elif isinstance(arg, TYPES_ITERABLE):
         return list(arg)
     else:
         return [arg]

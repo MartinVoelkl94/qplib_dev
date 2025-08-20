@@ -2,15 +2,18 @@ import pandas as pd
 import numpy as np
 import copy
 import os
-import datetime
 
-from IPython.display import display
-from ipywidgets import interact, widgets
-from pandas.api.extensions import register_dataframe_accessor
-
-from .util import log, _arg_to_list, GREEN, RED, GREEN_LIGHT, ORANGE_LIGHT, RED_LIGHT
 from .types import _dict, _date
 from .xlsx import hide, format_excel
+from .util import (
+    log,
+    _arg_to_list,
+    GREEN,
+    RED,
+    GREEN_LIGHT,
+    ORANGE_LIGHT,
+    RED_LIGHT,
+    )
 
 
 
