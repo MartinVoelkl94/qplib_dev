@@ -1,12 +1,95 @@
+import re
 import pandas as pd
 import numpy as np
 import datetime
-import re
+from pandas import isna
 
 #Mostly wrappers for pandas functions but with some additional functionality and generally more lenient handling of edge cases.
 
 
+TYPES_INT = (
+    int,
+    np.int64,
+    np.int32,
+    np.int16,
+    np.int8,
+    pd.Int64Dtype,
+    pd.Int32Dtype,
+    pd.Int16Dtype,
+    pd.Int8Dtype,
+    )
+TYPES_FLOAT = (
+    float,
+    np.float64,
+    np.float32,
+    np.float16,
+    pd.Float64Dtype,
+    pd.Float32Dtype,
+    )
+TYPES_NUM = (
+    int,
+    float,
+    np.int64,
+    np.float64,
+    np.int32,
+    np.float32,
+    np.int16,
+    np.float16,
+    np.int8,
+    np.number,
+    pd.Int64Dtype,
+    pd.Float64Dtype,
+    pd.Int32Dtype,
+    pd.Float32Dtype,
+    pd.Int16Dtype,
+    pd.Int8Dtype,
+    )
+TYPES_BOOL = (
+    bool,
+    np.bool_,
+    pd.BooleanDtype,
+    )
+
+VALUES_NA = (
+    '',
+    'na',
+    'n/a',
+    'n.a',
+    'n.a.',
+    'na.',
+    'n.a',
+    'nan',
+    'n.a.n',
+    'n.a.n.',
+    'not available',
+    'not applicable',
+    'not a number',
+    'missing',
+    'missing.',
+    'null',
+    'nil',
+    'none',
+    'void',
+    'blank',
+    'empty',
+    )
+VALUES_NK = (
+    'unk',
+    'unknown',
+    'not known',
+    'not known.',
+    'nk',
+    'n.k.',
+    'n.k',
+    'n/k',
+    'not specified',
+    'not specified.',
+    )
+
+
 def _int(x, errors='coerce', na=np.nan):
+    if isinstance(x, TYPES_INT):
+        return x
     try:
         return round(float(x))  #float first to handle strings like '1.0'
     except:
@@ -27,6 +110,8 @@ def _int(x, errors='coerce', na=np.nan):
 
 
 def _float(x, errors='coerce', na=np.nan):
+    if isinstance(x, TYPES_FLOAT):
+        return x
     try:
         return float(x)
     except:
@@ -47,6 +132,8 @@ def _float(x, errors='coerce', na=np.nan):
 
 
 def _num(x, errors='coerce', na=np.nan):
+    if isinstance(x, TYPES_NUM):
+        return x
     try:
         return pd.to_numeric(x)
     except:
@@ -67,7 +154,9 @@ def _num(x, errors='coerce', na=np.nan):
 
 
 def _bool(x, errors='coerce', na=None):
-    if str(x).lower() in ['y', 'yes', 'true', '1', '1.0', 'positive', 'pos']:
+    if isinstance(x, TYPES_BOOL):
+        return x
+    elif str(x).lower() in ['y', 'yes', 'true', '1', '1.0', 'positive', 'pos']:
         return True
     elif str(x).lower() in ['n', 'no', 'false', '0', '0.0', 'negative', 'neg']:
         return False
@@ -168,14 +257,10 @@ def _datetime(x, errors='coerce', na=pd.NaT):
 
 
 def _na(x, errors='ignore', na=None):
-    possible_nas = [
-        '',
-        'na', 'n/a', 'n.a', 'n.a.', 'na.', 'n.a', 'nan', 'n.a.n', 'n.a.n.',
-        'not available', 'not applicable', 'not a number', 'missing', 'missing.',
-        'null', 'nil', 'none', 'void', 'blank', 'empty',
-        ]
-    
-    if pd.isna(x) or str(x).lower().strip() in possible_nas:
+
+    if str(x).lower().strip() in VALUES_NA:
+        return na
+    elif isna(x):
         return na
     else:
         if errors == 'raise':
@@ -195,13 +280,7 @@ def _na(x, errors='ignore', na=None):
 
 
 def _nk(x, errors='ignore', nk='unknown', na=None):
-    possible_nks = [
-        'unk', 'unknown', 'not known', 'not known.',
-        'nk', 'n.k.', 'n.k', 'n/k',
-        'not specified', 'not specified.',
-        ]
-    
-    if str(x).lower() in possible_nks:
+    if str(x).lower().strip() in VALUES_NK:
         return nk
     else:
         if errors == 'raise':
@@ -247,18 +326,14 @@ def _type(x):
     """
     Returns what type something "should" be. e.g.: qp.type('1') == 'int'
     """
-    types_int = (int, np.int8, np.int16, np.int32, np.int64)
-    types_float = (float, np.float16, np.float32, np.float64)
     
-
     if isinstance(x, bool):
         return 'bool'
-    elif isinstance(x, types_int):  #type: ignore  (turns of pylance for this line)
+    elif isinstance(x, TYPES_INT):  #type: ignore  (turns of pylance for this line)
         return 'int'
-    elif isinstance(x, types_float):  #type: ignore  (turns of pylance for this line)
+    elif isinstance(x, TYPES_FLOAT):  #type: ignore  (turns of pylance for this line)
         return 'float'
     
-
     elif isinstance(x, str):
         if re.fullmatch(r'(true|false)', x.strip(), re.IGNORECASE):
             return 'bool'
@@ -286,6 +361,10 @@ def _type(x):
 
 
 def _convert(value, errors='coerce', na=None):
+    """
+    Converts to the type something "should" be according to qp.type().
+    e.g.: qp.convert('1') == 1
+    """
     mapping = {
         'int': _int,
         'float': _float,
