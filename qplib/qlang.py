@@ -60,17 +60,23 @@ class Symbol:
 
     def details(self):
         traits = '\n\t\t'.join(self.traits)
-        return f'symbol:\n\tname: {self.name}\n\tsymbol: {self.glyph}\n\tdescription: {self.description}\n\ttraits:\n\t\t{traits}\n\t'
+        text = (
+            f'symbol:\n\tname: {self.name}\n'
+            f'\tsymbol: {self.glyph}\n'
+            f'\tdescription: {self.description}\n'
+            f'\ttraits:\n\t\t{traits}\n\t'
+            )
+        return text
 
     def __repr__(self):
         return f'<"{self.glyph}": {self.name}>'
- 
+
     def __str__(self):
         return self.__repr__()
-    
+
     def __lt__(self, value):
         return self.glyph < value
-    
+
     def __gt__(self, value):
         return self.glyph > value
 
@@ -98,7 +104,7 @@ class Symbols:
         elif value == 'by_trait':
             return super().__getattribute__(value)
         elif value in self.by_glyph:
-            return self.by_glyph[value] #pragma: no cover (not possible with current symbols)
+            return self.by_glyph[value]
         elif value in self.by_name:
             return self.by_name[value]
         elif value in self.by_trait:
@@ -114,14 +120,17 @@ class Symbols:
         elif key in self.by_trait:
             return self.by_trait[key]
         else:
-            log(f'error: symbol "{key}" not found in "{self.name}"', 'qp.qlang.Symbols.__getitem__', VERBOSITY)
+            message = f'error: symbol "{key}" not found in "{self.name}"'
+            log(message, 'qp.qlang.Symbols.__getitem__', VERBOSITY)
             return None
 
     def __iter__(self):
         return iter(self.by_name.values())
 
     def __repr__(self):
-        return f'{self.name}:\n\t' + '\n\t'.join([str(val) for key,val in self.by_name.items()])
+        text = f'{self.name}:\n\t'
+        text += '\n\t'.join([str(val) for val in self.by_name.values()])
+        return text
 
     def __str__(self):
         return self.__repr__()
@@ -147,7 +156,12 @@ class Instruction:
 
 
     def __repr__(self):
-        string = f'Instruction:\n\tline_num: {self.line_num}\n\tcode: {self.code}\n\tconnector: {self.connector}'
+        string = (
+            f'Instruction:\n'
+            f'\tline_num: {self.line_num}\n'
+            f'\tcode: {self.code}\n'
+            f'\tconnector: {self.connector}'
+            )
         for flag in self.flags:
             string += f'\n\tflag: {flag}'
         string += f'\n\toperator: {self.operator}\n\tvalue: {self.value}'
@@ -200,7 +214,7 @@ def get_symbols():
 
 DEFINITIONS, CONNECTORS, OPERATORS, FLAGS, compatible = get_symbols()
 COMMENT = Symbol('COMMENT', '#', 'syntax', 'comments out the rest of the line', [])
-ESCAPE = Symbol('ESCAPE', '´',  'syntax', 'escape the next character', [])
+ESCAPE = Symbol('ESCAPE', '´', 'syntax', 'escape the next character', [])
 
 
 
@@ -210,7 +224,7 @@ ESCAPE = Symbol('ESCAPE', '´',  'syntax', 'escape the next character', [])
 
 def query(df_old, code=''):
     """
-    Used by the dataframe accessors df.q() (DataFrameQuery) and df.qi() (DataFrameQueryInteractive).
+    Used by the dataframe accessors df.q() and df.qi().
     """
 
     #setup
@@ -232,14 +246,14 @@ def query(df_old, code=''):
         columns=df_new.columns,
         index=df_new.index
         )
-    
+
     settings.vals_blank = pd.DataFrame(
         np.zeros(df_new.shape, dtype=bool),
         columns=df_new.columns,
         index=df_new.index
         )
-    
-    settings.last_selection = 'vals' #default selection scope for modification instructions
+
+    settings.last_selection = 'vals'  #default scope for modification instructions
     settings.saved = {}
     settings.verbosity = VERBOSITY
     settings.diff = DIFF
@@ -262,9 +276,11 @@ def query(df_old, code=''):
             df_new = df_old.copy()
             settings.df_copied = True
 
-        log(f'debug: applying instruction:\n{instruction}', 'qp.qlang.query', settings.verbosity)
-        df_new, settings  = instruction.function(instruction, df_new, settings)
-        log(f'trace: instruction applied', 'qp.qlang.query', settings.verbosity)
+        message = f'debug: applying instruction:\n{instruction}'
+        log(message, 'qp.qlang.query', settings.verbosity)
+        df_new, settings = instruction.function(instruction, df_new, settings)
+        message = 'trace: instruction applied'
+        log(message, 'qp.qlang.query', settings.verbosity)
 
 
 
@@ -273,8 +289,11 @@ def query(df_old, code=''):
     df_filtered = df_new.loc[settings.rows, settings.cols]
 
     if settings.diff is not None and settings.style is not None:
-        log('warning: diff and style formatting are not compatible. formatting will be ignored',
-            'qp.qlang.query', settings.verbosity)
+        message = (
+            'warning: diff and style formatting are not compatible.'
+            ' formatting will be ignored'
+            )
+        log(message, 'qp.qlang.query', settings.verbosity)
         settings.style = None
 
     if settings.diff is not None:
@@ -292,14 +311,20 @@ def query(df_old, code=''):
         rows_shared = df_filtered.index.intersection(settings.style.index)
         cols_shared = df_filtered.columns.intersection(settings.style.columns)
         if APPLY_STYLE:
-            def f(x, style): #pragma: no cover
-                return style
-            result = df_filtered.style.apply(lambda x: f(x, settings.style.loc[rows_shared, cols_shared]), axis=None, subset=(rows_shared,  cols_shared))
+            result = (
+                df_filtered
+                .style
+                .apply(
+                    lambda x: settings.style.loc[rows_shared, cols_shared],
+                    axis=None,
+                    subset=(rows_shared, cols_shared),
+                    )
+                )
         else:
             result = settings.style.loc[rows_shared, cols_shared]
     else:
         result = df_filtered
-    
+
     return result
 
 
@@ -347,14 +372,21 @@ def check_df(df, verbosity=3):
 
     for problem, cols in syntax_conflicts.items():
         if len(cols) > 0:
-            log(f'warning: the following colnames contain {problem} which is used by the query syntax, use a tick (´) to escape such characters:\n\t{cols}',
-                'qp.qlang.check_df', verbosity)
+            message = (
+                f'warning: the following colnames contain'
+                f' {problem} which is used by the query syntax,'
+                f' use a tick (´) to escape such characters:\n\t{cols}'
+                )
+            log(message, 'qp.qlang.check_df', verbosity)
             problems_found = True
 
     for problem, cols in whitespace.items():
         if len(cols) > 0:
-            log(f'warning: the following colnames contain {problem} which should be removed:\n\t{cols}',
-                'qp.qlang.check_df', verbosity)
+            message = (
+                f'warning: the following colnames contain {problem}'
+                f' which should be removed:\n\t{cols}'
+                )
+            log(message, 'qp.qlang.check_df', verbosity)
             problems_found = True
 
 
@@ -365,8 +397,13 @@ def check_df(df, verbosity=3):
             symbol_conflicts.append(col)
 
     if len(symbol_conflicts) > 0:
-        log(f'warning: the following colnames start with a character sequence that can be read as a query instruction symbol when the default instruction operator is inferred:\n{symbol_conflicts}\nexplicitely use a valid operator to avoid conflicts.',
-            'qp.qlang.check_df', verbosity)
+        message = (
+            'warning: the following colnames start with a character sequence that'
+            ' can be read as a query instruction symbol when the default instruction'
+            f' operator is inferred:\n{symbol_conflicts}\nexplicitely use a valid'
+            ' operator to avoid conflicts.'
+            )
+        log(message, 'qp.qlang.check_df', verbosity)
         problems_found = True
 
 
@@ -390,8 +427,11 @@ def scan(code, settings):
         elif line.startswith(COMMENT.glyph):
             continue
         elif line[0] not in CONNECTORS.by_glyph:
-            log(f'trace: line "{line}" does not start with a connector, adding NEW_SELECT_COLS connector to the beginning of the line',
-                'qp.qlang.tokenize', verbosity)
+            message = (
+                f'trace: line "{line}" does not start with a connector,'
+                ' adding NEW_SELECT_COLS connector to the beginning of the line'
+                )
+            log(message, 'qp.qlang.tokenize', verbosity)
             line = CONNECTORS.NEW_SELECT_COLS.glyph + line
 
         while True:
@@ -422,9 +462,9 @@ def scan(code, settings):
                 instructions_raw[-1].code += line[0]
                 line = line[1:]
 
-
-    log('trace: transformed code into raw instructions:\n' + '\n'.join([str(instruction) for instruction in instructions_raw]),
-        'qp.qlang.tokenize', verbosity)
+    message = 'trace: transformed code into raw instructions:\n'
+    message += '\n'.join([str(instruction) for instruction in instructions_raw])
+    log(message, 'qp.qlang.tokenize', verbosity)
 
     return instructions_raw, settings
 
@@ -458,8 +498,8 @@ def extract_symbol(string, symbols, verbosity=3):
 
     for symbol in symbols:
         if string.startswith(symbol.glyph):
-            log(f'trace: found "{symbols.name}.{symbol.name}" in "{string}"',
-                'qp.qlang.extract_symbol', verbosity)
+            message = f'trace: found "{symbols.name}.{symbol.name}" in "{string}"'
+            log(message, 'qp.qlang.extract_symbol', verbosity)
             return symbol, string[len(symbol.glyph):].strip()
 
     return None, string
@@ -478,12 +518,18 @@ def parse(instruction_tokenized, settings):
     #set default operator
     if instruction.operator is None:
         if FLAGS.TAG_METADATA in flags:
-            log(f'trace: no operator found in "{instruction.code}". using default "{OPERATORS.ADD}" for tagging metadata',
-                'qp.qlang.parse', verbosity)
+            message = (
+                f'trace: no operator found in "{instruction.code}".'
+                f' using default "{OPERATORS.ADD}" for tagging metadata'
+                )
+            log(message, 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.ADD
         else:
-            log(f'trace: no operator found in "{instruction.code}". using default "{OPERATORS.SET}"',
-                'qp.qlang.parse', verbosity)
+            message = (
+                f'trace: no operator found in "{instruction.code}".'
+                f' using default "{OPERATORS.SET}"'
+                )
+            log(message, 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.SET
 
 
@@ -499,8 +545,11 @@ def parse(instruction_tokenized, settings):
     elif instruction.connector in CONNECTORS.by_trait['select']:
 
         if instruction.operator == OPERATORS.SET:
-            log(f'trace:"{OPERATORS.SET}" is interpreted as "{OPERATORS.EQUALS}" for selection instruction',
-                'qp.qlang.parse', verbosity)
+            message = (
+                f'trace:"{OPERATORS.SET}" is interpreted as'
+                f' "{OPERATORS.EQUALS}" for selection instruction'
+                )
+            log(message, 'qp.qlang.parse', verbosity)
             instruction.operator = OPERATORS.EQUALS
 
         if instruction.connector in CONNECTORS.by_trait['select_cols']:
@@ -529,8 +578,12 @@ def parse(instruction_tokenized, settings):
     else:
 
         if not flags.intersection(FLAGS.by_trait['modify_scope']):
-            log(f'trace: no scope flag found for modification instruction "{instruction.code}". using flag based on last selection instruction "{settings.last_selection}"',
-                'qp.qlang.parse', verbosity)
+            message = (
+                f'trace: no scope flag found for modification instruction'
+                f' "{instruction.code}". using flag based on last selection'
+                f' instruction "{settings.last_selection}"'
+                )
+            log(message, 'qp.qlang.parse', verbosity)
             instruction.flags.add(FLAGS[settings.last_selection])
 
         if flags.intersection(FLAGS.by_trait['format']):
@@ -547,13 +600,24 @@ def parse(instruction_tokenized, settings):
 
 
     #general checks
-    if instruction.operator in OPERATORS.by_trait['unary'] and len(instruction.value) > 0:
-        log(f'warning: value {instruction.value} will be ignored for unary operator {instruction.operator}',
-            'qp.qlang.parse', verbosity)
+    conditions = (
+        instruction.operator in OPERATORS.by_trait['unary']
+        and len(instruction.value) > 0
+        )
+    if conditions:
+        message = (
+            f'warning: value {instruction.value} will be'
+            f' ignored for unary operator {instruction.operator}'
+            )
+        log(message, 'qp.qlang.parse', verbosity)
         instruction.value = ''
+
     if flags.intersection(FLAGS.by_trait['copy_df']) and not INPLACE:
-        log(f'debug: df will be copied since instruction "{instruction.code}" modifies data',
-            'qp.qlang.parse', verbosity)
+        message = (
+            f'debug: df will be copied since instruction'
+            f' "{instruction.code}" modifies data'
+            )
+        log(message, 'qp.qlang.parse', verbosity)
         settings.copy_df = True
 
 
@@ -569,11 +633,12 @@ def validate(instruction, settings):
 
     #current approach is fast but not very specific in which symbols are not compatible
     if symbols.all().all():
-        log(f'trace: instruction "{instruction.code}" is valid', 'qp.qlang.validate', settings.verbosity)
+        message = f'trace: instruction "{instruction.code}" is valid'
+        log(message, 'qp.qlang.validate', settings.verbosity)
     else:
         incompatible = list(symbols.index[~symbols.all()])
-        log(f'warning: the following symbols are not compatible: {incompatible}',
-            'qp.qlang.validate', settings.verbosity)  #wip: switch to error?
+        message = f'warning: the following symbols are not compatible: {incompatible}'
+        log(message, 'qp.qlang.validate', settings.verbosity)
 
     return instruction
 
@@ -599,11 +664,14 @@ def _save_selection(instruction, df_new, settings):
 
     if operator == OPERATORS.SET:
         if value in settings.saved.keys():
-            log(f'warning: a selection was already saved as "{value}". overwriting it',
-                'qp.qlang._save_selection', settings.verbosity)
+            message = (
+                f'warning: a selection was already saved'
+                f' as "{value}". overwriting it'
+                )
+            log(message, 'qp.qlang._save_selection', settings.verbosity)
         else:
             settings.saved[value] = {}
-        
+
         if FLAGS.COLS in instruction.flags:
             settings.saved[value]['cols'] = selection['cols']
         elif FLAGS.ROWS in instruction.flags:
@@ -620,8 +688,11 @@ def _save_selection(instruction, df_new, settings):
             settings.saved[value]['vals'] |= settings.vals
 
         elif value not in settings.saved.keys():
-            log(f'trace: no selection was saved as "{value}" yet, saving current selection',
-                'qp.qlang._save_selection', settings.verbosity)
+            message = (
+                f'trace: no selection was saved as'
+                f' "{value}" yet, saving current selection'
+                )
+            log(message, 'qp.qlang._save_selection', settings.verbosity)
             settings.saved[value] = selection
 
     return df_new, settings
@@ -641,8 +712,8 @@ def _load_selection(instruction, df_new, settings):
     if value in saved.keys():
         selection = saved[value]
     else:
-        log(f'error: selection "{value}" is not in saved selections',
-            'qp.qlang._load_selection', verbosity)
+        message = f'error: selection "{value}" is not in saved selections'
+        log(message, 'qp.qlang._load_selection', verbosity)
         return None, settings
 
     if connector == CONNECTORS.NEW_SELECT_COLS:
@@ -658,7 +729,7 @@ def _load_selection(instruction, df_new, settings):
         settings.rows = settings.rows & selection['rows']
     elif connector == CONNECTORS.OR_SELECT_ROWS:
         settings.rows = settings.rows | selection['rows']
-    
+
     elif connector == CONNECTORS.NEW_SELECT_VALS:
         settings.vals = selection['vals']
     elif connector == CONNECTORS.AND_SELECT_VALS:
@@ -686,7 +757,6 @@ def _select_cols(instruction, df_new, settings):
     verbosity = settings.verbosity
     cols = settings.cols
     cols_all = df_new.columns.to_series()
-    rows = settings.rows
     settings.last_selection = 'cols'
 
 
@@ -700,11 +770,11 @@ def _select_cols(instruction, df_new, settings):
         cols_new = _filter_series(cols_all, instruction, settings, df_new)
 
 
-    if cols_new.any() == False:
+    if bool(cols_new.any()) is False:  #.any() returns np.True_ or np.False_
         log(f'warning: no cols fulfill the condition in "{instruction.code}"',
             'qp.qlang._select_cols', verbosity)
 
-    if cols is None: #pragma: no cover (should not happen)
+    if cols is None:  #pragma: no cover (should not happen)
         cols = cols_new
     elif instruction.connector == CONNECTORS.NEW_SELECT_COLS:
         cols = cols_new
@@ -713,10 +783,16 @@ def _select_cols(instruction, df_new, settings):
     elif instruction.connector == CONNECTORS.OR_SELECT_COLS:
         cols |= cols_new
 
-
-    if cols.any() == False and instruction.connector == CONNECTORS.AND_SELECT_COLS:
-        log(f'warning: no cols fulfill the condition in "{instruction.code}" and the previous condition(s)',
-            'qp.qlang._select_cols', verbosity)
+    conditions = (
+        bool(cols.any()) is False
+        and instruction.connector == CONNECTORS.AND_SELECT_COLS
+        )
+    if conditions:
+        message = (
+            f'warning: no cols fulfill the condition in'
+            f' "{instruction.code}" and the previous condition(s)'
+            )
+        log(message, 'qp.qlang._select_cols', verbosity)
 
     settings.cols = cols
     return df_new, settings
@@ -735,14 +811,18 @@ def _select_rows(instruction, df_new, settings):
     rows = settings.rows
     rows_all = df_new.index.to_series()
     settings.last_selection = 'rows'
-        
+
     if not flags.intersection(FLAGS.by_trait['select_rows_scope']):
-        log(f'trace: no row selection scope flag found in "{instruction.code}". using default "{FLAGS.ANY}"',
-            'qp.qlang._select_rows', verbosity)
+        message = (
+            f'trace: no row selection scope flag found in'
+            f' "{instruction.code}". using default "{FLAGS.ANY}"'
+            )
+        log(message, 'qp.qlang._select_rows', verbosity)
         instruction.flags.add(FLAGS.ANY)
 
-    if cols.any() == False:
-        log(f'error: row selection cannot be applied when no cols where selected', 'qp.qlang._select_rows', verbosity)
+    if bool(cols.any()) is False:
+        message = 'error: row selection cannot be applied when no cols where selected'
+        log(message, 'qp.qlang._select_rows', verbosity)
         return df_new, settings
 
     if value.startswith('@'):
@@ -750,12 +830,15 @@ def _select_rows(instruction, df_new, settings):
         if col in df_new.columns:
             instruction.value = df_new[col]
         else:
-            log(f'error: col "{col}" not found in dataframe. cannot use "@{col}" for row selection',
-                'qp.qlang._select_rows', verbosity)
+            message = (
+                f'error: col "{col}" not found in dataframe.'
+                f' cannot use "@{col}" for row selection'
+                )
+            log(message, 'qp.qlang._select_rows', verbosity)
             return df_new, settings
 
     if instruction.operator == OPERATORS.TRIM:
-        rows_new = settings.vals.loc[:,cols].any(axis=1)
+        rows_new = settings.vals.loc[:, cols].any(axis=1)
         if FLAGS.NEGATE in instruction.flags:
             rows_new = ~rows_new
     elif instruction.operator == OPERATORS.INVERT:
@@ -793,7 +876,6 @@ def _select_vals(instruction, df_new, settings):
     """
 
     verbosity = settings.verbosity
-    flags = instruction.flags
     value = instruction.value
 
     cols = settings.cols
@@ -803,12 +885,14 @@ def _select_vals(instruction, df_new, settings):
     vals_blank = settings.vals_blank
     settings.last_selection = 'vals'
 
-    if cols.any() == False:
-        log(f'error: val selection cannot be applied when no cols where selected', 'qp.qlang._select_vals', verbosity)
+    if bool(cols.any()) is False:
+        message = 'error: val selection cannot be applied when no cols where selected'
+        log(message, 'qp.qlang._select_vals', verbosity)
         return df_new, settings
 
-    if rows.any() == False:
-        log(f'warning: val selection cannot be applied when no rows where selected', 'qp.qlang._select_vals', verbosity)
+    if bool(rows.any()) is False:
+        message = 'warning: val selection cannot be applied when no rows where selected'
+        log(message, 'qp.qlang._select_vals', verbosity)
         return df_new, settings
 
 
@@ -817,10 +901,13 @@ def _select_vals(instruction, df_new, settings):
         if col in df_new.columns:
             instruction.value = df_new.loc[rows, col]
         else:
-            log(f'error: col "{col}" not found in dataframe. cannot use "@{col}" for val selection',
-                'qp.qlang._select_vals', verbosity)
+            message = (
+                f'error: col "{col}" not found in dataframe.'
+                f' cannot use "@{col}" for val selection'
+                )
+            log(message, 'qp.qlang._select_vals', verbosity)
             return df_new, settings
-    
+
 
     if instruction.operator == OPERATORS.INVERT:
         vals_new = vals.copy()
@@ -828,7 +915,12 @@ def _select_vals(instruction, df_new, settings):
     else:
         vals_new = vals_blank.copy()
         for col in df_new.columns[cols]:
-            vals_new.loc[rows, col] = _filter_series(selection[col], instruction, settings, selection)
+            vals_new.loc[rows, col] = _filter_series(
+                selection[col],
+                instruction,
+                settings,
+                selection,
+                )
 
     if instruction.connector == CONNECTORS.AND_SELECT_VALS:
         vals = vals & vals_new
@@ -848,7 +940,8 @@ def _select_vals(instruction, df_new, settings):
 def _filter_series(series, instruction, settings, df_new=None):
     """
     Filters a pandas series by applying a condition.
-    Conditions are made up of a comparison operator and for binary operators a value to compare to.
+    Conditions are made up of a comparison operator
+    and for binary operators a value to compare to.
     FLAGS.NEGATE inverts the result of the condition.
     """
     verbosity = settings.verbosity
@@ -856,7 +949,7 @@ def _filter_series(series, instruction, settings, df_new=None):
     operator = instruction.operator
     value = instruction.value
     filtered = None
-    
+
 
     #regex comparisone
     if FLAGS.REGEX in flags:
@@ -864,17 +957,34 @@ def _filter_series(series, instruction, settings, df_new=None):
             filtered = series.astype(str).str.fullmatch(value)
         elif operator == OPERATORS.CONTAINS:
             filtered = series.astype(str).str.contains(value)
-        else: #pragma: no cover (covered by validate())
-            log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._filter_series', verbosity)
+        else:  #pragma: no cover (covered by validate())
+            message = f'error: operator "{operator}" is not compatible with regex flag'
+            log(message, 'qp.qlang._filter_series', verbosity)
 
 
     #eval python expression
     elif operator == OPERATORS.EVAL:
         if FLAGS.COL_EVAL in flags:
-            filtered = eval(value, {'col': series, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
+            namespace = {
+                'col': series,
+                'df': df_new,
+                'pd': pd,
+                'np': np,
+                'qp': qp,
+                }
+            filtered = eval(value, namespace)
         else:
-            filtered = series.apply(lambda x: eval(value, {'x': x, 'col': series, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp}))
-
+            def custom_func(x):
+                namespace = {
+                    'x': x,
+                    'col': series,
+                    'df': df_new,
+                    'pd': pd,
+                    'np': np,
+                    'qp': qp,
+                    }
+                return eval(value, namespace)
+            filtered = series.apply(lambda x: custom_func(x))
 
     #substring comparison
     elif operator == OPERATORS.CONTAINS:
@@ -887,8 +997,6 @@ def _filter_series(series, instruction, settings, df_new=None):
     #type checks
     elif operator in OPERATORS.by_trait['is_type']:
         if FLAGS.STRICT in flags:
-            # if operator == OPERATORS.IS_STR:
-            #     filtered = series.apply(lambda x: isinstance(x, str))
             if operator == OPERATORS.IS_INT:
                 filtered = series.apply(lambda x: isinstance(x, TYPES_INT))
             elif operator == OPERATORS.IS_FLOAT:
@@ -897,14 +1005,14 @@ def _filter_series(series, instruction, settings, df_new=None):
                 filtered = series.apply(lambda x: isinstance(x, TYPES_NUM))
             elif operator == OPERATORS.IS_BOOL:
                 filtered = series.apply(lambda x: isinstance(x, TYPES_BOOL))
-
-            # elif operator == OPERATORS.IS_DATETIME:
-            #     filtered = series.apply(lambda x: _datetime(x, errors='ERROR')) != 'ERROR'
-            # elif operator == OPERATORS.IS_DATE:
-            #     filtered = series.apply(lambda x: _date(x, errors='ERROR')) != 'ERROR'
-
             elif operator == OPERATORS.IS_NA:
                 filtered = series.isna()
+            else:
+                message = (
+                    'error: type checking with strict flag is'
+                    f' not implemented for operator {operator}'
+                    )
+                log(message, 'qp.qlang._filter_series', verbosity)
 
         else:
             if operator == OPERATORS.IS_STR:
@@ -921,7 +1029,10 @@ def _filter_series(series, instruction, settings, df_new=None):
                 filtered = series.apply(lambda x: _bool(x, errors='ERROR')) != 'ERROR'
 
             elif operator == OPERATORS.IS_DATETIME:
-                filtered = series.apply(lambda x: _datetime(x, errors='ERROR')) != 'ERROR'
+                filtered = (
+                    series.apply(lambda x: _datetime(x, errors='ERROR'))
+                    != 'ERROR'
+                    )
             elif operator == OPERATORS.IS_DATE:
                 filtered = series.apply(lambda x: _date(x, errors='ERROR')) != 'ERROR'
 
@@ -941,24 +1052,26 @@ def _filter_series(series, instruction, settings, df_new=None):
     elif operator == OPERATORS.IS_NO:
         filtered = series.apply(lambda x: _yn(x, errors='ERROR', no='no')) == 'no'
 
+    #these must use "==" to compare for each value instead of the whole series
     elif operator == OPERATORS.IS_UNIQUE:
-        filtered = series.duplicated(keep=False) == False
+        filtered = series.duplicated(keep=False) == False  # noqa E712
     elif operator == OPERATORS.IS_FIRST:
-        filtered = series.duplicated(keep='first') == False
+        filtered = series.duplicated(keep='first') == False  # noqa E712
     elif operator == OPERATORS.IS_LAST:
-        filtered = series.duplicated(keep='last') == False
+        filtered = series.duplicated(keep='last') == False  # noqa E712
 
 
     #type dependant comparison
     elif operator in [
-        OPERATORS.BIGGER_EQUAL,
-        OPERATORS.SMALLER_EQUAL,
-        OPERATORS.BIGGER,
-        OPERATORS.SMALLER,
-        OPERATORS.EQUALS,
-        ]:
+            OPERATORS.BIGGER_EQUAL,
+            OPERATORS.SMALLER_EQUAL,
+            OPERATORS.BIGGER,
+            OPERATORS.SMALLER,
+            OPERATORS.EQUALS,
+            ]:
         value_type = _type(value)
-        log(f'trace: value "{value}" is treated as type "{value_type}" for comparison', 'qp.qlang._filter_series', verbosity)
+        message = f'trace: value "{value}" is treated as type "{value_type}"'
+        log(message, 'qp.qlang._filter_series', verbosity)
         numeric_dtypes = [
             'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64',
             'float32', 'float64',
@@ -979,8 +1092,11 @@ def _filter_series(series, instruction, settings, df_new=None):
         elif value_type in ('date', 'datetime'):
             value = _datetime(value, errors='ignore')
             if series.dtype not in datetime_dtypes:
-                log(f'warning: series "{series.name}" is not a datetime series, consider converting it with "$to datetime;"',
-                    'qp.qlang._filter_series', verbosity)
+                message = (
+                    f'warning: series "{series.name}" is not a datetime series,'
+                    ' consider converting it with "$to datetime;"'
+                    )
+                log(message, 'qp.qlang._filter_series', verbosity)
                 series = pd.to_datetime(series, errors='coerce')
 
         elif value_type == 'str':
@@ -1008,9 +1124,9 @@ def _filter_series(series, instruction, settings, df_new=None):
         elif operator == OPERATORS.EQUALS:
             filtered = series == value
 
-    else: #pragma: no cover  (should not happen)
-        log(f'error: could not apply filter condition',
-            'qp.qlang._filter_series', verbosity)
+    else:  #pragma: no cover  (should not happen)
+        message = 'error: could not apply filter condition'
+        log(message, 'qp.qlang._filter_series', verbosity)
 
     if FLAGS.NEGATE in flags:
         filtered = ~filtered
@@ -1027,11 +1143,20 @@ def _filter_series(series, instruction, settings, df_new=None):
 
 def _sort_rows(instruction, df_new, settings):
     cols = settings.cols
-    
+
     if FLAGS.NEGATE in instruction.flags:
-        df_new.sort_values(by=list(df_new.columns[cols]), axis=0, ascending=False, inplace=True)
+        df_new.sort_values(
+            by=list(df_new.columns[cols]),
+            axis=0,
+            ascending=False,
+            inplace=True,
+            )
     else:
-        df_new.sort_values(by=list(df_new.columns[cols]), axis=0, inplace=True)
+        df_new.sort_values(
+            by=list(df_new.columns[cols]),
+            axis=0,
+            inplace=True
+            )
 
     return df_new, settings
 
@@ -1055,13 +1180,16 @@ def _new_col(instruction, df_new, settings):
         if col in df_new.columns:
             value = df_new[col]
         else:
-            log(f'error: col "{col}" not found in dataframe. cannot add a new col thats a copy of it',
-                'qp.qlang._new_col', verbosity)
+            message = (
+                f'error: col "{col}" not found in dataframe.'
+                ' cannot add a new col thats a copy of it'
+                )
+            log(message, 'qp.qlang._new_col', verbosity)
 
     for i in range(1, 1001):
-        if i == 1000: #pragma: no cover (unlikely to happen)
-            log(f'error: could not add new col. too many cols named "new<x>"',
-                'qp.qlang._new_col', verbosity)
+        if i == 1000:  #pragma: no cover (unlikely to happen)
+            message = 'error: could not add new col. too many cols named "new<x>"'
+            log(message, 'qp.qlang._new_col', verbosity)
             return df_new, settings
         colname = 'new' + str(i)
         if colname not in df_new.columns:
@@ -1072,7 +1200,13 @@ def _new_col(instruction, df_new, settings):
         pass
 
     elif operator == OPERATORS.EVAL:
-        value = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
+        namespace = {
+            'df': df_new,
+            'pd': pd,
+            'np': np,
+            'qp': qp,
+            }
+        value = eval(value, namespace)
 
     if isinstance(value, pd.Series):
         df_new[colname] = value
@@ -1107,8 +1241,11 @@ def _modify_settings(instruction, df_new, settings):
         if value in ['0', '1', '2', '3', '4', '5']:
             verbosity = int(value)
         else:
-            log(f'warning: verbosity must be an integer between 0 and 5. "{value}" is not valid',
-                'qp.qlang._modify_settings', verbosity)
+            message = (
+                f'warning: verbosity must be an integer between 0 and 5.'
+                f' "{value}" is not valid'
+                )
+            log(message, 'qp.qlang._modify_settings', verbosity)
 
     elif FLAGS.DIFF in instruction.flags:
         if value.lower() in ['none', '0', 'false']:
@@ -1116,11 +1253,14 @@ def _modify_settings(instruction, df_new, settings):
         elif value.lower() in ['mix', 'new', 'old', 'new+']:
             diff = value.lower()
         else:
-            log(f'warning: diff must be one of [None, mix, old, new, new+]. "{value}" is not valid',
-                'qp.qlang._modify_settings', verbosity)
-    else: #pragma: no cover (covered by validate())
-        log(f'error: no setting flag found in "{instruction.code}"',
-            'qp.qlang._modify_settings', verbosity)
+            message = (
+                f'warning: diff must be one of [None, mix, old, new, new+].'
+                f' "{value}" is not valid'
+                )
+            log(message, 'qp.qlang._modify_settings', verbosity)
+    else:  #pragma: no cover (covered by validate())
+        message = f'error: no setting flag found in "{instruction.code}"'
+        log(message, 'qp.qlang._modify_settings', verbosity)
 
     settings.verbosity = verbosity
     settings.diff = diff
@@ -1140,8 +1280,11 @@ def _modify_metadata(instruction, df_new, settings):
 
 
     if 'meta' not in df_new.columns:
-        log(f'info: no metadata col found in dataframe. creating new col named "meta"',
-            'qp.qlang._modify_metadata', verbosity)
+        message = (
+            'info: no metadata col found in dataframe.'
+            ' creating new col named "meta"'
+            )
+        log(message, 'qp.qlang._modify_metadata', verbosity)
         df_new['meta'] = ''
         cols = pd.concat([cols, pd.Series([True])])
         cols.index = df_new.columns
@@ -1155,8 +1298,12 @@ def _modify_metadata(instruction, df_new, settings):
             df_new.loc[rows, 'meta'] = f'\n{tag}: {value}'
         elif operator == OPERATORS.ADD:
             df_new.loc[rows, 'meta'] += f'\n{tag}: {value}'
-        else: #pragma: no cover (covered by validate())
-            log(f'error: operator "{operator}" is not compatible with TAG_METADATA flag', 'qp.qlang._modify_metadata', verbosity)
+        else:  #pragma: no cover (covered by validate())
+            message = (
+                f'error: operator "{operator}" is not'
+                ' compatible with TAG_METADATA flag'
+                )
+            log(message, 'qp.qlang._modify_metadata', verbosity)
 
     elif operator == OPERATORS.SET:
         df_new.loc[rows, 'meta'] = value
@@ -1164,25 +1311,97 @@ def _modify_metadata(instruction, df_new, settings):
     elif operator == OPERATORS.ADD:
         df_new.loc[rows, 'meta'] += value
 
+
     elif operator == OPERATORS.EVAL:
+
         if FLAGS.COL_EVAL in instruction.flags:
-            df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+            def custom_func(x):
+                namespace = {
+                    'col': x,
+                    'df': df_new,
+                    'pd': pd,
+                    'np': np,
+                    'qp': qp,
+                    're': re,
+                    }
+                return eval(value, namespace)
+            df_new.loc[rows, 'meta'] = (
+                df_new
+                .loc[rows, 'meta']
+                .apply(lambda x: custom_func(x))
+                )
+
         elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
             if 'x' in value:  #needs to be evaluated for each value
-                df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
-            else:  #only needs to be evaluated once
-                eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
-                df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].map(lambda x: eval_result)
-        else: #pragma: no cover (tests only run with pandas >= 2.1.0)
-            if 'x' in value:
-                df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
-            else:
-                eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
-                df_new.loc[rows, 'meta'] = df_new.loc[rows, 'meta'].applymap(lambda x: eval_result)
+                def custom_func(x):
+                    namespace = {
+                        'x': x,
+                        'df': df_new,
+                        'pd': pd,
+                        'np': np,
+                        'qp': qp,
+                        're': re,
+                        }
+                    return eval(value, namespace)
+                df_new.loc[rows, 'meta'] = (
+                    df_new
+                    .loc[rows, 'meta']
+                    .map(lambda x: custom_func(x))
+                    )
 
-    else: #pragma: no cover (covered by validate())
-        log(f'error: operator "{operator}" is not compatible with metadata modification',
-            'qp.qlang._modify_metadata', verbosity)
+            else:  #only needs to be evaluated once
+                namespace = {
+                    'df': df_new,
+                    'pd': pd,
+                    'np': np,
+                    'qp': qp,
+                    're': re,
+                    }
+                eval_result = eval(value, namespace)
+                df_new.loc[rows, 'meta'] = (
+                    df_new
+                    .loc[rows, 'meta']
+                    .map(lambda x: eval_result)
+                    )
+
+        else:  #pragma: no cover (tests only run with pandas >= 2.1.0)
+            if 'x' in value:
+                def custom_func(x):
+                    namespace = {
+                        'x': x,
+                        'df': df_new,
+                        'pd': pd,
+                        'np': np,
+                        'qp': qp,
+                        're': re,
+                        }
+                    return eval(value, namespace)
+                df_new.loc[rows, 'meta'] = (
+                    df_new
+                    .loc[rows, 'meta']
+                    .applymap(lambda x: custom_func(x))
+                    )
+            else:
+                namespace = {
+                    'df': df_new,
+                    'pd': pd,
+                    'np': np,
+                    'qp': qp,
+                    're': re,
+                    }
+                eval_result = eval(value, namespace)
+                df_new.loc[rows, 'meta'] = (
+                    df_new
+                    .loc[rows, 'meta']
+                    .applymap(lambda x: eval_result)
+                    )
+
+    else:  #pragma: no cover (covered by validate())
+        message = (
+            f'error: operator "{operator}" is not'
+            ' compatible with metadata modification'
+            )
+        log(message, 'qp.qlang._modify_metadata', verbosity)
 
 
     settings.cols = cols
@@ -1221,34 +1440,57 @@ def _modify_format(instruction, df_new, settings):
     if FLAGS.COLOR in flags:
         style[vals_temp] += f'color: {value};'
 
-    elif FLAGS.BACKGROUND_COLOR in flags: #pragma: no cover (visual changes are currently not tested)
+    elif FLAGS.BACKGROUND_COLOR in flags:  #pragma: no cover
         style[vals_temp] += f'background-color: {value};'
 
-    elif FLAGS.ALIGN in flags: #pragma: no cover (visual changes are currently not tested)
+    elif FLAGS.ALIGN in flags:  #pragma: no cover
         if value in ['left', 'right', 'center', 'justify']:
             style[vals_temp] += f'text-align: {value};'
         elif value in ['top', 'middle', 'bottom']:
             style[vals_temp] += f'vertical-align: {value};'
         else:
-            log(f'warning: alignment "{value}" is not valid. must be one of [left, right, center, justify, top, middle, bottom]',
-                'qp.qlang._modify_format', verbosity)
+            message = (
+                f'warning: alignment "{value}" is not valid.'
+                ' must be one of [left, right, center, justify, top, middle, bottom]'
+                )
+            log(message, 'qp.qlang._modify_format', verbosity)
 
-    elif FLAGS.WIDTH in flags: #pragma: no cover (visual changes are currently not tested)
-        if not value.endswith(('px', 'cm', 'mm', 'in', 'pt', 'pc', 'em', 'ex', 'ch', 'rem', 'vw', 'vh', 'vmin', 'vmax', '%')):
-            log(f'info: no unit for col width was used. defaulting to "px". other options: [cm, mm, in, pt, pc, em, ex, ch, rem, vw, vh, vmin, vmax, %]',
-                'qp.qlang._modify_format', verbosity)
+    elif FLAGS.WIDTH in flags:  #pragma: no cover
+        units = (
+            'px',
+            'cm',
+            'mm',
+            'in',
+            'pt',
+            'pc',
+            'em',
+            'ex',
+            'ch',
+            'rem',
+            'vw',
+            'vh',
+            'vmin',
+            'vmax',
+            '%',
+            )
+        if not value.endswith(units):
+            message = (
+                'info: no unit for col width was used.'
+                f' defaulting to "px". other options: {units}'
+                )
+            log(message, 'qp.qlang._modify_format', verbosity)
             value += 'px'
         style[vals_temp] += f'width: {value};'
 
 
-    elif FLAGS.CSS in flags: #pragma: no cover (visual changes are currently not tested)
+    elif FLAGS.CSS in flags:  #pragma: no cover
         if not value.endswith(';'):
             value += ';'
         style[vals_temp] += value
 
-    else: #pragma: no cover (should not happen)
-        log(f'error: no format flag found in "{instruction.code}"',
-            'qp.qlang._modify_format', verbosity)
+    else:  #pragma: no cover (should not happen)
+        message = f'error: no format flag found in "{instruction.code}"'
+        log(message, 'qp.qlang._modify_format', verbosity)
 
 
     settings.style = style
@@ -1268,10 +1510,14 @@ def _modify_cols(instruction, df_new, settings):
     operator = instruction.operator
     value = instruction.value
 
-    if cols.any() == False:
-        log(f'error: colname modification cannot be applied when no cols where selected', 'qp.qlang._modify_cols', verbosity)
+    if bool(cols.any()) is False:
+        message = (
+            'error: colname modification cannot be'
+            ' applied when no cols where selected'
+            )
+        log(message, 'qp.qlang._modify_cols', verbosity)
         return df_new, settings
-    
+
 
     if operator == OPERATORS.SET:
         col_mapping = {col: value for col in df_new.columns[cols]}
@@ -1281,13 +1527,16 @@ def _modify_cols(instruction, df_new, settings):
 
     elif operator == OPERATORS.EVAL:
         col_mapping = {
-                col: eval(value, {'x': col, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
-                for col in df_new.columns[cols]
-                }
+            col: eval(value, {'x': col, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp})
+            for col in df_new.columns[cols]
+            }
 
-    else: #pragma: no cover (covered by validate())
-        log(f'error: operator "{operator}" is not compatible with colname modification',
-            'qp.qlang._modify_cols', verbosity)
+    else:  #pragma: no cover (covered by validate())
+        message = (
+            f'error: operator "{operator}" is not'
+            ' compatible with colname modification'
+            )
+        log(message, 'qp.qlang._modify_cols', verbosity)
 
 
     df_new.rename(columns=col_mapping, inplace=True)
@@ -1297,7 +1546,7 @@ def _modify_cols(instruction, df_new, settings):
     for selection in settings.saved.values():
         selection['cols'].index = df_new.columns
         selection['vals'].rename(columns=col_mapping, inplace=True)
-    
+
 
     settings.cols = cols
     settings.vals = vals
@@ -1317,21 +1566,28 @@ def _modify_rows_vals(instruction, df_new, settings):
     rows = settings.rows
     vals = settings.vals
     vals_temp = settings.vals_blank.copy()
-            
+
     if FLAGS.ROWS in flags:
         vals_temp.loc[rows, cols] = True
 
     elif FLAGS.VALS in flags:
         vals_temp.loc[rows, cols] = vals.loc[rows, cols]
-    
+
     else:
-        log(f'trace: no row or val modification flag found in "{instruction.code}". defaulting to val modification',
-            'qp.qlang._modify_rows_vals', verbosity)
+        message = (
+            'trace: no row or val modification flag found in'
+            ' "{instruction.code}". defaulting to val modification'
+            )
+        log(message, 'qp.qlang._modify_rows_vals', verbosity)
         vals_temp.loc[rows, cols] = vals.loc[rows, cols]
 
 
-    if vals_temp.any().any() == False:
-        log(f'warning: modification cannot be applied when no values where selected', 'qp.qlang._modify_rows_vals', verbosity)
+    if bool(vals_temp.any().any()) is False:
+        message = (
+            'warning: modification cannot be'
+            ' applied when no values where selected'
+            )
+        log(message, 'qp.qlang._modify_rows_vals', verbosity)
         return df_new, settings
 
     operator = instruction.operator
@@ -1342,8 +1598,11 @@ def _modify_rows_vals(instruction, df_new, settings):
         if col in df_new.columns:
             value = df_new.loc[rows, col]
         else:
-            log(f'error: col "{col}" not found in dataframe. cannot use "@{col}" for modification',
-                'qp.qlang._modify_rows_vals', verbosity)
+            message = (
+                f'error: col "{col}" not found in dataframe.'
+                ' cannot use "@{col}" for modification'
+                )
+            log(message, 'qp.qlang._modify_rows_vals', verbosity)
             return df_new, settings
 
     type_conversions = {
@@ -1369,9 +1628,9 @@ def _modify_rows_vals(instruction, df_new, settings):
         OPERATORS.TO_NK: 'object',
         OPERATORS.TO_YN: 'object',
         }
-    
 
-    #data modification  
+
+    #data modification
     if operator == OPERATORS.SET:
         if isinstance(value, pd.Series):
             df_temp = pd.DataFrame({colname: value for colname in df_new.columns})
@@ -1388,60 +1647,143 @@ def _modify_rows_vals(instruction, df_new, settings):
 
     elif FLAGS.COL_EVAL in instruction.flags:
         if operator == OPERATORS.EVAL:
-            changed = df_new.loc[rows, cols].apply(lambda x: eval(value, {'col': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}), axis=0)
+            def custom_func(x):
+                namespace = {
+                    'col': x,
+                    'df': df_new,
+                    'pd': pd,
+                    'np': np,
+                    'qp': qp,
+                    're': re,
+                    }
+                return eval(value, namespace)
+            changed = (
+                df_new
+                .loc[rows, cols]
+                .apply(lambda x: custom_func(x), axis=0)
+                )
             df_new = df_new.mask(vals_temp, changed)
-        else: #pragma: no cover (covered by validate())
-            log(f'error: operator "{operator}" is not compatible with COL_EVAL flag',
-                'qp.qlang._modify_rows_vals', verbosity)
+
+        else:  #pragma: no cover (covered by validate())
+            message = (
+                f'error: operator "{operator}" is'
+                ' not compatible with COL_EVAL flag'
+                )
+            log(message, 'qp.qlang._modify_rows_vals', verbosity)
 
     #wip: reintroduce/change regex flag?
     # elif FLAGS.REGEX in instruction.flags:
     #     if operator == OPERATORS.SET:
     #         rows = mask_temp.any(axis=1)
     #         for col in df_new.columns[cols]:
-    #             df_new.loc[rows, col] = df_new.loc[rows, col].str.extract(value).loc[rows, 0]
-    #     else: #pragma: no cover (covered by validate())
-    #         log(f'error: operator "{operator}" is not compatible with regex flag', 'qp.qlang._modify_rows_vals', verbosity)
+    #             df_new.loc[rows, col] = (
+    #                 df_new
+    #                 .loc[rows, col]
+    #                 .str
+    #                 .extract(value)
+    #                 .loc[rows, 0]
+    #                 )
+    #     else:  #pragma: no cover (covered by validate())
+    #         message = f'error: operator "{operator}" not compatible with regex flag'
+    #         log(message, 'qp.qlang._modify_rows_vals', verbosity)
+
 
     elif pd.__version__ >= '2.1.0':  #map was called applymap before 2.1.0
+
         #data modification
         if operator == OPERATORS.EVAL:
+
             if 'x' in value:  #needs to be evaluated for each value
-                changed = df_new.loc[rows, cols].map(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+                def custom_func(x):
+                    namespace = {
+                        'x': x,
+                        'df': df_new,
+                        'pd': pd,
+                        'np': np,
+                        'qp': qp,
+                        're': re,
+                        }
+                    return eval(value, namespace)
+                changed = df_new.loc[rows, cols].map(lambda x: custom_func(x))
+
             else:  #only needs to be evaluated once
-                eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
-                changed = df_new.loc[rows, cols].map(lambda x: eval_result)  #setting would be faster but map is dtype compatible
+                namespace = {
+                    'df': df_new,
+                    'pd': pd,
+                    'np': np,
+                    'qp': qp,
+                    're': re,
+                    }
+                eval_result = eval(value, namespace)
+                #setting would be faster but map is dtype compatible
+                changed = df_new.loc[rows, cols].map(lambda x: eval_result)
+
             df_new = df_new.mask(vals_temp, changed)
+
 
         #type conversion
         elif operator in type_conversions:
-            changed = df_new.loc[rows, cols].map(lambda x: type_conversions[operator](x))
+            changed = (
+                df_new
+                .loc[rows, cols]
+                .map(lambda x: type_conversions[operator](x))
+                )
             df_new.loc[rows, cols] = changed
             if operator in dtype_conversions:
                 for col in df_new.columns[cols]:
                     df_new[col] = df_new[col].astype(dtype_conversions[operator])
 
-    else: #pragma: no cover (tests only run with pandas >= 2.1.0)
+
+    else:  #pragma: no cover (tests only run with pandas >= 2.1.0)
+
         #data modification
         if operator == OPERATORS.EVAL:
+
             if 'x' in value:  #needs to be evaluated for each value
-                changed = df_new.loc[rows, cols].applymap(lambda x: eval(value, {'x': x, 'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re}))
+                def custom_func(x):
+                    namespace = {
+                        'x': x,
+                        'df': df_new,
+                        'pd': pd,
+                        'np': np,
+                        'qp': qp,
+                        're': re,
+                        }
+                    return eval(value, namespace)
+                changed = df_new.loc[rows, cols].applymap(lambda x: custom_func(x))
+
             else:  #only needs to be evaluated once
-                eval_result = eval(value, {'df': df_new, 'pd': pd, 'np': np, 'qp': qp, 're': re})
-                changed = df_new.loc[rows, cols].applymap(lambda x: eval_result)  #setting would be faster but map is dtype compatible
+                namespace = {
+                    'df': df_new,
+                    'pd': pd,
+                    'np': np,
+                    'qp': qp,
+                    're': re,
+                    }
+                eval_result = eval(value, namespace)
+                #setting would be faster but map is dtype compatible
+                changed = df_new.loc[rows, cols].applymap(lambda x: eval_result)
+
             df_new = df_new.mask(vals_temp, changed)
 
         #type conversion
         elif operator in type_conversions:
-            changed = df_new.loc[rows, cols].applymap(lambda x: type_conversions[operator](x))
+            changed = (
+                df_new
+                .loc[rows, cols]
+                .applymap(lambda x: type_conversions[operator](x))
+                )
             df_new.loc[rows, cols] = changed
             if operator in dtype_conversions:
                 for col in df_new.columns[cols]:
                     df_new[col] = df_new[col].astype(dtype_conversions[operator])
 
         else:
-            log(f'error: operator "{operator}" is not compatible with modification',
-                'qp.qlang._modify_rows_vals', verbosity)
+            message = (
+                f'error: operator "{operator}" is'
+                ' not compatible with modification'
+                )
+            log(message, 'qp.qlang._modify_rows_vals', verbosity)
 
     return df_new, settings
 
@@ -1455,7 +1797,7 @@ def _modify_rows_vals(instruction, df_new, settings):
 @pd.api.extensions.register_dataframe_accessor('check')
 class DataFrameCheck:
     def __init__(self, df: pd.DataFrame):
-        self.df = df 
+        self.df = df
 
     def __call__(self, verbosity=3):
         check_df(self.df, verbosity=verbosity)
@@ -1466,7 +1808,8 @@ class DataFrameCheck:
 class DataFrameQuery:
     """
     A query language for pandas data exploration/analysis/modification.
-    df.qi() without any args can be used to interactively build a query in Jupyter notebooks.
+    df.qi() without any args can be used to interactively
+    build a query in Jupyter notebooks.
 
 
     examples:
@@ -1511,7 +1854,7 @@ class DataFrameQuery:
 
 
 @pd.api.extensions.register_dataframe_accessor('qi')
-class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested)
+class DataFrameQueryInteractiveMode:  #pragma: no cover (dynamic UI is not tested)
     """
     Interactive version of df.q() for building queries in Jupyter notebooks.
     """
@@ -1522,9 +1865,11 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
         kwargs = {'df': fixed(self.df), 'code': ''}
 
         #code input
-        readme = '$verbosity=3\n$diff=None\n\n#Enter query code here,\n' \
-                + '#or use the buttons to the right to create a query.\n' \
-                + '#hover over buttons for tooltips.\n\n'
+        readme = (
+            '$verbosity=3\n$diff=None\n\n#Enter query code here,\n'
+            '#or use the buttons to the right to create a query.\n'
+            '#hover over buttons for tooltips.\n\n'
+            )
         ui_code = widgets.Textarea(
             value=readme,
             layout=Layout(width='35%', height='97%')
@@ -1535,20 +1880,20 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
         #syntax
 
 
-        def get_symbols_compatible():
+        def get_compatible_symbols():
             if ui_connectors.value is None:
-                symbols_compatible_with_connector = set(compatible.index)
+                connector_compatible = set(compatible.index)
             else:
-                compatible_with_connector = compatible[ui_connectors.value.name]
-                symbols_compatible_with_connector = set(compatible[compatible_with_connector].index)
+                connector_compatible = compatible[ui_connectors.value.name]
+                connector_compatible = set(compatible[connector_compatible].index)
 
             if ui_operators.value is None:
-                symbols_compatible_with_operator = set(compatible.index)
+                operator_compatible = set(compatible.index)
             else:
-                compatible_with_operator = compatible[ui_operators.value.name]
-                symbols_compatible_with_operator = set(compatible[compatible_with_operator].index)
+                operator_compatible = compatible[ui_operators.value.name]
+                operator_compatible = set(compatible[operator_compatible].index)
 
-            return symbols_compatible_with_connector.intersection(symbols_compatible_with_operator)
+            return connector_compatible.intersection(operator_compatible)
 
 
         def build_instruction(ui_connectors, ui_operators, ui_flags):
@@ -1568,7 +1913,7 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
                 flag = ui_flags.value.glyph + ' '
 
             return f'{connector}{flag}{operator}'
-     
+
 
         def new_connector(value):
 
@@ -1576,31 +1921,74 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
             ui_flags.value = None
             ui_instruction.value = ui_connectors.value.glyph
 
-            symbols_compatible = get_symbols_compatible()
+            symbols_compatible = get_compatible_symbols()
 
-            operators_compatible = sorted([operator for operator in OPERATORS if operator.name in symbols_compatible])
-            ui_operators.options = [(symbol.glyph, symbol) for symbol in operators_compatible]
-            ui_operators.tooltips = [symbol.description for symbol in operators_compatible]
+            operators_compatible = sorted([
+                operator
+                for operator
+                in OPERATORS
+                if operator.name in symbols_compatible
+                ])
+            ui_operators.options = [
+                (symbol.glyph, symbol)
+                for symbol
+                in operators_compatible
+                ]
+            ui_operators.tooltips = [
+                symbol.description
+                for symbol
+                in operators_compatible
+                ]
 
-            flags_compatible = sorted([flag for flag in FLAGS if flag.name in symbols_compatible])
-            ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_compatible]
-            ui_flags.tooltips = [symbol.description for symbol in flags_compatible]
+            flags_compatible = sorted([
+                flag
+                for flag
+                in FLAGS
+                if flag.name in symbols_compatible
+                ])
+            ui_flags.options = [
+                (symbol.glyph, symbol)
+                for symbol
+                in flags_compatible
+                ]
+            ui_flags.tooltips = [
+                symbol.description
+                for symbol
+                in flags_compatible
+                ]
 
-        
+
         def new_operator(value):
 
-            symbols_compatible = get_symbols_compatible()
+            symbols_compatible = get_compatible_symbols()
 
             flag_old = ui_flags.value
-            flags_compatible = sorted([flag for flag in FLAGS if flag.name in symbols_compatible])
-            ui_flags.options = [(symbol.glyph, symbol) for symbol in flags_compatible]
-            ui_flags.tooltips = [symbol.description for symbol in flags_compatible]
+            flags_compatible = sorted([
+                flag
+                for flag
+                in FLAGS
+                if flag.name in symbols_compatible
+                ])
+            ui_flags.options = [
+                (symbol.glyph, symbol)
+                for symbol
+                in flags_compatible
+                ]
+            ui_flags.tooltips = [
+                symbol.description
+                for symbol
+                in flags_compatible
+                ]
             if flag_old in flags_compatible:
                 ui_flags.value = flag_old
             else:
                 ui_flags.value = None
-            
-            ui_instruction.value = build_instruction(ui_connectors, ui_operators, ui_flags)
+
+            ui_instruction.value = build_instruction(
+                ui_connectors,
+                ui_operators,
+                ui_flags,
+                )
 
             if ui_operators.value in OPERATORS.by_trait['unary']:
                 ui_instruction_value.value = ''
@@ -1612,9 +2000,13 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
                 ui_instruction_value.layout.visibility = 'visible'
                 ui_instruction_value.layout.width = 'auto'
 
-    
+
         def new_flag(value):
-            ui_instruction.value = build_instruction(ui_connectors, ui_operators, ui_flags)
+            ui_instruction.value = build_instruction(
+                ui_connectors,
+                ui_operators,
+                ui_flags,
+                )
 
 
         connectors = sorted(list(CONNECTORS))
@@ -1651,16 +2043,16 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
             )
         ui_flags.style.button_width = 'auto'
         ui_flags.observe(new_flag, names='value')
-        
+
 
         ui_instruction = widgets.HTML(value='',)
-        
+
         ui_instruction_value = widgets.Text(
             value='',
             disabled=True,
             layout=Layout(width='0px', visibility='hidden')
             )
-        
+
         def add_instruction(test):
             ui_code.value += f'\n{ui_instruction.value} {ui_instruction_value.value}'
         ui_button = widgets.Button(
@@ -1685,6 +2077,12 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
 
         #some general info and statistics about the df
         mem_usage = self.df.memory_usage().sum() / 1024
+        cols = [
+            f'{col} ({dtype})'
+            for col, dtype
+            in list(zip(self.df.columns, self.df.dtypes))
+            ]
+        cols = '<br>'.join(cols)
         ui_details = widgets.HTML(
             value=f"""
             <b>rows:</b> {len(self.df.index)}<br>
@@ -1692,16 +2090,21 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
             <b>memory usage:</b> {mem_usage:,.3f}kb<br>
             <b>unique values:</b> {self.df.nunique().sum()}<br>
             <b>missing values:</b> {self.df.isna().sum().sum()}<br>
-            <b>cols:</b><br> {'<br>'.join([f'{col} ({dtype})' for col, dtype in list(zip(self.df.columns, self.df.dtypes))])}<br>
+            <b>cols:</b><br> {cols}<br>
             """
             )
 
-
+        docstring = (
+            DataFrameQuery
+            .__doc__
+            .replace('\n', '<br>')
+            .replace('    ', '&emsp;')
+            )
         ui_tabs = widgets.Tab(
             children=[
                 ui_builder,
                 ui_details,
-                widgets.HTML(value=DataFrameQuery.__doc__.replace('\n', '<br>').replace('    ', '&emsp;')),
+                widgets.HTML(value=docstring),
                 ],
             titles=['query builder', 'df details', 'readme'],
             layout=Layout(width='50%', height='94%')
@@ -1710,15 +2113,15 @@ class DataFrameQueryInteractiveMode: #pragma: no cover (dynamic UI is not tested
 
         kwargs['code'] = ui_code
         display(ui)
-        out = HBox([interactive_output(_interactive_mode, kwargs)], layout=Layout(overflow_y='auto'))
+        out = HBox(
+            [interactive_output(_interactive_mode, kwargs)],
+            layout=Layout(overflow_y='auto')
+            )
         display(out)
 
-def _interactive_mode(**kwargs): #pragma: no cover (dynamic UI is not tested)
+def _interactive_mode(**kwargs):  #pragma: no cover (dynamic UI is not tested)
     df = kwargs.pop('df')
     code = kwargs.pop('code')
     result = query(df, code)
     display(result)
     return result
-
-
-
