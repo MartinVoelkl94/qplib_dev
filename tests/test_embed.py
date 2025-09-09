@@ -1,8 +1,6 @@
-import datetime
-import pytest
 import pandas as pd
 import qplib as qp
-from qplib import embed, log
+from qplib import embed
 
 
 
@@ -10,7 +8,8 @@ def check_message(expected_message):
     logs = qp.log()
     logs['text_full'] = logs['level'] + ': ' + logs['text']
     log_texts = logs['text_full'].to_list()
-    assert expected_message in logs['text_full'].values, f'did not find expected message: {expected_message}\nin logs:\n{log_texts}'
+    text = f'did not find expected message: {expected_message}\nin logs:\n{log_texts}'
+    assert expected_message in logs['text_full'].values, text
 
 
 def get_dfs():
@@ -28,7 +27,7 @@ def get_dfs():
         'age': [42, 17, 55],
         'term': ['headache', 'nausea', 'headache'],
         })
-    
+
     df3 = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 42],
@@ -60,7 +59,7 @@ def test_default1():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -73,7 +72,7 @@ def test_default2():
         key_dest='MED1',
         df_src=df3,
         ).fillna('')
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -86,7 +85,7 @@ def test_default2():
             ],
         'MED2': [3, None, None],
         }).fillna('')
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -98,7 +97,7 @@ def test_default3():
         key_dest='MED2',
         df_src=df3,
         ).fillna('')
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -111,7 +110,7 @@ def test_default3():
             None,
             ],
         }).fillna('')
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -137,7 +136,7 @@ def test_multiples():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -150,7 +149,7 @@ def test_key_src():
         df_src=df2,
         key_src='uid',
         )
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -163,13 +162,13 @@ def test_key_src():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_key_src1():
     df1, df2, df3 = get_dfs()
-    df1['MH'] = [3,2,1]
+    df1['MH'] = [3, 2, 1]
     df3['new_key'] = [1, 2, 3]
 
     result = embed(
@@ -178,7 +177,7 @@ def test_key_src1():
         df_src=df2,
         key_src='uid',
         )
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -191,7 +190,7 @@ def test_key_src1():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -205,7 +204,7 @@ def test_include():
         df_src=df2,
         include=['uid', 'age', 'term'],
         )
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -218,7 +217,7 @@ def test_include():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -231,7 +230,7 @@ def test_include1():
         df_src=df2,
         include=['uid', 'age'],
         )
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -244,7 +243,7 @@ def test_include1():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -257,7 +256,7 @@ def test_exclude():
         df_src=df2,
         exclude=['term'],
         )
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -270,7 +269,7 @@ def test_exclude():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -283,7 +282,7 @@ def test_exclude1():
         df_src=df2,
         exclude=['uid', 'age', 'term'],
         )
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -296,7 +295,7 @@ def test_exclude1():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -310,7 +309,7 @@ def test_include_exclude():
         include=['uid', 'age', 'term'],
         exclude=['uid', 'age', 'term'],
         )
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -323,7 +322,7 @@ def test_include_exclude():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -337,7 +336,7 @@ def test_include_exclude1():
         include=['uid', 'age', 'term'],
         exclude=['age', 'term'],
         )
-    
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -350,9 +349,5 @@ def test_include_exclude1():
         'MED1': [1, 2, None],
         'MED2': [3, None, None],
         })
-    
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
-
-
-
-

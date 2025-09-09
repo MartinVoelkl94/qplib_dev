@@ -10,7 +10,8 @@ def check_message(expected_message):
     logs = qp.log()
     logs['text_full'] = logs['level'] + ': ' + logs['text']
     log_texts = logs['text_full'].to_list()
-    assert expected_message in logs['text_full'].values, f'did not find expected message: {expected_message}\nin logs:\n{log_texts}'
+    text = f'did not find expected message: {expected_message}\nin logs:\n{log_texts}'
+    assert expected_message in logs['text_full'].values, text
 
 
 def get_dfs():
@@ -26,7 +27,7 @@ def get_dfs():
         'term': ['headache', 'nausea', 'headache'],
         'start': [datetime.date(2023, 1, 1), None, datetime.date(2021, 12, 3)],
         })
-    
+
     df3 = pd.DataFrame({
         'uid': [1, 2, 2],
         'age': [42, 17, 17],
@@ -112,7 +113,16 @@ def test_duplicates():
 
 def test_line_start():
     df1, df2, df3 = get_dfs()
-    result = merge(df1, df2, on='uid', duplicates=True, prefix=None, line_start='§', verbosity=3)
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        duplicates=True,
+        prefix=None,
+        line_start='§',
+        verbosity=3,
+        )
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -133,12 +143,22 @@ def test_line_start():
             '',
             ],
         })
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_line_stop():
     df1, df2, df3 = get_dfs()
-    result = merge(df1, df2, on='uid', duplicates=True, prefix=None, line_stop='§', verbosity=3)
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        duplicates=True,
+        prefix=None,
+        line_stop='§',
+        verbosity=3,
+        )
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -159,6 +179,7 @@ def test_line_stop():
             '',
             ],
         })
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -271,6 +292,7 @@ def test_include3():
             '',
             ],
         })
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
@@ -303,7 +325,7 @@ def test_exclude():
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
-def test_exclude():
+def test_exclude1():
     df1, df2, df3 = get_dfs()
     result = merge(
         df1,
@@ -332,7 +354,7 @@ def test_exclude():
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
-def test_exclude():
+def test_exclude2():
     df1, df2, df3 = get_dfs()
     result = merge(
         df1,
@@ -468,7 +490,16 @@ def test_sequential():
 
 def test_flatten_once():
     df1, df2, df3 = get_dfs()
-    result = merge(df1, df2, on='uid', flatten='age', duplicates=True, prefix=None, verbosity=3)
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        flatten='age',
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -499,12 +530,21 @@ def test_flatten_once():
             '',
             ],
         })
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_flatten_list():
     df1, df2, df3 = get_dfs()
-    result = merge(df1, df2, on='uid', flatten=['age'], duplicates=True, prefix=None, verbosity=3)
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        flatten=['age'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -540,7 +580,16 @@ def test_flatten_list():
 
 def test_flatten_twice():
     df1, df2, df3 = get_dfs()
-    result = merge(df1, df2, on='uid', flatten=['age', 'term'], duplicates=True, prefix=None, verbosity=3)
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        flatten=['age', 'term'],
+        duplicates=True,
+        prefix=None,
+        verbosity=3,
+        )
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -581,12 +630,22 @@ def test_flatten_twice():
             '',
             ],
         })
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_flatten_twice_prefix():
     df1, df2, df3 = get_dfs()
-    result = merge(df1, df2, on='uid', flatten=['age', 'term'], duplicates=True, prefix='MH_', verbosity=3)
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        flatten=['age', 'term'],
+        duplicates=True,
+        prefix='MH_',
+        verbosity=3,
+        )
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -627,12 +686,22 @@ def test_flatten_twice_prefix():
             '',
             ],
         })
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_flatten_twice_prefix_duplicates():
     df1, df2, df3 = get_dfs()
-    result = merge(df1, df2, on='uid', flatten=['age', 'term'], duplicates=False, prefix='MH_', verbosity=3)
+    result = merge(
+        df1,
+        df2,
+        on='uid',
+        flatten=['age', 'term'],
+        duplicates=False,
+        prefix='MH_',
+        verbosity=3,
+        )
+
     expected = pd.DataFrame({
         'uid': [1, 2, 3],
         'age': [42, 17, 55],
@@ -658,13 +727,14 @@ def test_flatten_twice_prefix_duplicates():
             '',
             ],
         })
+
     assert result.equals(expected), qp.diff(result, expected, output='str')
 
 
 def test_logging():
     log(clear=True)
     df1, df2, df3 = get_dfs()
-    df1['uid'] = [1,1,3]
+    df1['uid'] = [1, 1, 3]
     result = merge(df1, df2, on='uid', duplicates=False, prefix=None, verbosity=3)
     expected = pd.DataFrame({
         'uid': [1, 1, 3],
@@ -696,4 +766,3 @@ def test_logging():
     with pytest.raises(KeyError):
         merge(df1, df3, on='uid', duplicates=False, prefix=None, verbosity=3)
     check_message('ERROR: "uid" is not in left dataframe')
-

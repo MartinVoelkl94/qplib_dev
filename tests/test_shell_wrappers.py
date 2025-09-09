@@ -1,18 +1,19 @@
 import os
-import shutil
 import qplib as qp
 
 
 
 def test_isdir(tmpdir):
     os.chdir(tmpdir)
-    assert qp.isdir('dir1') == False, 'failed test checking existence of non existing directory'
+    text = 'failed test checking existence of non existing directory'
+    assert qp.isdir('dir1') is False, text
 
 
 def test_mkdir_isdir(tmpdir):
     os.chdir(tmpdir)
     qp.mkdir('dir1')
-    assert qp.isdir('dir1') == True, 'failed test checking existence of existing directory'
+    text = 'failed test checking existence of existing directory'
+    assert qp.isdir('dir1') is True, text
 
 
 def test_cd_pwd(tmpdir):
@@ -22,9 +23,10 @@ def test_cd_pwd(tmpdir):
     path = qp.pwd()
     if '\\' in path:
         path = path.split('\\')[-1]
-    elif '/' in path: #pragma: no cover
+    elif '/' in path:  #pragma: no cover
         path = path.split('/')[-1]
-    assert path == 'dir1', 'failed test for changing directory and finding path to current directory'
+    text = 'failed test for changing directory and finding path to current directory'
+    assert path == 'dir1', text
 
 
 def test_cd_return(tmpdir):
@@ -35,19 +37,15 @@ def test_cd_return(tmpdir):
     result1 = qp.pwd()
     if '\\' in result1:
         result1 = result1.split('\\')[-1]
-    elif '/' in result1: #pragma: no cover
+    elif '/' in result1:  #pragma: no cover
         result1 = result1.split('/')[-1]
-
 
     qp.cd('..')
     result2 = qp.pwd()
     if '\\' in result2:
         result2 = result2.split('\\')[-1]
-    elif '/' in result2: #pragma: no cover
+    elif '/' in result2:  #pragma: no cover
         result2 = result2.split('/')[-1]
 
-    assert result1 == 'dir2' and result2 == 'dir1', 'failed test for going back and forth in directory structure'
-
-
-
-
+    text = 'failed test for going back and forth in directory structure'
+    assert result1 == 'dir2' and result2 == 'dir1', text

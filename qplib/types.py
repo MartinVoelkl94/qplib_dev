@@ -4,7 +4,8 @@ import numpy as np
 import datetime
 from pandas import isna
 
-#Mostly wrappers for pandas functions but with some additional functionality and generally more lenient handling of edge cases.
+#Mostly wrappers for pandas functions but with some additional
+#functionality and generally more lenient handling of edge cases.
 
 
 TYPES_INT = (
@@ -92,15 +93,17 @@ def _int(x, errors='coerce', na=np.nan):
         return x
     try:
         return round(float(x))  #float first to handle strings like '1.0'
-    except:
+    except Exception as e:
         if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to integer.
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns np.nan
-                errors=<any other value>: returns <any other value>
-                """)
+            raise ValueError(
+                f'could not convert "{x}" to integer.\n'
+                'Error handling:\n'
+                'errors="raise": raises a ValueError\n'
+                'errors="ignore": returns the original value\n'
+                'errors="coerce": returns np.nan\n'
+                'errors=<any other value>: returns <any other value>\n'
+                f'original error:\n{e}'
+                )
         elif errors == 'ignore':
             return x
         elif errors == 'coerce':
@@ -114,15 +117,17 @@ def _float(x, errors='coerce', na=np.nan):
         return x
     try:
         return float(x)
-    except:
+    except Exception as e:
         if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to float.
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns np.nan
-                errors=<any other value>: returns <any other value>
-                """)
+            raise ValueError(
+                f'could not convert "{x}" to float.\n'
+                'Error handling:\n'
+                'errors="raise": raises a ValueError\n'
+                'errors="ignore": returns the original value\n'
+                'errors="coerce": returns np.nan\n'
+                'errors=<any other value>: returns <any other value>\n'
+                f'original error:\n{e}'
+                )
         elif errors == 'ignore':
             return x
         elif errors == 'coerce':
@@ -136,15 +141,17 @@ def _num(x, errors='coerce', na=np.nan):
         return x
     try:
         return pd.to_numeric(x)
-    except:
+    except Exception as e:
         if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to numeric.
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns np.nan
-                errors=<any other value>: returns <any other value>
-                """)
+            raise ValueError(
+                f'could not convert "{x}" to numeric value.\n'
+                'Error handling:\n'
+                'errors="raise": raises a ValueError\n'
+                'errors="ignore": returns the original value\n'
+                'errors="coerce": returns np.nan\n'
+                'errors=<any other value>: returns <any other value>\n'
+                f'original error:\n{e}'
+                )
         elif errors == 'ignore':
             return x
         elif errors == 'coerce':
@@ -162,13 +169,14 @@ def _bool(x, errors='coerce', na=None):
         return False
     else:
         if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to boolean.
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns None
-                errors=<any other value>: returns <any other value>
-                """)
+            raise ValueError(
+                f'could not convert "{x}" to numeric boolean.\n'
+                'Error handling:\n'
+                'errors="raise": raises a ValueError\n'
+                'errors="ignore": returns the original value\n'
+                'errors="coerce": returns np.nan\n'
+                'errors=<any other value>: returns <any other value>\n'
+                )
         elif errors == 'ignore':
             return x
         elif errors == 'coerce':
@@ -177,30 +185,36 @@ def _bool(x, errors='coerce', na=None):
             return errors
 
 
-months_txt = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December'
+months_txt = (
+    'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|'
+    'January|February|March|April|May|June|July|'
+    'August|September|October|November|December'
+    )
 def _date(x, errors='coerce', na=pd.NaT):
     """
-    recognizes and converts potential dates between 0001-01-01 and 2999-12-31 in various formats.
+    recognizes and converts potential dates
+    between 0001-01-01 and 2999-12-31 in various formats.
     """
     result = _datetime(x, errors=errors, na=na)
     if result is na:
         return na
     elif isinstance(result, datetime.datetime) or isinstance(result, pd.Timestamp):
         return result.date()
-    
+
     #raise and coerce are handled in _datetime and should not be reached here
-    elif errors == 'raise': #pragma: no cover
-        raise ValueError(f"""could not convert "{x}" to datetime.
-            Error handling:
-            errors='raise': raises a ValueError
-            errors='ignore': returns the original value
-            errors='coerce': returns pd.NaT
-            errors=<any other value>: returns <any other value>
-            """)
+    elif errors == 'raise':  #pragma: no cover
+        raise ValueError(
+            f'could not convert "{x}" to datetime.\n'
+            'Error handling:\n'
+            'errors="raise": raises a ValueError\n'
+            'errors="ignore": returns the original value\n'
+            'errors="coerce": returns np.nan\n'
+            'errors=<any other value>: returns <any other value>\n'
+            )
     elif errors == 'ignore':
         return x
     elif errors == 'coerce':
-        return na #pragma: no cover
+        return na  #pragma: no cover
     else:
         return errors
 
@@ -216,38 +230,67 @@ def _datetime(x, errors='coerce', na=pd.NaT):
         x = x.replace('\\', '-')
         x = x.replace('_', '-')
     try:
-        
+
         if re.fullmatch(r'[012]\d\d\d[-\d\s:]+.*', x):
             result = pd.to_datetime(x, dayfirst=False)
-        
-        elif re.match(f'(\\d\\d\\d\\d)\\D?({months_txt})\\D?(\\d\\d)', x, flags=re.IGNORECASE):
-            x = re.sub(f'(\\d\\d\\d\\d)\\D?({months_txt})\\D?(\\d\\d)(.*)', r'\3-\2-\1\4', x, flags=re.IGNORECASE)
+
+        elif re.match(
+                f'(\\d\\d\\d\\d)\\D?({months_txt})\\D?(\\d\\d)',
+                x,
+                flags=re.IGNORECASE,
+                ):
+            x = re.sub(
+                f'(\\d\\d\\d\\d)\\D?({months_txt})\\D?(\\d\\d)(.*)',
+                r'\3-\2-\1\4',
+                x,
+                flags=re.IGNORECASE,
+                )
             result = pd.to_datetime(x, dayfirst=True)
-        
-        elif re.match(f'(\\d\\d)\\D?({months_txt})\\D?(\\d\\d\\d\\d)', x, flags=re.IGNORECASE):
-            x = re.sub(f'(\\d\\d)\\D?({months_txt})\\D?(\\d\\d\\d\\d)(.*)', r'\1-\2-\3\4', x, flags=re.IGNORECASE)
+
+        elif re.match(
+                f'(\\d\\d)\\D?({months_txt})\\D?(\\d\\d\\d\\d)',
+                x,
+                flags=re.IGNORECASE,
+                ):
+            x = re.sub(
+                f'(\\d\\d)\\D?({months_txt})\\D?(\\d\\d\\d\\d)(.*)',
+                r'\1-\2-\3\4',
+                x,
+                flags=re.IGNORECASE,
+                )
             result = pd.to_datetime(x, dayfirst=True)
-        
-        elif re.match(f'({months_txt})\\D?(\\d\\d)\\D?(\\d\\d\\d\\d)', x, flags=re.IGNORECASE):
-            x = re.sub(f'({months_txt})\\D?(\\d\\d)\\D?(\\d\\d\\d\\d)(.*)', r'\2-\1-\3\4', x, flags=re.IGNORECASE)
+
+        elif re.match(
+                f'({months_txt})\\D?(\\d\\d)\\D?(\\d\\d\\d\\d)',
+                x,
+                flags=re.IGNORECASE,
+                ):
+            x = re.sub(
+                f'({months_txt})\\D?(\\d\\d)\\D?(\\d\\d\\d\\d)(.*)',
+                r'\2-\1-\3\4',
+                x,
+                flags=re.IGNORECASE,
+                )
             result = pd.to_datetime(x, dayfirst=True)
-        
+
         else:
             result = pd.to_datetime(x, dayfirst=True)
-        
+
         if result is pd.NaT:
             raise ValueError(f'could not convert "{x}" to date')
         else:
             return result
-    except:
+    except Exception as e:
         if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to datetime.
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns pd.NaT
-                errors=<any other value>: returns <any other value>
-                """)
+            raise ValueError(
+                f'could not convert "{x}" to datetime.\n'
+                'Error handling:\n'
+                'errors="raise": raises a ValueError\n'
+                'errors="ignore": returns the original value\n'
+                'errors="coerce": returns np.nan\n'
+                'errors=<any other value>: returns <any other value>\n'
+                f'original error:\n{e}'
+                )
         elif errors == 'ignore':
             return x
         elif errors == 'coerce':
@@ -264,13 +307,14 @@ def _na(x, errors='ignore', na=None):
         return na
     else:
         if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to "{na}".
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns None
-                errors=<any other value>: returns <any other value>
-                """)
+            raise ValueError(
+                f'could not convert "{x}" to "{na}".\n'
+                'Error handling:\n'
+                'errors="raise": raises a ValueError\n'
+                'errors="ignore": returns the original value\n'
+                'errors="coerce": returns np.nan\n'
+                'errors=<any other value>: returns <any other value>\n'
+                )
         elif errors == 'ignore':
             return x
         elif errors == 'coerce':
@@ -284,13 +328,14 @@ def _nk(x, errors='ignore', nk='unknown', na=None):
         return nk
     else:
         if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to "{nk}".
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns None
-                errors=<any other value>: returns <any other value>
-                """)
+            raise ValueError(
+                f'could not convert "{x}" to "{nk}".\n'
+                'Error handling:\n'
+                'errors="raise": raises a ValueError\n'
+                'errors="ignore": returns the original value\n'
+                'errors="coerce": returns np.nan\n'
+                'errors=<any other value>: returns <any other value>\n'
+                )
         elif errors == 'ignore':
             return x
         elif errors == 'coerce':
@@ -306,13 +351,14 @@ def _yn(x, errors='coerce', yes='yes', no='no', na=None):
         return no
     else:
         if errors == 'raise':
-            raise ValueError(f"""could not convert "{x}" to "{yes}" or "{no}".
-                Error handling:
-                errors='raise': raises a ValueError
-                errors='ignore': returns the original value
-                errors='coerce': returns NaN
-                errors=<any other value>: returns <any other value>
-                """)
+            raise ValueError(
+                f'could not convert "{x}" to "{yes}" or "{no}".\n'
+                'Error handling:\n'
+                'errors="raise": raises a ValueError\n'
+                'errors="ignore": returns the original value\n'
+                'errors="coerce": returns np.nan\n'
+                'errors=<any other value>: returns <any other value>\n'
+                )
         elif errors == 'ignore':
             return x
         elif errors == 'coerce':
@@ -326,14 +372,14 @@ def _type(x):
     """
     Returns what type something "should" be. e.g.: qp.type('1') == 'int'
     """
-    
+
     if isinstance(x, bool):
         return 'bool'
     elif isinstance(x, TYPES_INT):  #type: ignore  (turns of pylance for this line)
         return 'int'
     elif isinstance(x, TYPES_FLOAT):  #type: ignore  (turns of pylance for this line)
         return 'float'
-    
+
     elif isinstance(x, str):
         if re.fullmatch(r'(true|false)', x.strip(), re.IGNORECASE):
             return 'bool'
@@ -341,21 +387,21 @@ def _type(x):
             return 'int'
         elif re.fullmatch(r'\d+\.\d+', x.strip()):
             return 'float'
-        
-
-        elif re.search(r'\d{2}:\d{2}:\d[\d\.:]', x.strip(), re.IGNORECASE) \
-            and _datetime(x) is not pd.NaT:
+        elif (
+                re.search(r'\d{2}:\d{2}:\d[\d\.:]', x.strip(), re.IGNORECASE)
+                and _datetime(x) is not pd.NaT
+                ):
             return 'datetime'
         elif _date(x) is not pd.NaT:
             return 'date'
-     
+
         else:
             try:
                 x = pd.to_numeric(x)
                 return 'num'
-            except:
+            except Exception:
                 return 'str'
-                     
+
     else:
         return type(x).__name__
 
@@ -397,7 +443,10 @@ class _dict(dict):
 
     def __setattr__(self, name, value):
         if name in dict().__dir__():
-            msg = f'Attribute "{name}" is needed for regular dict functionality and cannot be modified'
+            msg = (
+                f'Attribute "{name}" is needed for regular'
+                ' dict functionality and cannot be modified'
+                )
             raise AttributeError(msg)
         else:
             super().__setattr__(name, value)
@@ -416,6 +465,6 @@ class _dict(dict):
             else:
                 values_flat.append(val)
         return values_flat
-    
+
     def invert(self):
-        return _dict({val:key for key,val in self.items()})
+        return _dict({val: key for key, val in self.items()})

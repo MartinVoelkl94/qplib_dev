@@ -36,13 +36,14 @@ RED_LIGHT = '#f7746a'
 
 logs = []
 def log(
-    text=None,
-    context='',
-    verbosity=None,
-    clear=False,
-    ):
+        text=None,
+        context='',
+        verbosity=None,
+        clear=False,
+        ):
     """
-    A very basic "logger" meant to be used in place of print() statements in jupyter notebooks. 
+    A very basic "logger" meant to be used in place
+    of print() statements in jupyter notebooks.
     For more extensive logging purposes use a logging module.
 
 
@@ -66,13 +67,13 @@ def log(
 
     time = pd.Timestamp.now()
     global logs
-    
+
     if clear:
         logs.clear()
         if verbosity in (None, 3, 4, 5):
-            print(f'cleared all logs in qp.util.logs.')
+            print('cleared all logs in qp.util.logs.')
         return
-    
+
     if text is None:
         return pd.DataFrame(logs)
 
@@ -115,7 +116,7 @@ def log(
         delta_ms = 0.0
     else:
         delta_ms = pd.Timestamp.now() - logs[-1]['time']
-        delta_ms = delta_ms.total_seconds()*1000
+        delta_ms = delta_ms.total_seconds() * 1000
     message = {
         'level': level,
         'text': text,
@@ -126,17 +127,28 @@ def log(
 
     if level_int <= verbosity:
         logs.append(message)
-        
+
         #make html friendly
-        message['text'] = message['text'].replace('\n', '<br>').replace('\t', '&emsp;')
-        message['context'] = message['context'].replace('\n', '<br>').replace('\t', '&emsp;')
+        message['text'] = (
+            message['text']
+            .replace('\n', '<br>')
+            .replace('\t', '&emsp;')
+            )
+        message['context'] = (
+            message['context']
+            .replace('\n', '<br>')
+            .replace('\t', '&emsp;')
+            )
         message_df = pd.DataFrame(message, index=[len(logs)])
 
         #for jupyter
-        if get_ipython().__class__.__name__ == 'ZMQInteractiveShell': #pragma: no cover
-            display(message_df.style.hide(axis=1).apply(
-                    lambda x: [f'background-color: {color}' for i in x], axis=1
-                    ).set_properties(**{'text-align': 'left'})
+        if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':  #pragma: no cover
+            display(
+                message_df
+                .style
+                .hide(axis=1)
+                .apply(lambda x: [f'background-color: {color}' for i in x], axis=1)
+                .set_properties(**{'text-align': 'left'})
                 )
         #everywhere else
         else:
@@ -158,7 +170,8 @@ def _arg_to_list(arg):
 
 def fetch(path, before='now', verbosity=3):
     """
-    returns the path to the most recent version of a file (based on timestamp in filename)
+    returns the path to the most recent version of a file
+    assuming that a date is part of the filename.
 
     "before" defines recency of the file:
     - now: most recent version
@@ -173,7 +186,7 @@ def fetch(path, before='now', verbosity=3):
     if os.path.isfile(path):
         log(f'info: found file "{path}"', 'qp.fetch()', verbosity)
         return path
-        
+
     today = datetime.date.today()
 
 
@@ -186,7 +199,7 @@ def fetch(path, before='now', verbosity=3):
     elif before == 'this week':
         cutoff = today - datetime.timedelta(days=today.weekday())
     elif before == 'this month':
-        cutoff = today - datetime.timedelta(days=today.day-1)
+        cutoff = today - datetime.timedelta(days=today.day - 1)
     elif before == 'this year':
         cutoff = pd.to_datetime(f'{today.year}0101').date()
     else:
@@ -210,14 +223,17 @@ def fetch(path, before='now', verbosity=3):
                 extension = '.' + timestamp_str_full.split('.')[-1]
                 timestamp_str = timestamp_str_full.replace(f'{extension}', '')
                 timestamp = _datetime(timestamp_str)
-                if timestamp < _datetime(cutoff):  #type: ignore  (turns off pylance for this line)
+                if timestamp < _datetime(cutoff):
                     timestamps[timestamp] = (timestamp_str, extension)
-            except: #pragma: no cover
+            except Exception:  #pragma: no cover
                 pass
     if len(timestamps) == 0:
-        log(f'error: no timestamped files starting with "{name}" found in "{folder}" before {cutoff}',
-            'qp.fetch()', verbosity)
-        raise FileNotFoundError(f'no timestamped files starting with "{name}" found in "{folder}" before {cutoff}')
+        text = (
+            'error: no timestamped files starting with'
+            f' "{name}" found in "{folder}" before {cutoff}'
+            )
+        log(text, 'qp.fetch()', verbosity)
+        raise FileNotFoundError(text)
     else:
         timestamps = timestamps.sort_index()
         latest = timestamps.iloc[len(timestamps) - 1][0]
@@ -228,7 +244,7 @@ def fetch(path, before='now', verbosity=3):
 
 
 def match(patterns, value, regex=True):
-        
+
     patterns = _arg_to_list(patterns)
 
     if regex and isinstance(value, str):
@@ -242,11 +258,11 @@ def match(patterns, value, regex=True):
 
 
 def header(
-    word='header',
-    slim=True,
-    width=None,
-    filler=' ',
-    ): #pragma: no cover
+        word='header',
+        slim=True,
+        width=None,
+        filler=' ',
+        ):  #pragma: no cover
     """
     Creates text headers for code sections or plain text.
 
@@ -262,7 +278,7 @@ def header(
     if slim is True:
         if width is None:
             width = 60
-        
+
         if len(word) > width - 10:
             width = len(word) + 10
         if len(word) % 2 == 1:
@@ -270,7 +286,7 @@ def header(
 
         border = int((width - len(word) - 10) / 2)
         text = '#' * border + '     ' + word + '     ' + '#' * border
-    
+
     else:
         if width is None:
             width = 42
@@ -279,9 +295,9 @@ def header(
             width = len(word) + 2
         if len(word) % 2 == 1:
             width += 1
-        
+
         border = '#' * width
-        filler = ' ' * int(((len(border) - len(word) - 2)/2))
+        filler = ' ' * int(((len(border) - len(word) - 2) / 2))
         text = border + '\n'\
             + '#' + filler + word + filler + '#' + '\n'\
             + border
@@ -289,7 +305,7 @@ def header(
     print(text)
 
 
-def now(fmt='%Y_%m_%d'): #pragma: no cover
+def now(fmt='%Y_%m_%d'):  #pragma: no cover
     """
     alias for datetime.datetime.now().strftime(format_str)
 
@@ -304,11 +320,11 @@ def now(fmt='%Y_%m_%d'): #pragma: no cover
 #"bashlike" wrappers and aliases
 
 def ls(
-    path_or_object='',
-    out='df',
-    recursive=False,
-    verbosity=3,
-    ):
+        path_or_object='',
+        out='df',
+        recursive=False,
+        verbosity=3,
+        ):
     """
     when path is passed: list files and folders in path.
     when python object is passed: list contents of the object.
@@ -317,8 +333,11 @@ def ls(
         return _list_files(path_or_object, out, recursive)
     else:
         if out != 'df':
-            log(f'warning: qp.ls() always returns dataframes when used on python objects, ignoring out={out}',
-                f'qp.ls({path_or_object=}, {out=}, {recursive=})', verbosity)
+            text = (
+                'warning: qp.ls() always returns dataframes'
+                f' when used on python objects, ignoring out={out}'
+                )
+            log(text, f'qp.ls({path_or_object=}, {out=}, {recursive=})', verbosity)
         layers = []
         result = pd.DataFrame()
         result = _ls_object(path_or_object, recursive, result, layers)
@@ -326,10 +345,10 @@ def ls(
 
 
 def lsr(
-    path_or_object='',
-    out='df',
-    recursive=True,
-    ):
+        path_or_object='',
+        out='df',
+        recursive=True,
+        ):
     """
     alias for ls() with recursive=True
     """
@@ -361,17 +380,53 @@ def _list_files(path, out, recursive):
 
         files['_path'] = filepaths
         files['name'] = files['_path'].apply(lambda x: os.path.basename(x))
-        files['size'] = files['_path'].apply(lambda x: os.path.getsize(x) if os.path.isfile(x) else None)
+        files['size'] = files['_path'].apply(
+            lambda x: (
+                os.path.getsize(x)
+                if os.path.isfile(x)
+                else None
+                )
+            )
         files['created'] = files['_path'].apply(
-            lambda x: datetime.datetime.fromtimestamp(os.path.getctime(x)).strftime('%Y-%m-%d %H:%M:%S'))
+            lambda x: (
+                datetime
+                .datetime
+                .fromtimestamp(os.path.getctime(x))
+                .strftime('%Y-%m-%d %H:%M:%S')
+                )
+            )
         files['last modified'] = files['_path'].apply(
-            lambda x: datetime.datetime.fromtimestamp(os.path.getmtime(x)).strftime('%Y-%m-%d %H:%M:%S'))
+            lambda x: (
+                datetime
+                .datetime
+                .fromtimestamp(os.path.getmtime(x))
+                .strftime('%Y-%m-%d %H:%M:%S')
+                )
+            )
         files['last accessed'] = files['_path'].apply(
-            lambda x: datetime.datetime.fromtimestamp(os.path.getatime(x)).strftime('%Y-%m-%d %H:%M:%S'))
-        files['permissions'] = files['_path'].apply(lambda x: oct(os.stat(x).st_mode)[-3:] if os.path.isfile(x) else None)
+            lambda x: (
+                datetime
+                .datetime
+                .fromtimestamp(os.path.getatime(x))
+                .strftime('%Y-%m-%d %H:%M:%S')
+                )
+            )
+        files['permissions'] = files['_path'].apply(
+            lambda x: (
+                oct(os.stat(x).st_mode)[-3:]
+                if os.path.isfile(x)
+                else None
+                )
+            )
         files['path'] = files['_path']
         files['folder'] = files['_path'].apply(lambda x: os.path.dirname(x))
-        files['type'] = files['_path'].apply(lambda x: 'dir' if os.path.isdir(x) else os.path.splitext(x)[1])
+        files['type'] = files['_path'].apply(
+            lambda x: (
+                'dir'
+                if os.path.isdir(x)
+                else os.path.splitext(x)[1]
+                )
+            )
 
         files.drop(columns='_path', inplace=True)
 
@@ -384,10 +439,10 @@ def _ls_object(py_object, recursive, result, layers):
     """
     ind = len(result)
 
-    for layer,name in enumerate(layers):
-        if f'layer{layer+1}' not in result.columns:
-            result.insert(len(layers)-1, f'layer{layer+1}', '')
-        result.loc[ind, f'layer{layer+1}'] = name
+    for layer, name in enumerate(layers):
+        if f'layer{layer + 1}' not in result.columns:
+            result.insert(len(layers) - 1, f'layer{layer + 1}', '')
+        result.loc[ind, f'layer{layer + 1}'] = name
 
 
     if isinstance(py_object, int):
@@ -397,64 +452,97 @@ def _ls_object(py_object, recursive, result, layers):
     elif isinstance(py_object, float):
         result.loc[ind, 'type'] = 'float'
         result.loc[ind, 'value'] = py_object
-        result.loc[ind, 'size'] = f'{len(str(py_object))-1}'
+        result.loc[ind, 'size'] = f'{len(str(py_object)) - 1}'
     elif isinstance(py_object, str):
-        result.loc[ind, 'type'] ='str'
+        result.loc[ind, 'type'] = 'str'
         result.loc[ind, 'value'] = py_object
         result.loc[ind, 'size'] = f'{len(py_object)}'
     elif isinstance(py_object, list):
         result.loc[ind, 'type'] = 'list'
         result.loc[ind, 'value'] = None
-        result.loc[ind,'size'] = f'{len(py_object)} elements'
+        result.loc[ind, 'size'] = f'{len(py_object)} elements'
     elif isinstance(py_object, tuple):
         result.loc[ind, 'type'] = 'tuple'
         result.loc[ind, 'value'] = None
-        result.loc[ind,'size'] = f'{len(py_object)} elements'
+        result.loc[ind, 'size'] = f'{len(py_object)} elements'
     elif isinstance(py_object, set):
-        result.loc[ind, 'type'] ='set'
+        result.loc[ind, 'type'] = 'set'
         result.loc[ind, 'value'] = None
-        result.loc[ind,'size'] = f'{len(py_object)} elements'
+        result.loc[ind, 'size'] = f'{len(py_object)} elements'
 
 
     elif isinstance(py_object, dict):
-        result.loc[ind, 'type'] ='dict'
+        result.loc[ind, 'type'] = 'dict'
         result.loc[ind, 'value'] = None
-        result.loc[ind,'size'] = f'{len(py_object)} key,val pairs'
+        result.loc[ind, 'size'] = f'{len(py_object)} key,val pairs'
         if recursive is True:
             for key, value in py_object.items():
                 result = _ls_object(value, recursive, result, layers + [f'["{key}"]'])
 
     elif isinstance(py_object, pd.core.series.Series):
-        result.loc[ind, 'type'] ='series'
+        result.loc[ind, 'type'] = 'series'
         result.loc[ind, 'value'] = None
-        result.loc[ind,'size'] = f'{len(py_object)} rows'
+        result.loc[ind, 'size'] = f'{len(py_object)} rows'
 
     elif isinstance(py_object, np.ndarray):
         result.loc[ind, 'type'] = 'ndarray'
         result.loc[ind, 'value'] = None
-        result.loc[ind,'size'] = f'{py_object.shape}'
+        result.loc[ind, 'size'] = f'{py_object.shape}'
 
     elif isinstance(py_object, pd.core.frame.DataFrame):
         df = py_object
         if len(layers) > 0:
             result.loc[ind, 'type'] = 'df'
-            result.loc[ind,'size'] = f'{len(df)} rows, {len(df.columns)} cols'
+            result.loc[ind, 'size'] = f'{len(df)} rows, {len(df.columns)} cols'
         else:
             result.loc[ind, 'contents'] = f'{len(df)} rows, {len(df.columns)} cols'
-            result.loc[ind, 'na'] = df.applymap(lambda x: _na(x, errors=0, na=1)).sum().sum()
-            result.loc[ind, 'nk'] = df.applymap(lambda x: _nk(x, errors=0, nk=1)).sum().sum()
+            result.loc[ind, 'na'] = (
+                df
+                .applymap(lambda x: _na(x, errors=0, na=1))
+                .sum()
+                .sum()
+                )
+            result.loc[ind, 'nk'] = (
+                df
+                .applymap(lambda x: _nk(x, errors=0, nk=1))
+                .sum()
+                .sum()
+                )
 
             ind1 = ind
-            rows = len(df.index)
             for col in df.columns:
                 ind1 += 1
                 result.loc[ind1, 'contents'] = col
-                result.loc[ind1, 'na'] = df[col].apply(lambda x: _na(x, errors=0, na=1)).sum()
-                result.loc[ind1, 'nk'] = df[col].apply(lambda x: _nk(x, errors=0, nk=1)).sum()
-                result.loc[ind1, 'min'] = df[col].apply(lambda x: _num(x, errors=None)).min()
-                result.loc[ind1, 'max'] = df[col].apply(lambda x: _num(x, errors=None)).max()
-                result.loc[ind1, 'median'] = df[col].apply(lambda x: _num(x, errors=None)).median()
-                result.loc[ind1, 'mean'] = df[col].apply(lambda x: _num(x, errors=None)).mean()
+                result.loc[ind1, 'na'] = (
+                    df[col]
+                    .apply(lambda x: _na(x, errors=0, na=1))
+                    .sum()
+                    )
+                result.loc[ind1, 'nk'] = (
+                    df[col]
+                    .apply(lambda x: _nk(x, errors=0, nk=1))
+                    .sum()
+                    )
+                result.loc[ind1, 'min'] = (
+                    df[col]
+                    .apply(lambda x: _num(x, errors=None))
+                    .min()
+                    )
+                result.loc[ind1, 'max'] = (
+                    df[col]
+                    .apply(lambda x: _num(x, errors=None))
+                    .max()
+                    )
+                result.loc[ind1, 'median'] = (
+                    df[col]
+                    .apply(lambda x: _num(x, errors=None))
+                    .median()
+                    )
+                result.loc[ind1, 'mean'] = (
+                    df[col]
+                    .apply(lambda x: _num(x, errors=None))
+                    .mean()
+                    )
 
     return result.fillna('').replace(0, '')
 
@@ -482,10 +570,11 @@ def cd(path=None, verbosity=3):
     if dir_old.endswith(path):
         log(f'info: already in {path}', f'qp.cd("{path}")', verbosity)
         return
-    
+
     os.chdir(path)
     dir_new = os.getcwd()
-    log(f'info: moved from<br>{dir_old}<br>to<br>{dir_new}', f'qp.cd("{path}")', verbosity)
+    text = f'info: moved from<br>{dir_old}<br>to<br>{dir_new}'
+    log(text, f'qp.cd("{path}")', verbosity)
     return
 
 
@@ -499,16 +588,15 @@ def cp(src, dest, verbosity=3):
         dest = os.path.join(dest, os.path.basename(src))
 
     if os.path.exists(dest):
-        log(f'warning: "{dest}" already exists and will be overwritten',
-            f'qp.cp()', verbosity)
-        
+        text = f'warning: "{dest}" already exists and will be overwritten'
+        log(text, 'qp.cp()', verbosity)
+
     if os.path.isdir(src):
         shutil.copytree(src, dest)
     else:
         shutil.copy(src, dest)
 
-    log(f'info: copied<br>{src}<br>to<br>{dest}',
-        f'qp.cp()', verbosity)
+    log(f'info: copied<br>{src}<br>to<br>{dest}', 'qp.cp()', verbosity)
     return
 
 
@@ -522,13 +610,13 @@ def mv(src, dest, verbosity=3):
         dest = os.path.join(dest, os.path.basename(src))
 
     if os.path.exists(dest):
-        log(f'warning: "{dest}" already exists and will be overwritten',
-            f'qp.mv()', verbosity)
-        
+        text = f'warning: "{dest}" already exists and will be overwritten'
+        log(text, 'qp.mv()', verbosity)
+
     shutil.move(src, dest)
 
-    log(f'info: moved<br>"{src}"<br>to<br>"{dest}"',
-        f'qp.mv()', verbosity)
+    text = f'info: moved<br>"{src}"<br>to<br>"{dest}"'
+    log(text, 'qp.mv()', verbosity)
     return
 
 
@@ -538,10 +626,12 @@ def mkdir(name, verbosity=3):
     create directory
     """
     if os.path.isdir(name):
-        log(f'info: directory "{name}" already exists', f'qp.mkdir("{name}")', verbosity)
+        text = f'info: directory "{name}" already exists'
+        log(text, f'qp.mkdir("{name}")', verbosity)
     else:
         os.mkdir(name)
-        log(f'info: created directory "{name}"', f'qp.mkdir("{name}")', verbosity)
+        text = f'info: created directory "{name}"'
+        log(text, f'qp.mkdir("{name}")', verbosity)
     return
 
 

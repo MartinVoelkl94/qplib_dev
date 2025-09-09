@@ -1,6 +1,4 @@
 import pandas as pd
-import qplib as qp
-
 
 
 def test1():
@@ -22,4 +20,3 @@ def test3():
     result = df.format(verbosity=0)
     expected = pd.DataFrame('', columns=['meta', 'a', 'b', 'c', 'a b c'], index=[])
     assert result.equals(expected), f'\nRESULT:\n{result}\nEXPECTED:\n{expected}'
-

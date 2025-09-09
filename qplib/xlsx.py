@@ -4,18 +4,18 @@ from .util import log, match
 
 
 def hide(
-    filename,
-    axis='col',  #'row', 'col', 'sheet'
-    patterns=None,
-    regex=True,
-    hide=True,  #True=hide, False=unhide
-    verbosity=3,
-    ): #pragma: no cover (does not affect reading of xlsx files)
+        filename,
+        axis='col',  #'row', 'col', 'sheet'
+        patterns=None,
+        regex=True,
+        hide=True,  #True=hide, False=unhide
+        verbosity=3,
+        ):  #pragma: no cover (does not affect reading of xlsx files)
     """
     Hide or unhide columns, rows, or sheets in an Excel file.
     """
 
-    if hide==True:
+    if hide is True:
         mode = 'hidden'
     else:
         mode = 'visible'
@@ -31,7 +31,11 @@ def hide(
                     hidden.append(col[0].value)
             if hidden:
                 hidden = '\n'.join(hidden)
-                log(f'debug: columns made {mode} in "{filename}" sheet "{ws.title}":\n{hidden}', 'qp.hide()', verbosity)
+                text = (
+                    f'debug: columns made {mode} in'
+                    f' "{filename}" sheet "{ws.title}":\n{hidden}'
+                    )
+                log(text, 'qp.hide()', verbosity)
 
 
     elif axis in ['row', 'rows', 'index', 0]:
@@ -43,7 +47,11 @@ def hide(
                     hidden.append(row[0].value)
             if hidden:
                 hidden = '\n'.join(hidden)
-                log(f'debug: rows made {mode} in "{filename}" sheet "{ws.title}":\n{hidden}', 'qp.hide()', verbosity)
+                text = (
+                    f'debug: rows made {mode} in'
+                    f' "{filename}" sheet "{ws.title}":\n{hidden}'
+                    )
+                log(text, 'qp.hide()', verbosity)
 
 
     elif axis in ['sheet', 'worksheet', 'tab', 2]:
@@ -57,7 +65,8 @@ def hide(
                 hidden.append(ws.title)
         if hidden:
             hidden = '\n'.join(hidden)
-            log(f'debug: sheets made {mode} in "{filename}":\n{hidden}', 'qp.hide()', verbosity)
+            text = f'debug: sheets made {mode} in "{filename}":\n{hidden}'
+            log(text, 'qp.hide()', verbosity)
 
     else:
         log(f'error: unknown axis "{axis}"', 'qp.hide', verbosity)
@@ -67,11 +76,11 @@ def hide(
 
 
 def format_excel(
-    filename,
-    col_width_max=70,
-    col_width_padding=2,
-    verbosity=3,
-    ): #pragma: no cover (does not affect reading of xlsx files)
+        filename,
+        col_width_max=70,
+        col_width_padding=2,
+        verbosity=3,
+        ):  #pragma: no cover (does not affect reading of xlsx files)
     """
     applies formatting to an Excel file:
     - adjust col width to max length of cell content (accounts for linebreaks)
@@ -84,20 +93,35 @@ def format_excel(
         data = pd.read_excel(filename, sheet_name=sheet.title)
         for col in sheet.columns:
             if col[0].value is None:
-                log(f'warning: skipping column with no header in sheet "{sheet.title}"', 'qp.format_excel()', verbosity)
+                text = (
+                    'warning: skipping column with'
+                    f' no header in sheet "{sheet.title}"'
+                    )
+                log(text, 'qp.format_excel()', verbosity)
                 continue
-            
+
             colname = col[0].value
             col_letter = col[0].column_letter
 
-            #multiline cells are split by newline, expanded into new rows, and the maximum length is calculated
-            #these changes are not applied to the actual data, only the column width is adjusted
-            max_length = data[colname].astype(str).apply(lambda x: x.split('\n')).explode().str.len().max()
+            #multiline cells are split by newline,
+            #expanded into new rows,
+            #and the maximum length is calculated
+            #these changes are not applied to the actual data,
+            #only the column width is adjusted
+            max_length = (
+                data[colname]
+                .astype(str)
+                .apply(lambda x: x.split('\n'))
+                .explode()
+                .str
+                .len()
+                .max()
+                )
             max_length = max(max_length, len(colname))
             max_length = min(max_length, col_width_max) + col_width_padding
-            
+
             sheet.column_dimensions[col_letter].width = max_length
-            
+
             for cell in col:
                 cell.alignment = openpyxl.styles.Alignment(
                     vertical='top',
@@ -107,4 +131,3 @@ def format_excel(
 
     wb.save(filename)
     wb.close()
-

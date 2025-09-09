@@ -20,29 +20,29 @@ qp_types = [
     ]
 
 invalid_values = [
-        None,
-        np.nan,
-        pd.NaT,
-        pd.NA,
-        '',
-        ' ',
-        'nan',
-        'NaN',
-        'NAN',
-        'na',
-        'NA',
-        'n/a',
-        'N/A',
-        'none',
-        'None',
-        'NONE',
-        'null',
-        'Null',
-        'NULL',
-        'nil',
-        'Nil',
-        'NIL',
-        ]
+    None,
+    np.nan,
+    pd.NaT,
+    pd.NA,
+    '',
+    ' ',
+    'nan',
+    'NaN',
+    'NAN',
+    'na',
+    'NA',
+    'n/a',
+    'N/A',
+    'none',
+    'None',
+    'NONE',
+    'null',
+    'Null',
+    'NULL',
+    'nil',
+    'Nil',
+    'NIL',
+    ]
 
 def test_error_raising():
     for func in qp_types:
@@ -71,7 +71,8 @@ def test_error_coercing_none():
 
 def test_error_custom():
     for func in qp_types:
-        assert func('abc', errors='custom') == 'custom', f'Failed using custom error message for {func.__name__}'
+        text = f'Failed using custom error message for {func.__name__}'
+        assert func('abc', errors='custom') == 'custom', text
 
 
 
@@ -117,10 +118,10 @@ def test_error_custom():
     ('1e0', 1),
     ('1_000', 1000),
     ])
-
 def test_int(input, expected):
     result = qp.int(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -151,10 +152,10 @@ def test_int(input, expected):
     ('1e0', 1.0),
     ('1_000', 1000.0),
     ])
-
 def test_float(input, expected):
     result = qp.float(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -184,10 +185,10 @@ def test_float(input, expected):
 
     ('1e0', 1),
     ])
-
 def test_num(input, expected):
     result = qp.num(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 
@@ -230,10 +231,10 @@ def test_num(input, expected):
     (1, True),
     (1.0, True),
     ])
-
 def test_bool(input, expected):
     result = qp.bool(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 
@@ -305,14 +306,15 @@ def test_bool(input, expected):
     ('30001230', pd.NaT),
 
     ])
-
 def test_date(input, expected):
     result = qp.date(input)
     if expected is pd.NaT:
-        assert result is expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+        text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+        assert result is expected, text
     else:
         expected = datetime.date(*expected)
-        assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+        text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+        assert result == expected, text
 
 
 def test_date_random():
@@ -372,14 +374,15 @@ def test_date_random():
     ('2020/02/01', (2020, 2, 1)),
     ('2020 02 01', (2020, 2, 1)),
     ])
-
 def test_datetime(input, expected):
     result = qp.datetime(input)
     if expected is pd.NaT:
-        assert result is expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+        text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+        assert result is expected, text
     else:
         expected = datetime.datetime(*expected)
-        assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+        text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+        assert result == expected, text
 
 
 def test_datetime_random():
@@ -445,10 +448,10 @@ def test_datetime_random():
     ('Blank', None),
     ('BLANK', None),
     ])
-
 def test_na(input, expected):
     result = qp.na(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -465,10 +468,10 @@ def test_na(input, expected):
     ('not specified', 'unknown'),
     ('not specified.', 'unknown'),
     ])
-
 def test_nk(input, expected):
     result = qp.nk(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -509,10 +512,10 @@ def test_nk(input, expected):
     (1, 'yes'),
     (1.0, 'yes'),
     ])
-
 def test_yn(input, expected):
     result = qp.yn(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 
@@ -615,7 +618,8 @@ def test_yn(input, expected):
     ])
 def test_type(input, expected):
     result = qp.type(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 
@@ -669,7 +673,7 @@ def test_type(input, expected):
     ('11Apr2024', datetime.datetime(2024, 4, 11).date()),
     ('2024Apr11', datetime.datetime(2024, 4, 11).date()),
 
-   
+
     ('November-11-2024', datetime.datetime(2024, 11, 11).date()),
     ('November.11.2024', datetime.datetime(2024, 11, 11).date()),
     ('November/11/2024', datetime.datetime(2024, 11, 11).date()),
@@ -705,11 +709,11 @@ def test_type(input, expected):
     ('Apr112024 00:00:00', datetime.datetime(2024, 4, 11)),
     ('11Apr2024 00:00:00', datetime.datetime(2024, 4, 11)),
     ('2024Apr11 00:00:00', datetime.datetime(2024, 4, 11)),
-
     ])
 def test_convert(input, expected):
     result = qp.convert(input)
-    assert result == expected, f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    text = f'\ninput: {input}\nRESULT: {result}\nEXPECTED: {expected}'
+    assert result == expected, text
 
 
 def test_dict_setattr():
@@ -728,11 +732,25 @@ def test_dict_values_flat():
         'a': 1,
         'b': [2, {'x': 3}],
         'c': (4, 5),
-        'd': {6,7},
+        'd': {6, 7},
         'e': {'y0': 8, 'y1': {'y2': 9}},
         'f': qp.dict({'z0': 10, 'z1': [11, 12]})
         })
-    assert d.values_flat() == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "Failed for nested structures"
+    values_expected = [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+        ]
+    assert d.values_flat() == values_expected, "Failed for nested structures"
 
 def test_dict_invert():
     d = qp.dict({'a': 1, 'b': 2, 'c': 3})
@@ -740,4 +758,3 @@ def test_dict_invert():
 
     d = qp.dict({'a': 1, 'b': 1, 'c': 3})
     assert d.invert() == qp.dict({1: 'b', 3: 'c'})
-

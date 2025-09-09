@@ -1,7 +1,5 @@
-
 import pytest
 import datetime
-import qplib as qp
 from qplib import log
 
 
@@ -37,4 +35,3 @@ def test_log_levels(input, expected):
     logs = log()
     result = logs.loc[len(logs) - 1, 'level']
     assert result == expected, f'expected: {expected}, got: "{result}"'
-

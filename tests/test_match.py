@@ -11,8 +11,8 @@ import pytest
     ('a', 1, False),
     (None, 1, False),
 
-    ([1,2,3], 1, True),
-    ([1,2,3], 4, False),
+    ([1, 2, 3], 1, True),
+    ([1, 2, 3], 4, False),
 
     ('.', 'a', True),
     ('...', 'abc', True),
