@@ -1587,6 +1587,7 @@ def test_returns_summary(tmpdir):
         output='summary'
         )
     expected = {
+        'uid column': 'uid',
         'cols added': 1,
         'cols removed': 1,
         'rows added': 1,
@@ -1633,6 +1634,7 @@ def test_returns_summary_ignore(tmpdir):
         output='summary',
         )
     expected = {
+        'uid column': 'uid',
         'cols added': 1,
         'cols removed': 1,
         'rows added': 1,
@@ -1680,6 +1682,7 @@ def test_returns_summary_ignore1(tmpdir):
         output='summary',
         )
     expected = {
+        'uid column': 'uid',
         'cols added': 1,
         'cols removed': 1,
         'rows added': 1,
@@ -1727,6 +1730,7 @@ def test_returns_summary_ignore2(tmpdir):
         output='summary',
         )
     expected = {
+        'uid column': 'uid',
         'cols added': 1,
         'cols removed': 1,
         'rows added': 1,
@@ -2005,6 +2009,7 @@ def test_returns_all(tmpdir):
     expected_df.loc['x', 'c'] = 1
 
     expected_summary = {
+        'uid column': 'uid',
         'cols added': 1,
         'cols removed': 1,
         'rows added': 1,

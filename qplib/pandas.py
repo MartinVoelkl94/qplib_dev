@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 import copy
@@ -13,7 +14,6 @@ from .util import (
     ORANGE_LIGHT,
     RED_LIGHT,
     )
-
 
 
 def get_df():
@@ -652,6 +652,7 @@ def _diff(
 
     #### uid:
     - column(s) to use as unique identifier(s) for comparison
+    - if uid is a list: uses first column name thats present and unique in both sheets
     - None: use index (only works if corresponding records are in the same order)
 
     #### ignore:
@@ -678,7 +679,6 @@ def _diff(
     #### Requirements:
     - only sheets with the same name are compared
     - needs column with unique entries to use as key for comparison (specify with "uid")
-    - if uid is a list: uses first column name thats present and unique in both sheets
     """
 
     #compare 2 excel files
@@ -727,6 +727,8 @@ def _diff(
             summary = pd.DataFrame()
             string = 'both dataframes are identical'
         else:
+            df_new, df_old, uid = _set_index(df_new, df_old, uid, verbosity)
+            df_new, df_old = _ensure_unique_index(df_new, df_old, uid, verbosity)
             df, summary = _diff_df(
                 df_new,
                 df_old,
@@ -736,8 +738,6 @@ def _diff(
                 ignore,
                 rename,
                 prefix_old,
-                name_new='new df',
-                name_old='old df',
                 verbosity=verbosity
                 )
             string = _diff_str(df_new, df_old, uid, ignore, rename, verbosity)
@@ -817,8 +817,6 @@ def _diff_df(
         ignore=None,
         rename=None,
         prefix_old='old: ',
-        name_new='new df',
-        name_old='old df',
         verbosity=3,
         ):
     '''
@@ -827,68 +825,29 @@ def _diff_df(
 
     ignore = _arg_to_list(ignore)
     ignore.append('meta')
-
-    if uid:
-        if uid not in df_new.columns:
-            log(f'error: "{uid}" is not in new dataframe', 'qp.diff', verbosity)
-            return pd.DataFrame(), {}
-        if uid not in df_old.columns:
-            log(f'error: "{uid}" is not in old dataframe', 'qp.diff', verbosity)
-            return pd.DataFrame(), {}
-        df_new.index = df_new[uid]
-        df_old.index = df_old[uid]
-        ignore.append(uid)
+    ignore.append(uid)
     if output.endswith('.xlsx'):
         newline = '\n'
     else:
         newline = '<br>'
 
 
-    summary_empty = {
-        'cols added': None,
-        'cols removed': None,
-        'rows added': None,
-        'rows removed': None,
-        'vals added': None,
-        'vals removed': None,
-        'vals changed': None,
-        }
-    if not df_new.index.is_unique:
-        message = (
-            f'warning: uid of {name_new} is not unique. choose a unique'
-            'column as uid or set "uid=None" to use sequential numbering'
-            )
-        log(message, 'qp.diff', verbosity)
-        return pd.DataFrame(), summary_empty
-    if not df_old.index.is_unique:
-        message = (
-            f'warning: uid of {name_old} is not unique. choose a unique'
-            'column as uid or set "uid=None" to use sequential numbering'
-            )
-        log(message, 'qp.diff', verbosity)
-        return pd.DataFrame(), summary_empty
-
-
 
     #prepare dataframes
+
     if rename is None:
         pass
     elif isinstance(rename, dict):
         if 'meta' in rename:
             message = 'warning: it is not advised to rename the "meta" column'
             log(message, 'qp.diff()', verbosity)
-        if uid in rename:
-            message = 'warning: it is not advised to rename the "uid" column'
-            log(message, 'qp.diff()', verbosity)
         df_new = df_new.rename(columns=rename)
         df_old = df_old.rename(columns=rename)
     else:
         log('error: rename argument must be a dictionary', 'qp.diff()', verbosity)
 
-
     df_new = _format_df(df_new, fix_headers=False, add_metadata=True, verbosity=2)
     df_old = _format_df(df_old, fix_headers=False, add_metadata=True, verbosity=2)
-
 
 
     cols_added = df_new.columns.difference(df_old.columns).difference(ignore)
@@ -900,6 +859,7 @@ def _diff_df(
     rows_shared = df_new.index.intersection(df_old.index)
 
     summary = {
+        'uid column': uid,
         'cols added': len(cols_added),
         'cols removed': len(cols_removed),
         'rows added': len(rows_added),
@@ -1122,8 +1082,6 @@ def _diff_excel(
     see _diff() for details
     '''
 
-    uids = _arg_to_list(uid)
-
     summary = pd.DataFrame(columns=[
         'sheet',
         'in both files',
@@ -1148,34 +1106,24 @@ def _diff_excel(
         if sheet in sheets_old:
             df_new = pd.read_excel(file_new, sheet_name=sheet)
             df_old = pd.read_excel(file_old, sheet_name=sheet)
-            name_new = f'sheet "{sheet}" in file "{file_new}"'
-            name_old = f'sheet "{sheet}" in file "{file_old}"'
-            uid_col = _get_uid(df_new, df_old, uids, verbosity)
 
-            if uid_col:
-                message = (
-                    f'debug: found uid column "{uid_col}" in sheet'
-                    f'"{sheet}"of file "{file_new}" and "{file_old}".'
-                    )
-                log(message, 'qp.diff()', verbosity)
+            if isinstance(uid, dict):
+                uid_sheet = uid.get(sheet, None)
             else:
-                message = (
-                    f'warning: no uid column found in sheet "{sheet}" of file'
-                    f'"{file_new}" and "{file_old}". using sequential index instead.'
-                    )
-                log(message, 'qp.diff()', verbosity)
+                uid_sheet = uid
+
+            df_new, df_old, uid_sheet = _set_index(df_new, df_old, uid_sheet, verbosity)
+            df_new, df_old = _ensure_unique_index(df_new, df_old, uid_sheet, verbosity)
 
             result, changes = _diff_df(
                 df_new,
                 df_old,
                 mode,
                 output,
-                uid_col,
+                uid_sheet,
                 ignore,
                 rename,
                 prefix_old,
-                name_new,
-                name_old,
                 verbosity,
                 )
 
@@ -1193,7 +1141,7 @@ def _diff_excel(
             idx = len(summary)
             summary.loc[idx, 'sheet'] = sheet
             summary.loc[idx, 'in both files'] = 'y'
-            summary.loc[idx, 'uid column'] = uid_col
+            summary.loc[idx, 'uid column'] = changes['uid column']
             for key, val in changes.items():
                 summary.loc[idx, key] = val
 
@@ -1228,10 +1176,7 @@ def _diff_str(
     elif isinstance(ignore, str):
         ignore = [ignore]
         ignore.append('meta')
-    if uid:
-        df_new.index = df_new[uid]
-        df_old.index = df_old[uid]
-        ignore.append(uid)
+    ignore.append(uid)
 
     if df_new.equals(df_old):
         return 'both dataframes are identical'
@@ -1318,18 +1263,67 @@ def _apply_style(x, df_style):
     return df_style
 
 
-def _get_uid(df_new, df_old, uids, verbosity=3):
-    """
-    returns the first column that is present in bothdataframes and is
-    unique in both dataframes if no such column is found, returns None
-    """
-    for uid in uids:
-        conditions = (
-            uid in df_new.columns
-            and uid in df_old.columns
-            and df_new[uid].is_unique
-            and df_old[uid].is_unique
+def _set_index(df_new, df_old, uid, verbosity=3):
+
+    if uid in df_new.columns:
+        if uid in df_old.columns:
+            df_new.index = df_new[uid]
+            df_old.index = df_old[uid]
+            return df_new, df_old, uid
+        else:
+            message = (
+                f'error: uid "{uid}" is not in old dataframe.'
+                ' looking for alternative uid.'
             )
-        if conditions:
-            return uid
-    return None
+            log(message, 'qp.diff', verbosity)
+    else:
+        message = (
+            f'error: uid "{uid}" is not in new dataframe.'
+            ' looking for alternative uid.'
+            )
+        log(message, 'qp.diff', verbosity)
+
+    uids_potential = df_new.columns.intersection(df_old.columns)
+    uids_by_uniqueness = {}
+    for uid in uids_potential:
+        unique_in_new = pd.Index(df_new[uid].dropna().unique())
+        unique_in_old = pd.Index(df_old[uid].dropna().unique())
+        unique_shared = unique_in_new.intersection(unique_in_old)
+        uids_by_uniqueness[uid] = len(unique_shared)
+
+    if len(uids_by_uniqueness) > 0:
+        uid = sorted(
+            uids_by_uniqueness.items(),
+            key=lambda item: item[1],
+            reverse=True,
+            )[0][0]
+        df_new.index = df_new[uid]
+        df_old.index = df_old[uid]
+        log(f'info: found alternative uid "{uid}" for comparison', 'qp.diff', verbosity)
+    else:
+        uid = None
+        log('warning: no alternative uid found. using index for comparison',
+            'qp.diff', verbosity)
+
+    return df_new, df_old, uid
+
+
+def _ensure_unique_index(df_new, df_old, uid, verbosity=3):
+
+    if not df_new.index.is_unique:
+        message = (
+            f'error: index/uid "{uid}" is not unique in new dataframe'
+            ' duplicated entries will be ignored'
+            )
+        log(message, 'qp.diff', verbosity)
+        df_new = df_new.loc[df_new.index.drop_duplicates(keep=False), :]
+
+    if not df_old.index.is_unique:
+        message = (
+            f'error: index/uid "{uid}" is not unique in old dataframe'
+            ' duplicated entries will be ignored'
+            )
+        log(message, 'qp.diff', verbosity)
+        df_old = df_old.loc[df_old.index.drop_duplicates(keep=False), :]
+
+    return df_new, df_old
