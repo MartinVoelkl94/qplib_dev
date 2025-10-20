@@ -278,6 +278,10 @@ def _format_df(
     Formats dataframe to ensure compatibility with the query language used by df.q().
     """
 
+    if df.empty:
+        log('debug: dataframe is empty, skipping formatting', 'df.format()', verbosity)
+        return df
+
     qp_old = df.qp
     df = copy.deepcopy(df)
 
@@ -615,420 +619,459 @@ def days_between(
 
 
 
-def _diff(
-        df_new: pd.DataFrame | str,
-        df_old: pd.DataFrame | str,
-        mode='mix',
-        output='df',  #df, summary, str, all, print, <filename.xlsx>
-        uid=None,     #None defaults to index
+
+class Diff:
+    def __init__(
+        self,
+        new: pd.DataFrame | str,
+        old: pd.DataFrame | str,
+        uid=None,
         ignore=None,  #col(s) to ignore for comparison
         rename=None,  #rename cols before comparison
-        prefix_old='old: ',
-        write_index=False,  #write index to excel file
         verbosity=3,
         ):
-    """
-    compares two dfs/csv/excel files and returns differences
 
-    ## Args:
+        #original args
+        self._new = new
+        self._old = old
+        self._uid = uid
+        self._ignore = _arg_to_list(ignore)
+        self._rename = rename
+        self._verbosity = verbosity
 
-    #### df_new, df_old:
-    - the new and old df versions to compare
+        #processed data
+        self.dfs_new = []
+        self.dfs_old = []
+        self.dfs_diff = []
+        self.dfs_diff_styled = []
+        self.sheets = []
+        self.sheet_in_both_files = []
+        self.uid_cols = []
+        self.renamed_cols_new = []
+        self.renamed_cols_old = []
+        self.ignored_cols_new = []
+        self.ignored_cols_old = []
+        self.cols_ignore = []
+        self.cols_added = []
+        self.cols_removed = []
+        self.cols_shared = []
+        self.rows_added = []
+        self.rows_removed = []
+        self.rows_shared = []
+        self.vals_added = []
+        self.vals_removed = []
+        self.vals_changed = []
 
-    #### mode:
-    - not needed for output="summary" or "str" or "print"
-    - 'new': creates new df with highlighted value additions, removals and changes
-    - 'new+': also shows old values in neighbouring columns (hidden when saved to excel)
-    - 'old': creates old df with highlighting
-    - 'mix': creates mixture of new and old df with highlighting
-
-    #### output:
-    - 'df': returns df(s) with highlighting. multiple dfs are returned in a dict.
-    - 'summary': returns a df summarizing additions, removals and changes
-    - 'str': returns a string containing a summary of the differences
-    - 'all': returns a tuple containing the df, the summary df and the string
-    - 'print': prints a string containing a summary of the differences and returns None
-    - '<filename.xlsx>': saves the differences to an excel file with the given name
-
-    #### uid:
-    - column(s) to use as unique identifier(s) for comparison
-    - if uid is a list: uses first column name thats present and unique in both sheets
-    - None: use index (only works if corresponding records are in the same order)
-
-    #### ignore:
-    - column(s) to ignore for comparison
-
-    #### rename:
-    - dictionary to rename columns before comparison
-    - is applied to both dfs
-
-    #### prefix_old:
-    - prefix to distinguish between columns from old and new df
-
-    #### write_index:
-    - whether to write index to created excel file
+        #process inputs
+        self._get_dfs()
+        self._format_dfs()
+        self._rename_cols()
+        self._get_uids()
+        self._ignore_cols()
+        self._get_diff_stats()
 
 
-    ## Excel comparison:
-
-    when two excel files are compared, all sheets with the same name in both files are
-    compared, meaning that 'df' will return a dictionary containing multiple dfs with
-    highlighted differences. 'summary' will return a df containing the summary of
-    differences for each sheet.
-
-    #### Requirements:
-    - only sheets with the same name are compared
-    - needs column with unique entries to use as key for comparison (specify with "uid")
-    """
-
-    #compare 2 excel files
-    conditions = (
-        isinstance(df_new, str)
-        and isinstance(df_old, str)
-        and df_new.endswith('.xlsx')
-        and df_old.endswith('.xlsx')
-        )
-    if conditions:
-        df, summary, string = _diff_excel(
-            df_new,
-            df_old,
-            mode,
-            output,
-            uid,
-            ignore,
-            rename,
-            prefix_old,
-            verbosity,
+    def _get_dfs(self):
+            
+        #when both inputs are excel files, they might
+        #contain multiple sheets to be compared
+        conditions_excel_comp = (
+            isinstance(self._new, str)
+            and isinstance(self._old, str)
+            and self._new.endswith('.xlsx')
+            and self._old.endswith('.xlsx')
             )
+        if conditions_excel_comp:
+            log('debug: comparing all sheets from 2 excel files', 'qp.diff()', self._verbosity)
+            self._read_excel_sheets()
 
-
-    #compare 2 dfs or 1 df and 1 csv/excel file
-    else:
-        if isinstance(df_new, str):
-            if df_new.endswith('.csv'):
-                df_new = pd.read_csv(df_new)
-            elif df_new.endswith('.xlsx'):
-                df_new = pd.read_excel(df_new)
-            else:
-                log(f'error: unknown file extension: {df_new}', 'qp.diff()', verbosity)
-                return None
-
-        if isinstance(df_old, str):
-            if df_old.endswith('.csv'):
-                df_old = pd.read_csv(df_old)
-            elif df_old.endswith('.xlsx'):
-                df_old = pd.read_excel(df_old)
-            else:
-                log(f'error: unknown file extension: {df_old}', 'qp.diff()', verbosity)
-                return None
-
-        if df_new.equals(df_old):
-            df = df_new
-            summary = pd.DataFrame()
-            string = 'both dataframes are identical'
+            
+        #only 2 dfs need to be compared if input is
+        #2 dfs, 2 csvs or 1 df and 1 csv/excel file
         else:
-            df_new, df_old, uid = _set_index(df_new, df_old, uid, verbosity)
-            df_new, df_old = _ensure_unique_index(df_new, df_old, uid, verbosity)
-            df, summary = _diff_df(
-                df_new,
-                df_old,
-                mode,
-                output,
-                uid,
-                ignore,
-                rename,
-                prefix_old,
-                verbosity=verbosity
+
+            if isinstance(self._new, str):
+                if self._new.endswith('.csv'):
+                    df_new = pd.read_csv(self._new)
+                elif self._new.endswith('.xlsx'):
+                    df_new = pd.read_excel(self._new)
+                else:
+                    log(f'error: unknown file extension: {self._new}', 'qp.diff()', self._verbosity)
+            elif isinstance(self._new, pd.DataFrame):
+                df_new = self._new
+
+            else:
+                message = f'error: incompatible type for new df'
+                log(message, 'qp.diff()', self._verbosity)
+
+            if isinstance(self._old, str):
+                if self._old.endswith('.csv'):
+                    df_old = pd.read_csv(self._old)
+                elif self._old.endswith('.xlsx'):
+                    df_old = pd.read_excel(self._old)
+                else:
+                    log(f'error: unknown file extension: {self._old}', 'qp.diff()', self._verbosity)
+            elif isinstance(self._old, pd.DataFrame):
+                df_old = self._old
+            else:
+                message = 'error: incompatible type for old df'
+                log(message, 'qp.diff()', self._verbosity)
+
+            self.dfs_new.append(df_new)
+            self.dfs_old.append(df_old)
+            self.sheets.append(None)
+            self.sheet_in_both_files.append(None)
+
+
+    def _read_excel_sheets(self):
+
+        sheets_new = pd.ExcelFile(self._new).sheet_names
+        sheets_old = pd.ExcelFile(self._old).sheet_names
+        sheets_all = list(dict.fromkeys(sheets_new + sheets_old))  #preserves order
+
+        for i, sheet in enumerate(sheets_all):
+
+            if sheet in sheets_new and sheet in sheets_old:
+                message = f'debug: found sheet "{sheet}" in both files'
+                log(message, 'qp.diff()', self._verbosity)
+                sheet_in_both_files = 'yes'
+                df_new = pd.read_excel(self._new, sheet_name=sheet)
+                df_old = pd.read_excel(self._old, sheet_name=sheet)
+
+            elif sheet in sheets_new:
+                message = f'warning: sheet "{sheet}" is only in new file. cannot compare'
+                log(message, 'qp.diff()', self._verbosity)
+                sheet_in_both_files = 'only in new file'
+                df_new = pd.read_excel(self._new, sheet_name=sheet)
+                df_old = pd.DataFrame()
+
+            elif sheet in sheets_old:
+                message = f'warning: sheet "{sheet}" is only in old file. cannot compare'
+                log(message, 'qp.diff()', self._verbosity)
+                sheet_in_both_files = 'only in old file'
+                df_new = pd.DataFrame()
+                df_old = pd.read_excel(self._old, sheet_name=sheet)
+
+            self.dfs_new.append(df_new)
+            self.dfs_old.append(df_old)
+            self.sheets.append(sheet)
+            self.sheet_in_both_files.append(sheet_in_both_files)
+
+
+    def _format_dfs(self):
+        for i, sheet in enumerate(self.sheets):
+            self.dfs_new[i] = _format_df(
+                self.dfs_new[i],
+                fix_headers=False,
+                add_metadata=True,
+                verbosity=2,
                 )
-            string = _diff_str(df_new, df_old, uid, ignore, rename, verbosity)
-
-
-    #return python results
-    if output == 'df':
-        return df
-    elif output == 'str':
-        return string
-    elif output == 'summary':
-        return summary
-    elif output == 'all':
-        return df, summary, string
-    elif output == 'print':
-        print(string)
-        return None
-
-
-    #write multiple dfs to excel file
-    elif output.endswith('.xlsx') and isinstance(df, dict):
-        with pd.ExcelWriter(output) as writer:
-            summary.to_excel(writer, sheet_name='diff_summary', index=write_index)
-            for sheet, df in df.items():
-                if sheet == 'diff_summary':
-                    message = (
-                        'warning: comparison for sheet "diff_summary" will not'
-                        ' be written to file since this name is reserved'
-                        )
-                    log(message, 'qp.diff()', verbosity)
-                    continue
-                if hasattr(df, 'data'):
-                    df.data['meta'] = df.data['meta'].str.replace('<br>', '\n')
-                    df.to_excel(writer, sheet_name=sheet, index=write_index)
-
-        if mode == 'new+':
-            hide(
-                output,
-                axis='col',
-                patterns=f'{prefix_old}.*',
-                hide=True,
-                verbosity=verbosity,
-                )
-        format_excel(output)
-
-        log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
-        return df, summary, string
-
-
-    #write single df to excel file
-    elif output.endswith('.xlsx'):
-        df.to_excel(output, index=write_index)
-        if mode == 'new+':
-            hide(
-                output,
-                axis='col',
-                patterns=f'{prefix_old}.*',
-                hide=True,
-                verbosity=verbosity,
-                )
-        format_excel(output)
-        log(f'info: differences saved to "{output}"', 'qp.diff()', verbosity)
-        return df, summary, string
-
-    else:
-        log(f'error: unknown return value: {output}', 'qp.diff()', verbosity)
-        return None
-
-
-
-def _diff_df(
-        df_new,
-        df_old,
-        mode='mix',
-        output='df',
-        uid=None,
-        ignore=None,
-        rename=None,
-        prefix_old='old: ',
-        verbosity=3,
-        ):
-    '''
-    see _diff() for details
-    '''
-
-    ignore = _arg_to_list(ignore)
-    ignore.append('meta')
-    ignore.append(uid)
-    if output.endswith('.xlsx'):
-        newline = '\n'
-    else:
-        newline = '<br>'
-
-
-
-    #prepare dataframes
-
-    if rename is None:
-        pass
-    elif isinstance(rename, dict):
-        if 'meta' in rename:
-            message = 'warning: it is not advised to rename the "meta" column'
-            log(message, 'qp.diff()', verbosity)
-        df_new = df_new.rename(columns=rename)
-        df_old = df_old.rename(columns=rename)
-    else:
-        log('error: rename argument must be a dictionary', 'qp.diff()', verbosity)
-
-    df_new = _format_df(df_new, fix_headers=False, add_metadata=True, verbosity=2)
-    df_old = _format_df(df_old, fix_headers=False, add_metadata=True, verbosity=2)
-
-
-    cols_added = df_new.columns.difference(df_old.columns).difference(ignore)
-    cols_removed = df_old.columns.difference(df_new.columns).difference(ignore)
-    cols_shared = df_new.columns.intersection(df_old.columns).difference(ignore)
-
-    rows_added = df_new.index.difference(df_old.index)
-    rows_removed = df_old.index.difference(df_new.index)
-    rows_shared = df_new.index.intersection(df_old.index)
-
-    summary = {
-        'uid column': uid,
-        'cols added': len(cols_added),
-        'cols removed': len(cols_removed),
-        'rows added': len(rows_added),
-        'rows removed': len(rows_removed),
-        'vals added': 0,
-        'vals removed': 0,
-        'vals changed': 0
-        }
-
-
-
-    #create dfs showing the highlighted changes dependant on mode argument
-    if mode in ['new', 'new+']:
-        df_diff = copy.deepcopy(df_new)
-        df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
-
-        #add metadata columns
-        if mode == 'new+':
-            cols_new = ['meta']
-            cols_add = []
-            for col in df_diff.columns:
-                if not col.startswith(prefix_old) and col != 'meta':
-                    cols_new.append(col)
-                    if col != uid:
-                        cols_new.append(prefix_old + col)
-                        if prefix_old + col not in df_diff.columns:
-                            cols_add.append(prefix_old + col)
-
-            df_diff = pd.concat(
-                [
-                    df_diff,
-                    pd.DataFrame('', index=df_diff.index, columns=cols_add)
-                ],
-                axis=1,
-                )
-            df_diff_style = pd.concat(
-                [
-                    df_diff_style,
-                    pd.DataFrame(
-                        'font-style: italic',
-                        index=df_diff.index,
-                        columns=cols_add
-                        )
-                ],
-                axis=1,
+            self.dfs_old[i] = _format_df(
+                self.dfs_old[i],
+                fix_headers=False,
+                add_metadata=True,
+                verbosity=2,
                 )
 
-            df_diff = df_diff[cols_new]
-            df_diff_style = df_diff_style[cols_new]
+
+    def _rename_cols(self):
+            for i, sheet in enumerate(self.sheets):
+                df_new = self.dfs_new[i]
+                df_old = self.dfs_old[i]
+                rename = self._rename
+                rename_new = rename_old = ''
+
+                if rename is None:
+                    pass
+                elif isinstance(rename, dict):
+                    if 'meta' in rename:
+                        message = 'warning: it is not advised to rename the "meta" column'
+                        log(message, 'qp.diff()', self._verbosity)
+                    rename_new = {old: new for old, new in rename.items() if old in df_new.columns}
+                    rename_old = {old: new for old, new in rename.items() if old in df_old.columns}
+                    df_new.rename(columns=rename_new, inplace=True)
+                    df_old.rename(columns=rename_old, inplace=True)
+                else:
+                    log('error: rename argument must be a dictionary', 'qp.diff()', self._verbosity)
+
+                self.renamed_cols_new.append(rename_new)
+                self.renamed_cols_old.append(rename_old)
 
 
-        df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
-        df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
+    def _get_uids(self):
 
-        df_diff.loc[rows_added, 'meta'] += 'added row'
+        for i, sheet in enumerate(self.sheets):
+            
+            df_new = self.dfs_new[i]
+            df_old = self.dfs_old[i]
 
+            if isinstance(self._uid, dict) and sheet in self._uid:
+                uid = self._uid[sheet]
+            elif self._uid in df_new.columns and self._uid in df_old.columns:
+                uid = self._uid
+            else:
+                if sheet is None:
+                    message = 'warning: no valid uid column specified for dataframe comparison'
+                else:
+                    message = f'warning: no valid uid column specified for sheet "{sheet}"'
+                log(message, 'qp.diff()', self._verbosity)
 
+                uids_potential = df_new.columns.intersection(df_old.columns)
+                uids_by_uniqueness = {}
+                for uid in uids_potential:
+                    unique_in_new = pd.Index(df_new[uid].dropna().unique())
+                    unique_in_old = pd.Index(df_old[uid].dropna().unique())
+                    unique_shared = unique_in_new.intersection(unique_in_old)
+                    uids_by_uniqueness[uid] = len(unique_shared)
 
-    elif mode == 'old':
-        df_diff = copy.deepcopy(df_old)
-        df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
-
-        df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
-        df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
-
-        df_diff.loc[rows_removed, 'meta'] += 'removed row'
-
-    elif mode == 'mix':
-        inds_old = df_old.index.difference(df_new.index)
-        cols_old = df_old.columns.difference(df_new.columns)
-
-        df_diff = pd.concat([df_new, df_old.loc[:, cols_old]], axis=1)
-        df_diff.loc[inds_old, :] = df_old.loc[inds_old, :]
-
-        df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
-
-        df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
-        df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
-        df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
-        df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
-
-        df_diff.loc[rows_added, 'meta'] += 'added row'
-        df_diff.loc[rows_removed, 'meta'] += 'removed row'
-
-    else:
-        log(f'error: unknown mode: {mode}', 'qp.diff()', verbosity)
-
-
-    #highlight values in shared columns
-    #column 0 contains metadata and is skipped
-    cols_shared_no_metadata = [
-        col for col
-        in cols_shared
-        if not col.startswith(prefix_old) and col != 'meta'
-        ]
-
-    df_new_isna = df_new.loc[rows_shared, cols_shared_no_metadata].isna()
-    df_old_isna = df_old.loc[rows_shared, cols_shared_no_metadata].isna()
-    df_new_equals_old = (
-        df_new.loc[rows_shared, cols_shared_no_metadata]
-        == df_old.loc[rows_shared, cols_shared_no_metadata]
-        )
-
-    df_added = df_old_isna & ~df_new_isna
-    df_removed = df_new_isna & ~df_old_isna
-    df_changed = (~df_new_isna & ~df_old_isna & ~df_new_equals_old).astype(bool)
-    #the previous comparison can result in dtype "boolean" instead of "bool"
-    #"boolean" masks cannot be used to set values as str
-
-    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
-        df_added
-        .mask(df_added, f'background-color: {GREEN_LIGHT}')
-        .where(df_added, '')
-        )
-
-    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
-        df_removed
-        .mask(df_removed, f'background-color: {RED_LIGHT}')
-        .where(df_removed, '')
-        )
-
-    df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
-        df_changed
-        .mask(df_changed, f'background-color: {ORANGE_LIGHT}')
-        .where(df_changed, '')
-        )
+                if len(uids_by_uniqueness) > 0:
+                    uid = sorted(
+                        uids_by_uniqueness.items(),
+                        key=lambda item: item[1],
+                        reverse=True,
+                        )[0][0]
+                    log(f'info: found alternative uid "{uid}" for comparison', 'qp.diff', self._verbosity)
+                else:
+                    uid = None
+                    log('warning: no alternative uid found. using index for comparison',
+                        'qp.diff', self._verbosity)
+            
+            if uid is not None:
+                df_new.index = df_new[uid]
+                df_old.index = df_old[uid]
+            self.uid_cols.append(uid)
 
 
-
-    df_added_sum = df_added.sum(axis=1)
-    df_removed_sum = df_removed.sum(axis=1)
-    df_changed_sum = df_changed.sum(axis=1)
-
-    summary['vals added'] += int(df_added_sum.sum())
-    summary['vals removed'] += int(df_removed_sum.sum())
-    summary['vals changed'] += int(df_changed_sum.sum())
-
-    df_diff.loc[rows_shared, 'meta'] += (
-        df_added_sum
-        .apply(lambda x: f'{newline}vals added: {x}' if x > 0 else '')
-        )
-    df_diff.loc[rows_shared, 'meta'] += (
-        df_removed_sum
-        .apply(lambda x: f'{newline}vals removed: {x}' if x > 0 else '')
-        )
-    df_diff.loc[rows_shared, 'meta'] += (
-        df_changed_sum
-        .apply(lambda x: f'{newline}vals changed: {x}' if x > 0 else '')
-        )
+    def _ignore_cols(self):
+        for i in range(len(self.sheets)):
+            cols_ignore = self._ignore.copy()
+            self.ignored_cols_new.append((
+                self.dfs_new[i]
+                .columns
+                .intersection(cols_ignore)
+                .to_list()
+                ))
+            self.ignored_cols_old.append((
+                self.dfs_old[i]
+                .columns
+                .intersection(cols_ignore)
+                .to_list()
+                ))
+            cols_ignore.append('meta')
+            if self.uid_cols[i] is not None:
+                cols_ignore.append(self.uid_cols[i])
+            self.cols_ignore.append(cols_ignore)
 
 
-    if mode == 'new+':
-        cols_shared_metadata = [prefix_old + col for col in cols_shared_no_metadata]
-        df_all_modifications = (df_added | df_removed | df_changed)
-        df_old_changed = (
-            df_old
-            .loc[rows_shared, cols_shared_no_metadata]
-            .where(df_all_modifications, '')
+    def _get_diff_stats(self, mode='mix'):
+
+        for i in range(len(self.sheets)):
+            df_new = self.dfs_new[i]
+            df_old = self.dfs_old[i]
+            cols_ignore = self.cols_ignore[i]
+            
+            self.cols_added.append((
+                df_new
+                .columns
+                .difference(df_old.columns)
+                .difference(cols_ignore)
+                ))
+            self.cols_removed.append((
+                df_old
+                .columns
+                .difference(df_new.columns)
+                .difference(cols_ignore)
+                ))
+            self.cols_shared.append((
+                df_new
+                .columns
+                .intersection(df_old.columns)
+                .difference(cols_ignore)
+                ))
+
+            self.rows_added.append((
+                df_new
+                .index
+                .difference(df_old.index)
+                ))
+            self.rows_removed.append((
+                df_old
+                .index
+                .difference(df_new.index)
+                ))
+            self.rows_shared.append((
+                df_new
+                .index
+                .intersection(df_old.index)
+                ))
+
+
+    def show(
+            self,
+            mode='mix',
+            sheet=0,
+            prefix_old='old: ',
+            ):
+
+        df_new = self.dfs_new[sheet]
+        df_old = self.dfs_old[sheet]
+        uid_col = self.uid_cols[sheet]
+        cols_added = self.cols_added[sheet]
+        cols_removed = self.cols_removed[sheet]
+        cols_shared = self.cols_shared[sheet]
+        rows_added = self.rows_added[sheet]
+        rows_removed = self.rows_removed[sheet]
+        rows_shared = self.rows_shared[sheet]
+
+        
+        if mode in ['new', 'new+']:
+            df_diff = copy.deepcopy(df_new)
+            df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
+
+            #add metadata columns
+            if mode == 'new+':
+                cols_new = ['meta']
+                cols_add = []
+                for col in df_diff.columns:
+                    if not col.startswith(prefix_old) and col != 'meta':
+                        cols_new.append(col)
+                        if col != uid_col:
+                            cols_new.append(prefix_old + col)
+                            if prefix_old + col not in df_diff.columns:
+                                cols_add.append(prefix_old + col)
+
+                df_diff = pd.concat(
+                    [
+                        df_diff,
+                        pd.DataFrame('', index=df_diff.index, columns=cols_add)
+                    ],
+                    axis=1,
+                    )
+                df_diff_style = pd.concat(
+                    [
+                        df_diff_style,
+                        pd.DataFrame(
+                            'font-style: italic',
+                            index=df_diff.index,
+                            columns=cols_add
+                            )
+                    ],
+                    axis=1,
+                    )
+
+                df_diff = df_diff[cols_new]
+                df_diff_style = df_diff_style[cols_new]
+
+
+            df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
+            df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
+
+            df_diff.loc[rows_added, 'meta'] += 'added row'
+
+
+        elif mode == 'old':
+            df_diff = copy.deepcopy(df_old)
+            df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
+
+            df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
+            df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
+
+            df_diff.loc[rows_removed, 'meta'] += 'removed row'
+
+        elif mode == 'mix':
+            inds_old = df_old.index.difference(df_new.index)
+            cols_old = df_old.columns.difference(df_new.columns)
+
+            df_diff = pd.concat([df_new, df_old.loc[:, cols_old]], axis=1)
+            df_diff.loc[inds_old, :] = df_old.loc[inds_old, :]
+
+            df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
+
+            df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
+            df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
+            df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
+            df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
+
+            df_diff.loc[rows_added, 'meta'] += 'added row'
+            df_diff.loc[rows_removed, 'meta'] += 'removed row'
+
+        else:
+            log(f'error: unknown mode: {mode}', 'qp.diff()', self._verbosity)
+
+
+        #highlight values in shared columns
+        #column 0 contains metadata and is skipped
+        cols_shared_no_metadata = [
+            col for col
+            in cols_shared
+            if not col.startswith(prefix_old) and col != 'meta'
+            ]
+
+        df_new_isna = df_new.loc[rows_shared, cols_shared_no_metadata].isna()
+        df_old_isna = df_old.loc[rows_shared, cols_shared_no_metadata].isna()
+        df_new_equals_old = (
+            df_new.loc[rows_shared, cols_shared_no_metadata]
+            == df_old.loc[rows_shared, cols_shared_no_metadata]
             )
-        df_diff.loc[rows_shared, cols_shared_metadata] = df_old_changed.values
 
+        df_added = df_old_isna & ~df_new_isna
+        df_removed = df_new_isna & ~df_old_isna
+        df_changed = (~df_new_isna & ~df_old_isna & ~df_new_equals_old).astype(bool)
+        #the previous comparison can result in dtype "boolean" instead of "bool"
+        #"boolean" masks cannot be used to set values as str
 
-    if output.endswith('.xlsx'):
-        result = (
-            df_diff
-            .style
-            .apply(lambda x: _apply_style(x, df_diff_style), axis=None)
+        df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
+            df_added
+            .mask(df_added, f'background-color: {GREEN_LIGHT}')
+            .where(df_added, '')
             )
-    else:
+
+        df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
+            df_removed
+            .mask(df_removed, f'background-color: {RED_LIGHT}')
+            .where(df_removed, '')
+            )
+
+        df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
+            df_changed
+            .mask(df_changed, f'background-color: {ORANGE_LIGHT}')
+            .where(df_changed, '')
+            )
+
+
+
+        df_added_sum = df_added.sum(axis=1)
+        df_removed_sum = df_removed.sum(axis=1)
+        df_changed_sum = df_changed.sum(axis=1)
+
+        self.vals_added.append(int(df_added_sum.sum()))
+        self.vals_removed.append(int(df_removed_sum.sum()))
+        self.vals_changed.append(int(df_changed_sum.sum()))
+
+        df_diff.loc[rows_shared, 'meta'] += (
+            df_added_sum
+            .apply(lambda x: f'<br>vals added: {x}' if x > 0 else '')
+            )
+        df_diff.loc[rows_shared, 'meta'] += (
+            df_removed_sum
+            .apply(lambda x: f'<br>vals removed: {x}' if x > 0 else '')
+            )
+        df_diff.loc[rows_shared, 'meta'] += (
+            df_changed_sum
+            .apply(lambda x: f'<br>vals changed: {x}' if x > 0 else '')
+            )
+
+
+        if mode == 'new+':
+            cols_shared_metadata = [prefix_old + col for col in cols_shared_no_metadata]
+            df_all_modifications = (df_added | df_removed | df_changed)
+            df_old_changed = (
+                df_old
+                .loc[rows_shared, cols_shared_no_metadata]
+                .where(df_all_modifications, '')
+                )
+            df_diff.loc[rows_shared, cols_shared_metadata] = df_old_changed.values
+
 
         if len(df_diff.columns) * len(df_diff.index) > 100_000:
             message = (
@@ -1036,7 +1079,7 @@ def _diff_df(
                 'while this might not cause performance issues for formatting,'
                 'the result might be slow to render, especially in jupyter notebooks.'
                 )
-            log(message, 'qp.diff()', verbosity)
+            log(message, 'qp.diff()', self._verbosity)
 
         #replace "<" and ">" with html entities to prevent interpretation as html tags
         cols_no_metadata = [
@@ -1058,196 +1101,32 @@ def _diff_df(
                 .applymap(lambda x: _try_replace_gt_lt(x))
                 )
 
-        result = (
-            df_diff
-            .style
-            .apply(lambda x: _apply_style(x, df_diff_style), axis=None)
-            )
 
-    return result, summary
+        diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
+        return diff_styled
 
 
-def _diff_excel(
-        file_new='new.xlsx',
-        file_old='old.xlsx',
-        mode='new+',
-        output='df',
-        uid=None,
-        ignore=None,
-        rename=None,
-        prefix_old='old: ',
-        verbosity=3,
-        ):
-    '''
-    see _diff() for details
-    '''
-
-    summary = pd.DataFrame(columns=[
-        'sheet',
-        'in both files',
-        'uid column',
-        'cols added',
-        'cols removed',
-        'rows added',
-        'rows removed',
-        'vals added',
-        'vals removed',
-        'vals changed',
-        ])
-    results = {}
-
-
-    #get names of all sheets in the excel files
-    sheets_new = pd.ExcelFile(file_new).sheet_names
-    sheets_old = pd.ExcelFile(file_old).sheet_names
-
-    #iterate over all sheets
-    for sheet in sheets_new:
-        if sheet in sheets_old:
-            df_new = pd.read_excel(file_new, sheet_name=sheet)
-            df_old = pd.read_excel(file_old, sheet_name=sheet)
-
-            if isinstance(uid, dict):
-                uid_sheet = uid.get(sheet, None)
-            else:
-                uid_sheet = uid
-
-            df_new, df_old, uid_sheet = _set_index(df_new, df_old, uid_sheet, verbosity)
-            df_new, df_old = _ensure_unique_index(df_new, df_old, uid_sheet, verbosity)
-
-            result, changes = _diff_df(
-                df_new,
-                df_old,
-                mode,
-                output,
-                uid_sheet,
-                ignore,
-                rename,
-                prefix_old,
-                verbosity,
-                )
-
-            #check if df is empty
-            if isinstance(result, pd.DataFrame) and result.empty:
-                message = f'error: comparison was not possible for sheet "{sheet}"'
-                log(message, 'qp.diff', verbosity)
-            else:
-                message = f'debug: compared sheet "{sheet}" from both files'
-                log(message, 'qp.diff()', verbosity)
-
-            results[sheet] = result
-
-
-            idx = len(summary)
-            summary.loc[idx, 'sheet'] = sheet
-            summary.loc[idx, 'in both files'] = 'y'
-            summary.loc[idx, 'uid column'] = changes['uid column']
-            for key, val in changes.items():
-                summary.loc[idx, key] = val
-
-        else:
-            message = f'warning: sheet "{sheet}" is only in new file. cannot compare'
-            log(message, 'qp.diff()', verbosity)
-            idx = len(summary)
-            summary.loc[idx, 'sheet'] = sheet
-            summary.loc[idx, 'in both files'] = ''
-            summary.loc[idx, 'uid column'] = ''
-
-    #wip
-    string = 'no string version of differences available when comparing excel files'
-
-    return results, summary, string
-
-
-def _diff_str(
-        df_new,
-        df_old,
-        uid=None,
-        ignore=None,
-        rename=None,
-        verbosity=3,
-        ):
-    """"
-    see _diff() for details
-    """
-
-    if ignore is None:
-        ignore = []
-    elif isinstance(ignore, str):
-        ignore = [ignore]
-        ignore.append('meta')
-    ignore.append(uid)
-
-    if df_new.equals(df_old):
-        return 'both dataframes are identical'
-
-    if isinstance(rename, dict):
-        df_new = df_new.rename(columns=rename)
-        df_old = df_old.rename(columns=rename)
-
-    idx_shared = df_new.index.intersection(df_old.index)
-    cols_shared = df_new.columns.intersection(df_old.columns).difference(ignore)
-
-
-    #different dtypes, headers and indices
-
-    dtypes_new = {}
-    dtypes_old = {}
-    for col in cols_shared:
-        if df_new[col].dtype != df_old[col].dtype:
-            dtypes_new[col] = df_new[col].dtype
-            dtypes_old[col] = df_old[col].dtype
-
-    result = 'only in df_new:\n'
-    result += f'dtypes: {dtypes_new}\n'
-    indices_new = (
-        df_new
-        .index
-        .difference(df_old.index)
-        .values
-        )
-    result += f'indices: {indices_new}\n'
-    headers_new = (
-        df_new
-        .columns
-        .difference(df_old.columns)
-        .difference(ignore)
-        .values
-        )
-    result += f'headers: {headers_new}\n'
-
-    result += 'only in df_old:\n'
-    result += f'dtypes: {dtypes_old}\n'
-    indices_old = (
-        df_old
-        .index
-        .difference(df_new.index)
-        .values
-        )
-    result += f'indices: {indices_old}\n'
-    headers_old = (
-        df_old
-        .columns
-        .difference(df_new.columns)
-        .difference(ignore)
-        .values
-        )
-    result += f'headers: {headers_old}\n'
-
-
-    #different values
-
-    df_new_shared = df_new.loc[idx_shared, cols_shared]
-    df_old_shared = df_old.loc[idx_shared, cols_shared]
-    diffs = df_new_shared != df_old_shared
-
-    temp1 = df_new_shared[diffs].astype(str).fillna('')
-    temp2 = df_old_shared[diffs].astype(str).fillna('')
-
-    result += f'\ndifferent values in df_new:\n{temp1}\n'
-    result += f'\ndifferent values in df_old:\n{temp2}\n'
-
-    return result
+    def summary(self):
+        summary = pd.DataFrame({
+            'sheets': self.sheets,
+            'in both files': self.sheet_in_both_files,
+            'uid col': self.uid_cols,
+            'renamed cols in new df': self.renamed_cols_new,
+            'renamed cols in old df': self.renamed_cols_old,
+            'ignored cols in new df': self.ignored_cols_new,
+            'ignored cols in old df': self.ignored_cols_old,
+            'cols ignored for comparison': self.cols_ignore,
+            'cols added': [len(x) for x in self.cols_added],
+            'cols removed': [len(x) for x in self.cols_removed],
+            'cols shared': [len(x) for x in self.cols_shared],
+            'rows added': [len(x) for x in self.rows_added],
+            'rows removed': [len(x) for x in self.rows_removed],
+            'rows shared': [len(x) for x in self.rows_shared],
+            # 'vals added': self.vals_added,
+            # 'vals removed': self.vals_removed,
+            # 'vals changed': self.vals_changed,
+            })
+        return summary
 
 
 def _try_replace_gt_lt(x):
@@ -1257,73 +1136,3 @@ def _try_replace_gt_lt(x):
         return str(x).replace('<', '&lt;').replace('>', '&gt;')
     else:
         return x
-
-
-def _apply_style(x, df_style):
-    return df_style
-
-
-def _set_index(df_new, df_old, uid, verbosity=3):
-
-    if uid in df_new.columns:
-        if uid in df_old.columns:
-            df_new.index = df_new[uid]
-            df_old.index = df_old[uid]
-            return df_new, df_old, uid
-        else:
-            message = (
-                f'error: uid "{uid}" is not in old dataframe.'
-                ' looking for alternative uid.'
-            )
-            log(message, 'qp.diff', verbosity)
-    else:
-        message = (
-            f'error: uid "{uid}" is not in new dataframe.'
-            ' looking for alternative uid.'
-            )
-        log(message, 'qp.diff', verbosity)
-
-    uids_potential = df_new.columns.intersection(df_old.columns)
-    uids_by_uniqueness = {}
-    for uid in uids_potential:
-        unique_in_new = pd.Index(df_new[uid].dropna().unique())
-        unique_in_old = pd.Index(df_old[uid].dropna().unique())
-        unique_shared = unique_in_new.intersection(unique_in_old)
-        uids_by_uniqueness[uid] = len(unique_shared)
-
-    if len(uids_by_uniqueness) > 0:
-        uid = sorted(
-            uids_by_uniqueness.items(),
-            key=lambda item: item[1],
-            reverse=True,
-            )[0][0]
-        df_new.index = df_new[uid]
-        df_old.index = df_old[uid]
-        log(f'info: found alternative uid "{uid}" for comparison', 'qp.diff', verbosity)
-    else:
-        uid = None
-        log('warning: no alternative uid found. using index for comparison',
-            'qp.diff', verbosity)
-
-    return df_new, df_old, uid
-
-
-def _ensure_unique_index(df_new, df_old, uid, verbosity=3):
-
-    if not df_new.index.is_unique:
-        message = (
-            f'error: index/uid "{uid}" is not unique in new dataframe'
-            ' duplicated entries will be ignored'
-            )
-        log(message, 'qp.diff', verbosity)
-        df_new = df_new.loc[df_new.index.drop_duplicates(keep=False), :]
-
-    if not df_old.index.is_unique:
-        message = (
-            f'error: index/uid "{uid}" is not unique in old dataframe'
-            ' duplicated entries will be ignored'
-            )
-        log(message, 'qp.diff', verbosity)
-        df_old = df_old.loc[df_old.index.drop_duplicates(keep=False), :]
-
-    return df_new, df_old
