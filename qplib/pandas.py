@@ -622,14 +622,14 @@ def days_between(
 
 class Diff:
     def __init__(
-        self,
-        new: pd.DataFrame | str,
-        old: pd.DataFrame | str,
-        uid=None,
-        ignore=None,  #col(s) to ignore for comparison
-        rename=None,  #rename cols before comparison
-        verbosity=3,
-        ):
+            self,
+            new: pd.DataFrame | str,
+            old: pd.DataFrame | str,
+            uid=None,
+            ignore=None,  #col(s) to ignore for comparison
+            rename=None,  #rename cols before comparison
+            verbosity=3,
+            ):
 
         #original args
         self._new = new
@@ -647,10 +647,10 @@ class Diff:
         self.sheets = []
         self.sheet_in_both_files = []
         self.uid_cols = []
-        self.renamed_cols_new = []
-        self.renamed_cols_old = []
-        self.ignored_cols_new = []
-        self.ignored_cols_old = []
+        self.cols_renamed_new = []
+        self.cols_renamed_old = []
+        self.cols_ignored_new = []
+        self.cols_ignored_old = []
         self.cols_ignore = []
         self.cols_added = []
         self.cols_removed = []
@@ -661,6 +661,7 @@ class Diff:
         self.vals_added = []
         self.vals_removed = []
         self.vals_changed = []
+        self.dtypes_changed = []
 
         #process inputs
         self._get_dfs()
@@ -672,7 +673,7 @@ class Diff:
 
 
     def _get_dfs(self):
-            
+
         #when both inputs are excel files, they might
         #contain multiple sheets to be compared
         conditions_excel_comp = (
@@ -682,10 +683,11 @@ class Diff:
             and self._old.endswith('.xlsx')
             )
         if conditions_excel_comp:
-            log('debug: comparing all sheets from 2 excel files', 'qp.diff()', self._verbosity)
+            msg = 'debug: comparing all sheets from 2 excel files'
+            log(msg, 'qp.diff()', self._verbosity)
             self._read_excel_sheets()
 
-            
+
         #only 2 dfs need to be compared if input is
         #2 dfs, 2 csvs or 1 df and 1 csv/excel file
         else:
@@ -696,12 +698,13 @@ class Diff:
                 elif self._new.endswith('.xlsx'):
                     df_new = pd.read_excel(self._new)
                 else:
-                    log(f'error: unknown file extension: {self._new}', 'qp.diff()', self._verbosity)
+                    msg = f'error: unknown file extension: {self._new}'
+                    log(msg, 'qp.diff()', self._verbosity)
             elif isinstance(self._new, pd.DataFrame):
                 df_new = self._new
 
             else:
-                message = f'error: incompatible type for new df'
+                message = 'error: incompatible type for new df'
                 log(message, 'qp.diff()', self._verbosity)
 
             if isinstance(self._old, str):
@@ -710,7 +713,8 @@ class Diff:
                 elif self._old.endswith('.xlsx'):
                     df_old = pd.read_excel(self._old)
                 else:
-                    log(f'error: unknown file extension: {self._old}', 'qp.diff()', self._verbosity)
+                    msg = f'error: unknown file extension: {self._old}'
+                    log(msg, 'qp.diff()', self._verbosity)
             elif isinstance(self._old, pd.DataFrame):
                 df_old = self._old
             else:
@@ -739,14 +743,14 @@ class Diff:
                 df_old = pd.read_excel(self._old, sheet_name=sheet)
 
             elif sheet in sheets_new:
-                message = f'warning: sheet "{sheet}" is only in new file. cannot compare'
+                message = f'debug: sheet "{sheet}" is only in new file.'
                 log(message, 'qp.diff()', self._verbosity)
                 sheet_in_both_files = 'only in new file'
                 df_new = pd.read_excel(self._new, sheet_name=sheet)
                 df_old = pd.DataFrame()
 
             elif sheet in sheets_old:
-                message = f'warning: sheet "{sheet}" is only in old file. cannot compare'
+                message = f'debug: sheet "{sheet}" is only in old file.'
                 log(message, 'qp.diff()', self._verbosity)
                 sheet_in_both_files = 'only in old file'
                 df_new = pd.DataFrame()
@@ -759,7 +763,7 @@ class Diff:
 
 
     def _format_dfs(self):
-        for i, sheet in enumerate(self.sheets):
+        for i in range(len(self.sheets)):
             self.dfs_new[i] = _format_df(
                 self.dfs_new[i],
                 fix_headers=False,
@@ -775,33 +779,44 @@ class Diff:
 
 
     def _rename_cols(self):
-            for i, sheet in enumerate(self.sheets):
-                df_new = self.dfs_new[i]
-                df_old = self.dfs_old[i]
-                rename = self._rename
-                rename_new = rename_old = ''
+        for i in range(len(self.sheets)):
+            df_new = self.dfs_new[i]
+            df_old = self.dfs_old[i]
+            rename = self._rename
+            rename_new = rename_old = ''
 
-                if rename is None:
-                    pass
-                elif isinstance(rename, dict):
-                    if 'meta' in rename:
-                        message = 'warning: it is not advised to rename the "meta" column'
-                        log(message, 'qp.diff()', self._verbosity)
-                    rename_new = {old: new for old, new in rename.items() if old in df_new.columns}
-                    rename_old = {old: new for old, new in rename.items() if old in df_old.columns}
-                    df_new.rename(columns=rename_new, inplace=True)
-                    df_old.rename(columns=rename_old, inplace=True)
-                else:
-                    log('error: rename argument must be a dictionary', 'qp.diff()', self._verbosity)
+            if rename is None:
+                pass
+            elif isinstance(rename, dict):
+                if 'meta' in rename:
+                    message = 'warning: it is not advised to rename the "meta" column'
+                    log(message, 'qp.diff()', self._verbosity)
+                rename_new = {
+                    old: new
+                    for old, new
+                    in rename.items()
+                    if old in df_new.columns
+                    }
+                rename_old = {
+                    old: new
+                    for old, new
+                    in rename.items()
+                    if old in df_old.columns
+                    }
+                df_new.rename(columns=rename_new, inplace=True)
+                df_old.rename(columns=rename_old, inplace=True)
+            else:
+                msg = 'error: rename argument must be a dictionary'
+                log(msg, 'qp.diff()', self._verbosity)
 
-                self.renamed_cols_new.append(rename_new)
-                self.renamed_cols_old.append(rename_old)
+            self.cols_renamed_new.append(rename_new)
+            self.cols_renamed_old.append(rename_old)
 
 
     def _get_uids(self):
 
         for i, sheet in enumerate(self.sheets):
-            
+
             df_new = self.dfs_new[i]
             df_old = self.dfs_old[i]
 
@@ -810,17 +825,19 @@ class Diff:
             elif self._uid in df_new.columns and self._uid in df_old.columns:
                 uid = self._uid
             else:
-                if sheet is None:
-                    message = 'warning: no valid uid column specified for dataframe comparison'
+                if self._uid is None:
+                    msg = 'debug: searching for alternative uid column'
+                elif sheet is None:
+                    msg = 'warning: no valid uid column specified for comparison'
                 else:
-                    message = f'warning: no valid uid column specified for sheet "{sheet}"'
-                log(message, 'qp.diff()', self._verbosity)
+                    msg = f'warning: no valid uid column specified for sheet "{sheet}"'
+                log(msg, 'qp.diff()', self._verbosity)
 
                 uids_potential = df_new.columns.intersection(df_old.columns)
                 uids_by_uniqueness = {}
                 for uid in uids_potential:
-                    unique_in_new = pd.Index(df_new[uid].dropna().unique())
-                    unique_in_old = pd.Index(df_old[uid].dropna().unique())
+                    unique_in_new = pd.Index(df_new[uid].dropna()).unique()
+                    unique_in_old = pd.Index(df_old[uid].dropna()).unique()
                     unique_shared = unique_in_new.intersection(unique_in_old)
                     uids_by_uniqueness[uid] = len(unique_shared)
 
@@ -830,12 +847,13 @@ class Diff:
                         key=lambda item: item[1],
                         reverse=True,
                         )[0][0]
-                    log(f'info: found alternative uid "{uid}" for comparison', 'qp.diff', self._verbosity)
+                    msg = f'debug: found alternative uid "{uid}" for comparison'
+                    log(msg, 'qp.diff()', self._verbosity)
                 else:
                     uid = None
-                    log('warning: no alternative uid found. using index for comparison',
-                        'qp.diff', self._verbosity)
-            
+                    msg = 'info: no alternative uid found. using index for comparison'
+                    log(msg, 'qp.diff()', self._verbosity)
+
             if uid is not None:
                 df_new.index = df_new[uid]
                 df_old.index = df_old[uid]
@@ -845,13 +863,13 @@ class Diff:
     def _ignore_cols(self):
         for i in range(len(self.sheets)):
             cols_ignore = self._ignore.copy()
-            self.ignored_cols_new.append((
+            self.cols_ignored_new.append((
                 self.dfs_new[i]
                 .columns
                 .intersection(cols_ignore)
                 .to_list()
                 ))
-            self.ignored_cols_old.append((
+            self.cols_ignored_old.append((
                 self.dfs_old[i]
                 .columns
                 .intersection(cols_ignore)
@@ -869,7 +887,7 @@ class Diff:
             df_new = self.dfs_new[i]
             df_old = self.dfs_old[i]
             cols_ignore = self.cols_ignore[i]
-            
+
             self.cols_added.append((
                 df_new
                 .columns
@@ -905,6 +923,19 @@ class Diff:
                 .intersection(df_old.index)
                 ))
 
+            different_dtypes = {}
+            for col in self.cols_shared[i]:
+                if df_new[col].dtype != df_old[col].dtype:
+                    changed = {
+                        'old': df_old[col].dtype,
+                        'new': df_new[col].dtype
+                        }
+                    different_dtypes[col] = changed
+            if len(different_dtypes) > 0:
+                self.dtypes_changed.append(different_dtypes)
+            else:
+                self.dtypes_changed.append(None)
+
 
     def show(
             self,
@@ -913,20 +944,52 @@ class Diff:
             prefix_old='old: ',
             ):
 
-        df_new = self.dfs_new[sheet]
-        df_old = self.dfs_old[sheet]
-        uid_col = self.uid_cols[sheet]
-        cols_added = self.cols_added[sheet]
-        cols_removed = self.cols_removed[sheet]
-        cols_shared = self.cols_shared[sheet]
-        rows_added = self.rows_added[sheet]
-        rows_removed = self.rows_removed[sheet]
-        rows_shared = self.rows_shared[sheet]
+        if sheet in self.sheets:
+            ind = self.sheets.index(sheet)
+        elif isinstance(sheet, int) and sheet < len(self.sheets):
+            ind = sheet
+        else:
+            log(f'error: sheet "{sheet}" not found', 'qp.diff()', self._verbosity)
+            return None
 
-        
-        if mode in ['new', 'new+']:
+        df_new = self.dfs_new[ind]
+        df_old = self.dfs_old[ind]
+        uid_col = self.uid_cols[ind]
+        cols_added = self.cols_added[ind]
+        cols_removed = self.cols_removed[ind]
+        cols_shared = self.cols_shared[ind]
+        rows_added = self.rows_added[ind]
+        rows_removed = self.rows_removed[ind]
+        rows_shared = self.rows_shared[ind]
+
+
+        if df_new.empty:
+            df_diff = copy.deepcopy(df_old)
+            df_diff_style = pd.DataFrame(
+                f'background-color: {RED}',
+                index=df_diff.index,
+                columns=df_diff.columns,
+                )
+            df_diff['meta'] += 'removed sheet'
+
+
+        elif df_old.empty:
             df_diff = copy.deepcopy(df_new)
-            df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
+            df_diff_style = pd.DataFrame(
+                f'background-color: {GREEN}',
+                index=df_diff.index,
+                columns=df_diff.columns,
+                )
+            df_diff['meta'] += 'added sheet'
+
+
+        elif mode in ['new', 'new+']:
+            df_diff = copy.deepcopy(df_new)
+            df_diff_style = pd.DataFrame(
+                '',
+                index=df_diff.index,
+                columns=df_diff.columns,
+                )
 
             #add metadata columns
             if mode == 'new+':
@@ -958,7 +1021,6 @@ class Diff:
                     ],
                     axis=1,
                     )
-
                 df_diff = df_diff[cols_new]
                 df_diff_style = df_diff_style[cols_new]
 
@@ -971,7 +1033,11 @@ class Diff:
 
         elif mode == 'old':
             df_diff = copy.deepcopy(df_old)
-            df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
+            df_diff_style = pd.DataFrame(
+                '',
+                index=df_diff.index,
+                columns=df_diff.columns,
+                )
 
             df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
             df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
@@ -985,7 +1051,11 @@ class Diff:
             df_diff = pd.concat([df_new, df_old.loc[:, cols_old]], axis=1)
             df_diff.loc[inds_old, :] = df_old.loc[inds_old, :]
 
-            df_diff_style = pd.DataFrame('', index=df_diff.index, columns=df_diff.columns)
+            df_diff_style = pd.DataFrame(
+                '',
+                index=df_diff.index,
+                columns=df_diff.columns,
+                )
 
             df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
             df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
@@ -1106,27 +1176,167 @@ class Diff:
         return diff_styled
 
 
-    def summary(self):
-        summary = pd.DataFrame({
-            'sheets': self.sheets,
-            'in both files': self.sheet_in_both_files,
-            'uid col': self.uid_cols,
-            'renamed cols in new df': self.renamed_cols_new,
-            'renamed cols in old df': self.renamed_cols_old,
-            'ignored cols in new df': self.ignored_cols_new,
-            'ignored cols in old df': self.ignored_cols_old,
-            'cols ignored for comparison': self.cols_ignore,
-            'cols added': [len(x) for x in self.cols_added],
-            'cols removed': [len(x) for x in self.cols_removed],
-            'cols shared': [len(x) for x in self.cols_shared],
-            'rows added': [len(x) for x in self.rows_added],
-            'rows removed': [len(x) for x in self.rows_removed],
-            'rows shared': [len(x) for x in self.rows_shared],
-            # 'vals added': self.vals_added,
-            # 'vals removed': self.vals_removed,
-            # 'vals changed': self.vals_changed,
+    def summary(self, linebreak='<br>'):
+        summary = pd.DataFrame()
+
+        if len(self.sheets) > 1 or self.sheets[0] is not None:
+            summary['sheets'] = self.sheets
+            summary['in both files'] = self.sheet_in_both_files
+
+        summary['uid col'] = _cols_to_str(self.uid_cols)
+        summary['cols shared'] = [len(x) for x in self.cols_shared]
+        summary['rows shared'] = [len(x) for x in self.rows_shared]
+        summary['cols added'] = _iters_to_str(self.cols_added, linebreak)
+        summary['cols removed'] = _iters_to_str(self.cols_removed, linebreak)
+        summary['rows added'] = _iters_to_str(self.rows_added, linebreak)
+        summary['rows removed'] = _iters_to_str(self.rows_removed, linebreak)
+        summary['dtypes changed'] = _nested_dicts_to_str(self.dtypes_changed, linebreak)
+        summary['cols renamed in new'] = _dicts_to_str(self.cols_renamed_new, linebreak)
+        summary['cols renamed in old'] = _dicts_to_str(self.cols_renamed_old, linebreak)
+        summary['cols ignored in new'] = _iters_to_str(self.cols_ignored_new, linebreak)
+        summary['cols ignored in old'] = _iters_to_str(self.cols_ignored_old, linebreak)
+
+        summary = summary.style.set_properties(**{
+            'text-align': 'left',
+            'white-space': 'pre-wrap',
             })
         return summary
+
+
+    def to_excel(
+            self,
+            path,
+            mode='mix',
+            index=False,
+            prefix_old='old: ',
+            linebreak='\n',
+            ):
+
+        with pd.ExcelWriter(path) as writer:
+            self.summary(linebreak).to_excel(
+                writer,
+                sheet_name='diff_summary',
+                index=index,
+                )
+
+            for i, sheet in enumerate(self.sheets):
+
+                if sheet is None:
+                    sheet = 'diff'
+
+                if sheet == 'diff_summary':
+                    message = (
+                        'warning: comparison for sheet "diff_summary" will not'
+                        ' be written to file since this name is reserved'
+                        )
+                    log(message, 'qp.diff()', self._verbosity)
+
+                else:
+
+                    result = self.show(
+                        mode=mode,
+                        sheet=i,
+                        prefix_old=prefix_old,
+                        )
+
+                    result.data['meta'] = result.data['meta'].str.replace('<br>', '\n')
+
+                    result.to_excel(
+                        writer,
+                        sheet_name=sheet,
+                        index=index,
+                        )
+
+        if mode == 'new+':
+            hide(
+                path,
+                axis='col',
+                patterns=f'{prefix_old}.*',
+                hide=True,
+                verbosity=self._verbosity,
+                )
+        format_excel(path)
+        log(f'info: differences saved to "{path}"', 'qp.diff()', self._verbosity)
+
+
+    def print(self):
+        print(self.to_str())
+
+
+    def to_str(self):
+        return str(self)
+
+    def __str__(self):
+        summary = self.summary()
+        if len(self.sheets) == 1 and self.sheets[0] is None:
+            string = 'Diff between 2 dataframes\n'
+            string += _sheet_to_str(summary, 0)
+        else:
+            string = f'Diff between 2 excel files with {len(self.sheets)} sheets\n'
+            for i, sheet in enumerate(self.sheets):
+                string += f'\nSheet: {sheet}\n'
+                string += _sheet_to_str(summary, i)
+        return string
+
+
+def _sheet_to_str(summary, row):
+    string = ''
+    one_liners = [
+        'in both files',
+        'uid col',
+        'cols shared',
+        'rows shared',
+        ]
+    for col in summary.data.columns:
+        if col == 'sheets':
+            continue
+        elif col in one_liners:
+            string += f'  {col}: {summary.data.loc[row, col]}\n'
+        else:
+            string += f'  {col}:\n    {summary.data.loc[row, col]}\n'
+    return string.replace('<br>', '\n    ')
+
+
+def _cols_to_str(iter):
+    iter_new = []
+    for col in iter:
+        if col is None:
+            iter_new.append('')
+        else:
+            iter_new.append(str(col))
+    return iter_new
+
+
+def _dicts_to_str(iter, linebreak='<br>'):
+    iter_new = []
+    for dictionary in iter:
+        if dictionary:
+            iter_new.append(
+                f';{linebreak}'.join(
+                    [f'{k} -> {v}' for k, v in dictionary.items()]
+                    )
+                )
+        else:
+            iter_new.append('')
+    return iter_new
+
+
+def _iters_to_str(iter, linebreak='<br>'):
+    iter_new = []
+    for iter in iter:
+        iter_new.append(f';{linebreak}'.join([str(x) for x in iter]))
+    return iter_new
+
+
+def _nested_dicts_to_str(iter, linebreak='<br>'):
+    iter_new = []
+    for dictionary in iter:
+        string = ''
+        if dictionary:
+            for k, v in dictionary.items():
+                string += f'{k}: {v["old"]} -> {v["new"]}{linebreak}'
+        iter_new.append(string)
+    return iter_new
 
 
 def _try_replace_gt_lt(x):
