@@ -14,7 +14,7 @@ from ipywidgets import (
     )
 
 from .util import log
-from .pandas import _diff
+from .pandas import Diff as diff
 from .types import (
     _dict,
     _int,
@@ -301,11 +301,11 @@ def query(df_old, code=''):
         if 'meta' in df_old.columns and 'meta' not in df_filtered.columns:
             df_filtered.insert(0, 'meta', df_old.loc[settings.rows, 'meta'])
 
-        result = _diff(
-            df_filtered, df_old,
-            mode=settings.diff,
+        result = diff(
+            df_filtered,
+            df_old,
             verbosity=settings.verbosity
-            )
+            ).show(mode=settings.diff)
 
     elif settings.style is not None:
         rows_shared = df_filtered.index.intersection(settings.style.index)

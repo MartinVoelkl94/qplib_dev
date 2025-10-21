@@ -7,7 +7,7 @@ from .pandas import (
     merge,
     embed,
     days_between,
-    _diff as diff,
+    Diff as diff,
     )
 
 from .util import (

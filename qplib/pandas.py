@@ -861,20 +861,25 @@ class Diff:
 
 
     def _ignore_cols(self):
+
         for i in range(len(self.sheets)):
+
             cols_ignore = self._ignore.copy()
+
             self.cols_ignored_new.append((
                 self.dfs_new[i]
                 .columns
                 .intersection(cols_ignore)
                 .to_list()
                 ))
+
             self.cols_ignored_old.append((
                 self.dfs_old[i]
                 .columns
                 .intersection(cols_ignore)
                 .to_list()
                 ))
+
             cols_ignore.append('meta')
             if self.uid_cols[i] is not None:
                 cols_ignore.append(self.uid_cols[i])
@@ -1260,22 +1265,28 @@ class Diff:
 
 
     def print(self):
-        print(self.to_str())
+        print(self.str())
 
 
-    def to_str(self):
+    def str(self):
         return str(self)
 
     def __str__(self):
         summary = self.summary()
         if len(self.sheets) == 1 and self.sheets[0] is None:
-            string = 'Diff between 2 dataframes\n'
-            string += _sheet_to_str(summary, 0)
+            if self.dfs_new[0].equals(self.dfs_old[0]):
+                string = 'both dataframes are identical'
+            else:
+                string = 'Diff between 2 dataframes\n'
+                string += _sheet_to_str(summary, 0)
         else:
             string = f'Diff between 2 excel files with {len(self.sheets)} sheets\n'
             for i, sheet in enumerate(self.sheets):
-                string += f'\nSheet: {sheet}\n'
-                string += _sheet_to_str(summary, i)
+                if self.dfs_new[i].equals(self.dfs_old[i]):
+                    string += f'\nSheet "{sheet}" is identical in both files\n'
+                else:
+                    string += f'\nSheet: {sheet}\n'
+                    string += _sheet_to_str(summary, i)
         return string
 
 
