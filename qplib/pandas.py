@@ -278,10 +278,6 @@ def _format_df(
     Formats dataframe to ensure compatibility with the query language used by df.q().
     """
 
-    if df.empty:
-        log('debug: dataframe is empty, skipping formatting', 'df.format()', verbosity)
-        return df
-
     qp_old = df.qp
     df = copy.deepcopy(df)
 
@@ -297,7 +293,10 @@ def _format_df(
     elif add_metadata is True:
         log('info: adding column "meta" at position 0', 'df.format()', verbosity)
         metadata_col = pd.Series('', index=df.index, name='meta')
-        df = pd.concat([metadata_col, df], axis=1)
+        if df.empty:
+            df.insert(0, 'meta', '')
+        else:
+            df = pd.concat([metadata_col, df], axis=1)
 
     df.qp = qp_old
     return df
@@ -619,6 +618,81 @@ def days_between(
 
 
 
+def deduplicate(obj, name='object', verbosity=0):
+    """
+    Deduplicate entries in object which can be converted
+    to pandas Series by appending consecutive numbers.
+    Note that the entries are converted to strings in the process.
+    """
+
+    obj = copy.deepcopy(obj)
+    class_orig = obj.__class__
+    obj = _to_series(obj)
+
+    #Values can only be deduplicated if index is unique
+    if not obj.index.is_unique:
+        msg = (
+            f'info: duplicates found in index of {name}.'
+            ' deduplicating by appending consecutive numbers.'
+            )
+        log(msg, 'qp.diff()', verbosity)
+        obj.index = _deduplicate(_to_series(obj.index))
+
+    rounds = 0
+    while not obj.is_unique:
+        if rounds == 0:
+            msg = (
+                f'debug: duplicates found in {name}.'
+                ' deduplicating by appending consecutive numbers.'
+                )
+        else:
+            msg = (
+                f'debug: duplicates still found in {name} after'
+                f' {rounds} deduplication rounds.'
+                ' deduplicating again by appending consecutive numbers.'
+                )
+        log(msg, 'qp.diff()', verbosity)
+        obj = _deduplicate(obj)
+        rounds += 1
+
+    if not isinstance(obj, class_orig):
+        try:
+            obj = class_orig(obj)
+        except Exception as e:
+            msg = (
+                'Error: could not convert deduplicated Series back to'
+                f' original type {class_orig}: {e}'
+                )
+            log(msg, 'qp.diff()', verbosity)
+
+    return obj
+
+
+def _to_series(obj, verbosity=3):
+    try:
+        obj = pd.Series(obj, dtype=str)
+    except Exception as e:
+        msg = (
+            'Error: could not convert input of type'
+            f' {type(obj)} to Series: {e}'
+            )
+        log(msg, 'qp.diff()', verbosity)
+    return obj
+
+
+def _deduplicate(series):
+    cumulative_count = series.groupby(series).cumcount()
+    duplicates_mask = series.index[cumulative_count > 0]
+    duplicates = series[duplicates_mask]
+    duplicates_new = (
+        duplicates.astype(str)
+        + '_'
+        + cumulative_count[duplicates_mask].astype(str)
+        )
+    series[duplicates_mask] = duplicates_new
+    return series
+
+
 
 class Diff:
     """
@@ -635,6 +709,7 @@ class Diff:
         which rows correspond to each other in old and new data.
         If None, the function will try to find a suitable column automatically.
         If no suitable column is found, the index will be used.
+        If False, the index will be used.
         when comparing multiple sheets from excel files, a dictionary
         with sheet names as keys and uid column names as values can be provided.
 
@@ -695,8 +770,6 @@ class Diff:
         #processed data
         self.dfs_new = []
         self.dfs_old = []
-        self.dfs_diff = []
-        self.dfs_diff_styled = []
         self.sheets = []
         self.sheet_in_both_files = []
         self.uid_cols = []
@@ -912,6 +985,8 @@ class Diff:
                 uid = self._uid[sheet]
             elif self._uid in df_new.columns and self._uid in df_old.columns:
                 uid = self._uid
+            elif self._uid is False:
+                uid = None
             else:
                 if self._uid is None:
                     msg = 'debug: searching for alternative uid column'
@@ -943,8 +1018,16 @@ class Diff:
                     log(msg, 'qp.diff()', self._verbosity)
 
             if uid is not None:
-                df_new.index = df_new[uid]
-                df_old.index = df_old[uid]
+                df_new.index = deduplicate(
+                    df_new[uid],
+                    name=f'{uid} in new df',
+                    verbosity=self._verbosity,
+                    )
+                df_old.index = deduplicate(
+                    df_old[uid],
+                    name=f'{uid} in old df',
+                    verbosity=self._verbosity,
+                    )
             self.uid_cols.append(uid)
 
 
@@ -1343,6 +1426,19 @@ class Diff:
         summary['cols removed'] = _iters_to_str(self.cols_removed, linebreak)
         summary['rows added'] = _iters_to_str(self.rows_added, linebreak)
         summary['rows removed'] = _iters_to_str(self.rows_removed, linebreak)
+
+        #these 3 are calculated as part of show(), so only include them
+        #if all sheets have been processed with show()
+        if (
+            len(self.vals_added)
+            == len(self.vals_removed)
+            == len(self.vals_changed)
+            == len(self.sheets)
+                ):
+            summary['vals added'] = self.vals_added
+            summary['vals removed'] = self.vals_removed
+            summary['vals changed'] = self.vals_changed
+
         summary['dtypes changed'] = _nested_dicts_to_str(self.dtypes_changed, linebreak)
         summary['cols renamed in new'] = _dicts_to_str(self.cols_renamed_new, linebreak)
         summary['cols renamed in old'] = _dicts_to_str(self.cols_renamed_old, linebreak)
@@ -1387,10 +1483,13 @@ class Diff:
         """
 
         with pd.ExcelWriter(path) as writer:
-            self.summary(linebreak).to_excel(
+
+            #placeholder. summary is updated based on the results
+            #of the individual sheet comparisons, but should still
+            #be at the beginning of the file.
+            pd.DataFrame().to_excel(
                 writer,
                 sheet_name='diff_summary',
-                index=index,
                 )
 
             for i, sheet in enumerate(self.sheets):
@@ -1420,6 +1519,12 @@ class Diff:
                         sheet_name=sheet,
                         index=index,
                         )
+
+            self.summary(linebreak).to_excel(
+                writer,
+                sheet_name='diff_summary',
+                index=index,
+                )
 
         if mode == 'new+':
             hide(
@@ -1521,11 +1626,11 @@ def _dicts_to_str(iter, linebreak='<br>'):
     return iter_new
 
 
-def _iters_to_str(iter, linebreak='<br>'):
-    iter_new = []
-    for iter in iter:
-        iter_new.append(f';{linebreak}'.join([str(x) for x in iter]))
-    return iter_new
+def _iters_to_str(iters, linebreak='<br>'):
+    iters_new = []
+    for iter in iters:
+        iters_new.append(f';{linebreak}'.join([str(x) for x in iter]))
+    return iters_new
 
 
 def _nested_dicts_to_str(iter, linebreak='<br>'):

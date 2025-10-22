@@ -7,6 +7,7 @@ from .pandas import (
     merge,
     embed,
     days_between,
+    deduplicate,
     Diff as diff,
     )
 
@@ -53,6 +54,7 @@ __all__ = (
     'merge',
     'embed',
     'days_between',
+    'deduplicate',
     'diff',
 
     'log',

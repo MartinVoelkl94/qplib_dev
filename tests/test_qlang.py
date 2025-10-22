@@ -71,7 +71,7 @@ def test_col_eval():
         """)
     expected = get_df()
     expected['ID'] = expected['name']
-    text = 'failed test0: copy col contents\n' + qp.diff(result, expected, output='str')
+    text = 'failed test0: copy col contents\nDIFF:\n' + qp.diff(result, expected).str()
     assert result.equals(expected), text
 
     result = get_df().q(
@@ -82,8 +82,8 @@ def test_col_eval():
     expected = get_df()
     expected['ID'] = expected['name']
     text = (
-        'failed test1: copy col contents and select all\n'
-        + qp.diff(result, expected, output='str')
+        'failed test1: copy col contents and select all\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -97,8 +97,8 @@ def test_col_eval():
     expected['ID'] = expected['name']
     expected['age'] = expected['name']
     text = (
-        'failed test2: copy col contents to multiple cols\n'
-        + qp.diff(result, expected, output='str')
+        'failed test2: copy col contents to multiple cols\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -112,8 +112,8 @@ def test_col_eval():
     for col in expected.columns:
         expected[col] = expected['name']
     text = (
-        'failed test3: copy col contents to all cols\n'
-        + qp.diff(result, expected, output='str')
+        'failed test3: copy col contents to all cols\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -127,8 +127,8 @@ def test_col_eval():
     expected['ID'] = expected['name']
     expected['age'] = expected['name']
     text = (
-        'failed test4: conditionally copy col contents to multiple cols\n'
-        + qp.diff(result, expected, output='str')
+        'failed test4: conditionally copy col contents to multiple cols\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -142,8 +142,8 @@ def test_col_eval():
     expected['ID'] = expected['name']
     expected['age'] = expected['name']
     text = (
-        'failed test5: conditionally copy col contents to multiple cols\n'
-        + qp.diff(result, expected, output='str')
+        'failed test5: conditionally copy col contents to multiple cols\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -158,13 +158,13 @@ def test_col_eval():
     rows = [0, 1, 2, 3, 4, 8, 10]
     expected.loc[rows, 'age'] = expected.loc[rows, 'name']
     text = (
-        'failed test6: conditionally copy col contents to multiple cols\n'
-        + qp.diff(result, expected, output='str')
+        'failed test6: conditionally copy col contents to multiple cols\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert (result.loc[[5, 6, 7, 9], 'age'] != df.loc[[5, 6, 7, 9], 'name']).all(), text
     text = (
-        'failed test7: conditionally copy col contents to multiple cols\n'
-        + qp.diff(result, expected, output='str')
+        'failed test7: conditionally copy col contents to multiple cols\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -172,11 +172,11 @@ def test_col_eval():
 def test_comment():
     result = get_df().q('#id')
     expected = get_df()
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     result = get_df().q('id #name')
     expected = get_df().loc[:, ['ID']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     result = get_df().q(
         r"""
@@ -185,7 +185,7 @@ def test_comment():
         """
         )
     expected = get_df().loc[:, ['ID']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_diff_mix():
@@ -195,7 +195,7 @@ def test_diff_mix():
     expected.insert(0, 'meta', '')
     expected.insert(1, 'new1', ['a'] * 11)
     expected = expected.reindex(sorted(expected.columns), axis=1)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_diff_new():
@@ -204,7 +204,7 @@ def test_diff_new():
         'meta': [''] * 11,
         'new1': ['1'] * 11,
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_diff_new_plus():
@@ -218,14 +218,14 @@ def test_diff_new_plus():
         'old: a': [1, 2, 3],
         })
     expected['old: a'] = expected['old: a'].astype('object')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_diff_old():
     result = get_df().q(r'$new=1   $diff=old').data
     expected = get_df()
     expected.insert(0, 'meta', '')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_diff_retain_meta():
@@ -233,7 +233,7 @@ def test_diff_retain_meta():
     df.insert(0, 'meta', 'test')
     result = df.q(r'id $diff=new').data
     expected = df.loc[:, ['meta', 'ID']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_eval():
@@ -246,8 +246,8 @@ def test_eval():
     expected = get_df()
     expected['name'] = expected['name'].str.lower()
     text = (
-        'failed test0: change to lowercase\n'
-        + qp.diff(result, expected, output='str')
+        'failed test0: change to lowercase\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -261,8 +261,8 @@ def test_eval():
     expected = get_df()
     expected['name'] = expected['name'].str.lower()
     text = (
-        'failed test1: conditionally change to lowercase\n'
-        + qp.diff(result, expected, output='str')
+        'failed test1: conditionally change to lowercase\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -275,8 +275,8 @@ def test_eval():
     expected = get_df()
     expected['gender'] = expected['gender'].astype(str).str.lower()
     text = (
-        'failed test2: convert and change to lowercase\n'
-        + qp.diff(result, expected, output='str')
+        'failed test2: convert and change to lowercase\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -289,8 +289,8 @@ def test_eval():
     expected = get_df().loc[[0], ['ID']]
     expected.loc[0, 'ID'] = '10001'
     text = (
-        'failed test3: convert single entry to str\n'
-        + qp.diff(result, expected, output='str')
+        'failed test3: convert single entry to str\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -304,8 +304,8 @@ def test_eval():
     expected['ID'] = str(0)
     expected['age'] = str(0)
     text = (
-        'failed test4: conditionally convert multiple entries to str\n'
-        + qp.diff(result, expected, output='str')
+        'failed test4: conditionally convert multiple entries to str\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -320,8 +320,8 @@ def test_eval():
     expected.loc[rows, 'ID'] = 0
     expected.loc[rows, 'age'] = 0
     text = (
-        'failed test5: conditionally convert multiple entries to str\n'
-        + qp.diff(result, expected, output='str')
+        'failed test5: conditionally convert multiple entries to str\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -335,18 +335,18 @@ def test_eval():
     expected['ID'] = 10
     expected.loc[[0, 1, 2, 3, 4, 8, 10], 'age'] = 10
     text = (
-        'failed test6: conditionally convert multiple entries to str\n'
-        + qp.diff(result, expected, output='str')
+        'failed test6: conditionally convert multiple entries to str\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert (result['ID'] == 10).all(), text
     text = (
-        'failed test7: conditionally convert multiple entries to str\n'
-        + qp.diff(result, expected, output='str')
+        'failed test7: conditionally convert multiple entries to str\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert (result.loc[[5, 6, 7, 9], 'age'] != 10).all(), text
     text = (
-        'failed test8: conditionally convert multiple entries to str\n'
-        + qp.diff(result, expected, output='str')
+        'failed test8: conditionally convert multiple entries to str\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -355,8 +355,8 @@ def test_eval():
     expected = get_df().loc[:, ['name']]
     expected['name'] = '1'
     text = (
-        'failed test9: convert all entries to python expression\n'
-        + qp.diff(result, expected, output='str')
+        'failed test9: convert all entries to python expression\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -404,8 +404,8 @@ params = [
 def test_cols(code, expected):
     result = get_df().q(code)
     text = (
-        'failed test5: rename multiple col cols with eval\n'
-        + qp.diff(result, expected, output='str')
+        'failed test5: rename multiple col cols with eval\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -430,7 +430,7 @@ def test_invert():
         'dose',
         ]
     expected = df.loc[:, cols]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     result = df.q(r'name  /gender  %invert;')
     cols = [
@@ -446,15 +446,15 @@ def test_invert():
         'dose',
         ]
     expected = df.loc[:, cols]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     result = df.q(r'name  %%?j  %%invert;')
     expected = df.loc[3:8, ['name']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     result = df.q(r'name  %%%?j  %%%invert;')
     expected = df.loc[:, ['name']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 
@@ -472,8 +472,8 @@ def test_logging():
     result = df.q(r'diabetes  %%is na;')
     result1 = df.q(r'diabetes  %%is na;0')
     expected = df.copy().loc[[2, 7, 8], ['diabetes']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
-    assert result1.equals(expected), qp.diff(result1, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
+    assert result1.equals(expected), qp.diff(result1, expected).str()
     check_message(
         'WARNING: value 0 will be ignored for unary operator <"is na;": IS_NA>'
         )
@@ -481,14 +481,14 @@ def test_logging():
     log(clear=True, verbosity=1)
     result = df.q(r'test  %%is na;')
     expected = pd.DataFrame(index=df.index)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
     check_message('WARNING: no cols fulfill the condition in "%test  "')
     check_message('ERROR: row selection cannot be applied when no cols where selected')
 
     log(clear=True, verbosity=1)
     result = df.q(r'id %%=@test')
     expected = df.copy().loc[:, ['ID']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
     check_message(
         'ERROR: col "test" not found in dataframe.'
         ' cannot use "@test" for row selection'
@@ -522,8 +522,8 @@ def test_logging():
     result3 = df.q(r'$diff=false')
     text = f'setting diff to None should return a dataframe, not {type(result1)}'
     assert isinstance(result1, pd.DataFrame), text
-    assert result1.equals(result2), qp.diff(result1, result2, output='str')
-    assert result1.equals(result3), qp.diff(result1, result3, output='str')
+    assert result1.equals(result2), qp.diff(result1, result2).str()
+    assert result1.equals(result3), qp.diff(result1, result3).str()
 
     log(clear=True, verbosity=1)
     result = df.q(r'test  $cols=abc')
@@ -588,7 +588,7 @@ def test_metadata(code, metadata):
     result = get_df_simple_tagged().q(code)
     expected = get_df_simple_tagged()
     expected['meta'] = metadata
-    text = 'failed test: metadata tagging\n' + qp.diff(result, expected, output='str')
+    text = 'failed test: metadata tagging\nDIFF:\n' + qp.diff(result, expected).str()
     assert result.equals(expected), text
 
 
@@ -599,7 +599,7 @@ def test_metadata_init():
     result = df.q(r'$meta=a   %is any;')
     expected = df.copy()
     expected['meta'] = ['a', 'a', 'a']
-    text = 'failed test: metadata init\n' + qp.diff(result, expected, output='str')
+    text = 'failed test: metadata init\nDIFF:\n' + qp.diff(result, expected).str()
     assert result.equals(expected), text
 
 
@@ -611,48 +611,48 @@ def test_metadata_continous():
     result = result.q(r'=a  %%>0   $meta +=>0   %is any;  %%is any;')
     expected['meta'] = ['', '', '>0']
     text = (
-        'failed test0: continous metadata tagging\n'
-        + qp.diff(result, expected, output='str')
+        'failed test0: continous metadata tagging\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
     result = result.q(r'=a   %%>0  $meta+=>0   %is any;  %%is any;')
     expected['meta'] = ['', '', '>0>0']
     text = (
-        'failed test1: continous metadata tagging\n'
-        + qp.diff(result, expected, output='str')
+        'failed test1: continous metadata tagging\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
     result = result.q(r'=a   %%==0    $meta += 0   %is any;  %%is any;')
     expected['meta'] = ['', '0', '>0>0']
     text = (
-        'failed test2: continous metadata tagging\n'
-        + qp.diff(result, expected, output='str')
+        'failed test2: continous metadata tagging\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
     result = result.q(r'a   %%==0    $meta ~ x.replace("0", "")   %is any;  %%is any;')
     expected['meta'] = ['', '', '>0>0']
     text = (
-        'failed test3: continous metadata tagging\n'
-        + qp.diff(result, expected, output='str')
+        'failed test3: continous metadata tagging\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
     result = result.q(r'=a   %%>0    $meta~x.replace("0", "")   %is any;  %%is any;')
     expected['meta'] = ['', '', '>>']
     text = (
-        'failed test4: continous metadata tagging\n'
-        + qp.diff(result, expected, output='str')
+        'failed test4: continous metadata tagging\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
     result = result.q(r'=a     $meta=   %is any;  %%is any;')
     expected['meta'] = ['', '', '']
     text = (
-        'failed test5: continous metadata tagging\n'
-        + qp.diff(result, expected, output='str')
+        'failed test5: continous metadata tagging\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -715,7 +715,7 @@ def test_modify_format(code, expected_rows):
     result = df.q(code)
     expected = pd.DataFrame('', index=df.index, columns=['age'])
     expected.loc[expected_rows, 'age'] = 'background-color: orange;'
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
     qp.qlang.APPLY_STYLE = True
 
 
@@ -731,8 +731,8 @@ def test_modify_rows_vals():
     expected = get_df()
     expected['name'] = 'a'
     text = (
-        'failed test0: set values\n'
-        + qp.diff(result, expected, output='str')
+        'failed test0: set values\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -746,8 +746,8 @@ def test_modify_rows_vals():
     expected = get_df()
     expected['name'] = 'a'
     text = (
-        'failed test1: set values\n'
-        + qp.diff(result, expected, output='str')
+        'failed test1: set values\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -763,8 +763,8 @@ def test_modify_rows_vals():
     expected['name'] = 'a'
     expected['gender'] = 'b'
     text = (
-        'failed test2: set values in multiple cols\n'
-        + qp.diff(result, expected, output='str')
+        'failed test2: set values in multiple cols\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -778,8 +778,8 @@ def test_modify_rows_vals():
     expected = get_df()
     expected['name'] = 'aa'
     text = (
-        'failed test3: appending to values\n'
-        + qp.diff(result, expected, output='str')
+        'failed test3: appending to values\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -800,8 +800,8 @@ def test_modify_rows_vals():
         30005,
         ]
     text = (
-        'failed test: replace values with column content\n'
-        + qp.diff(result, expected, output='str')
+        'failed test: replace values with column content\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -822,8 +822,8 @@ def test_modify_rows_vals():
         'john Doe30005',
         ]
     text = (
-        'failed test: add column content to selected values\n'
-        + qp.diff(result, expected, output='str')
+        'failed test: add column content to selected values\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -860,7 +860,7 @@ def test_modify_rows_vals():
     expected.loc[8, 'age'] = '___ERROR30003'
     expected.loc[7, 'gender'] = 'NaN___ERROR30002'
     expected.loc[8, 'gender'] = 'None___ERROR30003'
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 
@@ -925,8 +925,8 @@ def test_new_col(code, content, cols):
     expected['new1'] = content
     expected = expected.loc[:, cols]
     text = (
-        'failed test0: creating new col\n'
-        + qp.diff(result, expected, output='str')
+        'failed test0: creating new col\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -937,8 +937,8 @@ def test_new_col1():
     expected['new col'] = 'a'
     expected = expected.loc[:, ['new col']]
     text = (
-        'failed test1: creating new col with colname\n'
-        + qp.diff(result, expected, output='str')
+        'failed test1: creating new col with colname\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -948,8 +948,8 @@ def test_new_col1():
     expected['new1'] = 'a'
     expected = expected.loc[:, ['new1']]
     text = (
-        'failed test2: creating new col\n'
-        + qp.diff(result, expected, output='str')
+        'failed test2: creating new col\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
     check_message('WARNING: no cols fulfill the condition in "/=new2"')
@@ -960,8 +960,8 @@ def test_new_col1():
     expected['new1'] = 'a'
     expected = expected.loc[:, ['new1']]
     text = (
-        'failed test3: creating new col\n'
-        + qp.diff(result, expected, output='str')
+        'failed test3: creating new col\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
     check_message('WARNING: no cols fulfill the condition in "/=new2"')
@@ -973,8 +973,8 @@ def test_new_col1():
     expected['new2'] = 'b'
     expected = expected.loc[:, ['new1', 'new2']]
     text = (
-        'failed test4: creating multiple new cols\n'
-        + qp.diff(result, expected, output='str')
+        'failed test4: creating multiple new cols\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -984,8 +984,8 @@ def test_new_col1():
     expected['new1'] = 'a'
     expected = expected.loc[[0], ['new1']]
     text = (
-        'failed test5: creating new col with index\n'
-        + qp.diff(result, expected, output='str')
+        'failed test5: creating new col with index\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -995,8 +995,8 @@ def test_new_col1():
     expected['new1'] = 'a'
     expected = expected.loc[[0], ['new1']]
     text = (
-        'failed test6: creating new col and select with index\n'
-        + qp.diff(result, expected, output='str')
+        'failed test6: creating new col and select with index\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -1007,8 +1007,8 @@ def test_new_col1():
     expected = expected.loc[[0], ['new1']]
     text = (
         'failed test7: check if selection saving and'
-        ' loading works correctly with new col creation\n'
-        + qp.diff(result, expected, output='str')
+        ' loading works correctly with new col creation\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -1031,7 +1031,7 @@ def test_previous_bugs():
     #from v0.7.5
     result = get_df().q(r'%%%>0    &&&<50  %trim;  $bg=orange').data
     expected = get_df().loc[:, ['age', 'height', 'bp systole', 'dose']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
     #from v0.8.0 prototype
@@ -1050,7 +1050,7 @@ def test_previous_bugs():
         )
     expected = df
     expected.loc[8, 'date of birth'] = 'replaced'
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
     qp.qlang.APPLY_STYLE = True
 
 
@@ -1226,7 +1226,7 @@ params = [
 @pytest.mark.parametrize('code, expected, message', params)
 def test_save_load(code, expected, message):
     result = get_df().q(code)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
     if message:  #pragma: no cover
         check_message(message)
 
@@ -1451,7 +1451,7 @@ params = [
 def test_select_cols(code, expected_cols, message):
     result = df.q(code)
     expected = df.loc[:, expected_cols]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
     if message:
         check_message(message)
 
@@ -2209,7 +2209,7 @@ params = [
 def test_select_rows(code, expected, message):
     temp = get_df().q(code)
     result = get_df().loc[temp.index, temp.columns]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
     if message:  #pragma: no cover
         check_message(message)
 
@@ -2219,8 +2219,8 @@ def test_select_rows_scopes():
     expected = get_df().loc[[1, 2, 3, 4, 6, 7, 8, 9, 10], :]
     expected.loc[:, :] = ''
     text = (
-        'failed test0: check if default selection scope is "any"\n'
-        + qp.diff(result, expected, output='str')
+        'failed test0: check if default selection scope is "any"\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -2229,8 +2229,8 @@ def test_select_rows_scopes():
     expected = get_df().loc[[1, 2, 3, 4, 6, 7, 8, 9, 10], :]
     expected.loc[:, :] = ''
     text = (
-        'failed test1: check selection scope "any"\n'
-        + qp.diff(result, expected, output='str')
+        'failed test1: check selection scope "any"\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -2238,8 +2238,8 @@ def test_select_rows_scopes():
     result = get_df().q(r'%%all is na; $')
     expected = get_df().loc[[], :]
     text = (
-        'failed test2: check selection scope "all"\n'
-        + qp.diff(result, expected, output='str')
+        'failed test2: check selection scope "all"\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
     check_message(
@@ -2261,8 +2261,8 @@ def test_select_vals():
     expected.loc[[2, 7, 8], 'diabetes'] = ''
     expected.loc[[1, 6, 7], 'dose'] = ''
     text = (
-        'failed test0: check val selection\n'
-        + qp.diff(result, expected, output='str')
+        'failed test0: check val selection\nDIFF:\n'
+        + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
 
@@ -2296,7 +2296,7 @@ def test_select_vals():
     expected.loc[[1, 2, 4, 7, 9], 'cholesterol'] = 'FOUND'
     expected.loc[[2, 7, 8], 'diabetes'] = 'FOUND'
     expected.loc[[1, 6, 7], 'dose'] = 'FOUND'
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 
@@ -2341,7 +2341,7 @@ def test_sort(code, expected_cols):
         expected = get_df().sort_values(by=expected_cols, ascending=False)
     else:
         expected = get_df().sort_values(by=expected_cols)
-        text = 'failed test: sort values\n' + qp.diff(result, expected, output='str')
+        text = 'failed test: sort values\nDIFF:\n' + qp.diff(result, expected).str()
     assert result.equals(expected), text
 
 
@@ -2360,8 +2360,8 @@ def test_style():
     isinstance(result, pd.io.formats.style.Styler)
     expected = pd.DataFrame('a', index=df.index, columns=['new1'])
     text = (
-        'failed test: updating style\n'
-        + qp.diff(result.data, expected, output='str')
+        'failed test: updating style\nDIFF:\n'
+        + qp.diff(result.data, expected).str()
         )
     assert result.data.equals(expected), text
 
@@ -2425,30 +2425,30 @@ def test_tagging():
     expected = get_df_simple_tagged()
     expected['meta'] = ['', '', '\n@a: 1']
     result = result.q(r'=a  %%>0   $tag1   %is any;  %%is any;')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     expected['meta'] = ['', '', '\n@a: 1\n@a: 1']
     result = result.q(r'=a   %%>0  $tag1   %is any;  %%is any;')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     expected['meta'] = ['', '', '\n@a: 1\n@a: 1\n@a: 1']
     result = result.q(r'=a   %%>0  $tag+=1   %is any;  %%is any;')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     expected['meta'] = ['', '', '\n@a: 1']
     result = result.q(r'=a   %%>0  $tag=1   %is any;  %%is any;')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     #no inplace modification should take place
     expected['meta'] = ['', '', '\n@a: 1']
     result = get_df_simple_tagged()
     result = result.q(r'=a  %%>0   $tag1   %is any;  %%is any;')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
     expected['meta'] = ['', '', '\n@a@b: 1']
     result = get_df_simple_tagged()
     result = result.q(r'a /b  %%all>0  $tag1  %is any;  %%is any;')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 
@@ -2470,7 +2470,7 @@ def test_to_int():
         ]
     expected['age'] = expected['age'].astype('Int64')
     expected = expected.loc[:, ['age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_to_float():
@@ -2491,7 +2491,7 @@ def test_to_float():
         ]
     expected['age'] = expected['age'].astype('Float64')
     expected = expected.loc[:, ['age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_to_num():
@@ -2512,7 +2512,7 @@ def test_to_num():
         ]
     expected['age'] = expected['age'].astype('object')
     expected = expected.loc[:, ['age']].astype('object')
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_to_str():
@@ -2533,7 +2533,7 @@ def test_to_str():
         ]
     expected['age'] = expected['age'].astype(str)
     expected = expected.loc[:, ['age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_to_date():
@@ -2558,7 +2558,7 @@ def test_to_date():
         .astype('datetime64[ns]')
         )
     expected = expected.loc[:, ['date of birth']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_to_na():
@@ -2579,7 +2579,7 @@ def test_to_na():
         ]
     expected['age'] = expected['age'].astype('object')
     expected = expected.loc[:, ['age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_to_nk():
@@ -2600,7 +2600,7 @@ def test_to_nk():
         ]
     expected['age'] = expected['age'].astype('object')
     expected = expected.loc[:, ['age']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 def test_to_yn():
@@ -2621,7 +2621,7 @@ def test_to_yn():
         ]
     expected['age'] = expected['age'].astype('object')
     expected = expected.loc[:, ['diabetes']]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 
@@ -2685,7 +2685,7 @@ params = [
 def test_trim(code, expected):
     temp = get_df().q(code)
     result = get_df().loc[temp.index, temp.columns]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected).str()
 
 
 
@@ -2696,5 +2696,5 @@ def test_type_inference():
     result2 = df2.q('1')
     expected1 = df1.loc[:, [1]]
     expected2 = df2.loc[:, ['1']]
-    assert result1.equals(expected1), qp.diff(result1, expected1, output='str')
-    assert result2.equals(expected2), qp.diff(result2, expected2, output='str')
+    assert result1.equals(expected1), qp.diff(result1, expected1).str()
+    assert result2.equals(expected2), qp.diff(result2, expected2).str()

@@ -304,6 +304,7 @@ def query(df_old, code=''):
         result = diff(
             df_filtered,
             df_old,
+            uid=False,
             verbosity=settings.verbosity
             ).show(mode=settings.diff)
 
