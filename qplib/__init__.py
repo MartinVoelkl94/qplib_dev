@@ -1,5 +1,5 @@
 from .qlang import query
-from .xlsx import hide, format_excel
+from .excel import hide, format_excel
 
 from .pandas import (
     get_df,
