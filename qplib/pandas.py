@@ -4,7 +4,7 @@ import numpy as np
 import copy
 
 from .types import _dict, _date
-from .xlsx import hide, format_excel
+from .excel import hide, format_excel
 from .util import (
     log,
     _arg_to_list,
@@ -523,11 +523,11 @@ def embed(
     vals_src = set(df_src[key_src].dropna().unique())
     only_in_dest = vals_dest - vals_src
     if len(only_in_dest) > 0:
-        message = (
+        msg = (
             f'warning: {len(only_in_dest)} value(s) in "{key_dest}"'
             f' of df_dest not found in df_src: {only_in_dest}'
             )
-        log(message, 'qp.embed', verbosity)
+        log(msg, 'qp.embed', verbosity)
 
 
     if include:
@@ -621,6 +621,59 @@ def days_between(
 
 
 class Diff:
+    """
+    Calculates differences between dataframes,
+    csv or excel files and returns a diff object.
+
+
+    Parameters
+    ----------
+
+    new, old : pd.DataFrame of filepath to CSV or Excel file
+
+    uid : which column to use as a unique identifier to specify
+        which rows correspond to each other in old and new data.
+        If None, the function will try to find a suitable column automatically.
+        If no suitable column is found, the index will be used.
+        when comparing multiple sheets from excel files, a dictionary
+        with sheet names as keys and uid column names as values can be provided.
+
+    ignore : column name or list of column names to ignore for comparison
+
+    rename : dictionary to rename columns before comparison.
+        Note that renaming is done before uid and columns to ignore
+        are determined, meaning that those must use the new column names.
+        This can also be used to fix situations where corrresponding columns
+        in old and new data have different names (see examples)
+
+
+    Examples
+    --------
+
+    basic usage:
+
+    >>> import qplib as qp
+    >>> diff = qp.diff(df_new, df_old)
+    >>> diff.show()  #returns df with highlighted differences
+    >>> diff.summary()  #returns df with summary stats
+    >>> diff.str()  #string version of summary stats
+    >>> diff.print()  #prints the string version
+    >>> diff.to_excel('diff.xlsx')  #writes summary and dfs to file
+
+
+    align inconsistently named columns before comparison:
+
+    >>> corrections = {
+            'year of birth': 'yob',
+            'birthyear': 'yob',
+            },
+    >>> qp.diff(
+            df_new,
+            df_old,
+            rename=corrections,
+            )
+    """
+
     def __init__(
             self,
             new: pd.DataFrame | str,
@@ -673,6 +726,13 @@ class Diff:
 
 
     def _get_dfs(self):
+        """
+        Load and prepare DataFrames from input sources.
+
+        Handles loading from various sources (DataFrames, CSV files, Excel files)
+        and determines whether to compare single sheets or multiple Excel sheets.
+        Populates self.dfs_new, self.dfs_old, self.sheets, and self.sheet_in_both_files.
+        """
 
         #when both inputs are excel files, they might
         #contain multiple sheets to be compared
@@ -704,8 +764,8 @@ class Diff:
                 df_new = self._new
 
             else:
-                message = 'error: incompatible type for new df'
-                log(message, 'qp.diff()', self._verbosity)
+                msg = 'error: incompatible type for new df'
+                log(msg, 'qp.diff()', self._verbosity)
 
             if isinstance(self._old, str):
                 if self._old.endswith('.csv'):
@@ -718,8 +778,8 @@ class Diff:
             elif isinstance(self._old, pd.DataFrame):
                 df_old = self._old
             else:
-                message = 'error: incompatible type for old df'
-                log(message, 'qp.diff()', self._verbosity)
+                msg = 'error: incompatible type for old df'
+                log(msg, 'qp.diff()', self._verbosity)
 
             self.dfs_new.append(df_new)
             self.dfs_old.append(df_old)
@@ -728,6 +788,13 @@ class Diff:
 
 
     def _read_excel_sheets(self):
+        """
+        Read all sheets from two Excel files.
+
+        Identifies sheets present in both files, new file only, or old file only.
+        Loads DataFrames for each sheet and tracks their comparison status.
+        Populates sheet-specific data in the instance lists.
+        """
 
         sheets_new = pd.ExcelFile(self._new).sheet_names
         sheets_old = pd.ExcelFile(self._old).sheet_names
@@ -736,22 +803,22 @@ class Diff:
         for i, sheet in enumerate(sheets_all):
 
             if sheet in sheets_new and sheet in sheets_old:
-                message = f'debug: found sheet "{sheet}" in both files'
-                log(message, 'qp.diff()', self._verbosity)
+                msg = f'debug: found sheet "{sheet}" in both files'
+                log(msg, 'qp.diff()', self._verbosity)
                 sheet_in_both_files = 'yes'
                 df_new = pd.read_excel(self._new, sheet_name=sheet)
                 df_old = pd.read_excel(self._old, sheet_name=sheet)
 
             elif sheet in sheets_new:
-                message = f'debug: sheet "{sheet}" is only in new file.'
-                log(message, 'qp.diff()', self._verbosity)
+                msg = f'debug: sheet "{sheet}" is only in new file.'
+                log(msg, 'qp.diff()', self._verbosity)
                 sheet_in_both_files = 'only in new file'
                 df_new = pd.read_excel(self._new, sheet_name=sheet)
                 df_old = pd.DataFrame()
 
             elif sheet in sheets_old:
-                message = f'debug: sheet "{sheet}" is only in old file.'
-                log(message, 'qp.diff()', self._verbosity)
+                msg = f'debug: sheet "{sheet}" is only in old file.'
+                log(msg, 'qp.diff()', self._verbosity)
                 sheet_in_both_files = 'only in old file'
                 df_new = pd.DataFrame()
                 df_old = pd.read_excel(self._old, sheet_name=sheet)
@@ -763,6 +830,12 @@ class Diff:
 
 
     def _format_dfs(self):
+        """
+        Apply consistent formatting to all loaded DataFrames.
+
+        Standardizes DataFrame structure by fixing headers and adding metadata columns
+        to ensure consistent comparison.
+        """
         for i in range(len(self.sheets)):
             self.dfs_new[i] = _format_df(
                 self.dfs_new[i],
@@ -779,6 +852,13 @@ class Diff:
 
 
     def _rename_cols(self):
+        """
+        Apply column renaming to DataFrames before comparison.
+
+        Uses the rename dictionary to standardize column names between
+        old and new DataFrames. Tracks which columns were renamed in each
+        DataFrame and warns about potential issues with renaming metadata columns.
+        """
         for i in range(len(self.sheets)):
             df_new = self.dfs_new[i]
             df_old = self.dfs_old[i]
@@ -789,8 +869,8 @@ class Diff:
                 pass
             elif isinstance(rename, dict):
                 if 'meta' in rename:
-                    message = 'warning: it is not advised to rename the "meta" column'
-                    log(message, 'qp.diff()', self._verbosity)
+                    msg = 'warning: it is not advised to rename the "meta" column'
+                    log(msg, 'qp.diff()', self._verbosity)
                 rename_new = {
                     old: new
                     for old, new
@@ -814,6 +894,14 @@ class Diff:
 
 
     def _get_uids(self):
+        """
+        Determine unique identifier columns for each comparison.
+
+        For each pair of dataframes, attempts to use the specified uid column or
+        automatically finds the best alternative based on uniqueness and overlap
+        between dataframes. Sets dataframe indices based on the selected uid column.
+        Falls back to using the existing index if no suitable uid column is found.
+        """
 
         for i, sheet in enumerate(self.sheets):
 
@@ -861,6 +949,13 @@ class Diff:
 
 
     def _ignore_cols(self):
+        """
+        Identify and track columns to ignore during comparison.
+
+        Builds lists of columns to exclude from difference calculations,
+        including user-specified ignore columns, metadata columns, and
+        uid columns. Tracks which ignore columns are present in each DataFrame.
+        """
 
         for i in range(len(self.sheets)):
 
@@ -886,7 +981,14 @@ class Diff:
             self.cols_ignore.append(cols_ignore)
 
 
-    def _get_diff_stats(self, mode='mix'):
+    def _get_diff_stats(self):
+        """
+        Calculate comprehensive difference statistics for each sheet.
+
+        Analyzes DataFrames to identify added/removed columns and rows,
+        shared elements, and data type changes. This method populates
+        the stats lists used by .summary(), .str() and .print().
+        """
 
         for i in range(len(self.sheets)):
             df_new = self.dfs_new[i]
@@ -948,6 +1050,35 @@ class Diff:
             sheet=0,
             prefix_old='old: ',
             ):
+        """
+        Generate a styled DataFrame showing differences between datasets.
+        Differences are highlighted with color-coded styles,
+        supporting multiple visualization modes.
+
+
+        Parameters
+        ----------
+
+        mode : str, default 'mix'
+            Display mode for differences:
+            - 'new': Show new DataFrame with added and changed elements highlighted
+            - 'new+': Show new DataFrame with old values in additional (hidden) columns
+            - 'old': Show old DataFrame with removed elements highlighted
+            - 'mix': Combine both DataFrames showing all changes
+
+        sheet : int or str, default 0
+            Sheet index or name to display in case multiple
+            sheets from excel files were compared
+
+        prefix_old : str, default 'old: '
+            Prefix for columns showing old values (used in 'new+' mode)
+
+
+        Returns
+        -------
+        pandas.io.formats.style.Styler
+            Styled DataFrame with color-coded differences, or None if sheet not found
+        """
 
         if sheet in self.sheets:
             ind = self.sheets.index(sheet)
@@ -1149,12 +1280,12 @@ class Diff:
 
 
         if len(df_diff.columns) * len(df_diff.index) > 100_000:
-            message = (
+            msg = (
                 'warning: more than 100 000 cells are being formatted.'
                 'while this might not cause performance issues for formatting,'
                 'the result might be slow to render, especially in jupyter notebooks.'
                 )
-            log(message, 'qp.diff()', self._verbosity)
+            log(msg, 'qp.diff()', self._verbosity)
 
         #replace "<" and ">" with html entities to prevent interpretation as html tags
         cols_no_metadata = [
@@ -1182,6 +1313,23 @@ class Diff:
 
 
     def summary(self, linebreak='<br>'):
+        """
+        Generate a comprehensive summary dataframe of differences between datasets.
+        Dataframe contains statistics about added/removed columns and rows,
+        shared elements, data type changes, and other metadata.
+
+        Parameters
+        ----------
+        linebreak : str, default '&lt;br&gt;'
+            String to use for line breaks in the summary output.
+            Use '&lt;br&gt;' for HTML display or '\\n' for plain text.
+
+        Returns
+        -------
+        pandas.io.formats.style.Styler
+            Styled DataFrame containing summary statistics with left-aligned,
+            pre-wrapped text formatting
+        """
         summary = pd.DataFrame()
 
         if len(self.sheets) > 1 or self.sheets[0] is not None:
@@ -1216,6 +1364,27 @@ class Diff:
             prefix_old='old: ',
             linebreak='\n',
             ):
+        """
+        Export diff results to an Excel file with formatting.
+
+        Creates an Excel file containing a summary sheet and individual
+        sheets for each comparison with highlighted differences. Applies
+        Excel-specific formatting and hides old value columns.
+
+
+        Parameters
+        ----------
+        path : str
+            File path for the output Excel file
+        mode : str, default 'mix'
+            Display mode for differences (see show() method for options)
+        index : bool, default False
+            Whether to include row indices in the Excel output
+        prefix_old : str, default 'old: '
+            Prefix for columns showing old values (used in 'new+' mode)
+        linebreak : str, default '\\n'
+            String to use for line breaks in Excel cells
+        """
 
         with pd.ExcelWriter(path) as writer:
             self.summary(linebreak).to_excel(
@@ -1230,11 +1399,11 @@ class Diff:
                     sheet = 'diff'
 
                 if sheet == 'diff_summary':
-                    message = (
+                    msg = (
                         'warning: comparison for sheet "diff_summary" will not'
                         ' be written to file since this name is reserved'
                         )
-                    log(message, 'qp.diff()', self._verbosity)
+                    log(msg, 'qp.diff()', self._verbosity)
 
                 else:
 
@@ -1265,13 +1434,33 @@ class Diff:
 
 
     def print(self):
+        """
+        Print the string representation of differences to console.
+
+        Convenience method that prints the output of str() method,
+        providing a readable summary of all differences found.
+        """
         print(self.str())
 
 
     def str(self):
+        """
+        Get string representation of differences.
+
+        Convenience method that calls __str__() to return a formatted
+        string summary of all differences found between datasets.
+        """
         return str(self)
 
+
     def __str__(self):
+        """
+        Generate a human-readable string summary of all differences.
+
+        Creates a detailed text summary showing differences for single
+        DataFrame comparisons or multi-sheet Excel file comparisons.
+        Handles cases where datasets are identical.
+        """
         summary = self.summary()
         if len(self.sheets) == 1 and self.sheets[0] is None:
             if self.dfs_new[0].equals(self.dfs_old[0]):
