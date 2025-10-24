@@ -10,37 +10,37 @@ def process_str(string):
 
 #prepare testing files
 
-def setup(df_new, df_old, tmpdir):
-
-    path_df_new = f'{tmpdir}/df_new.xlsx'
-    df_new.to_excel(path_df_new, index=False)
+def setup(df_old, df_new, tmpdir):
 
     path_df_old = f'{tmpdir}/df_old.xlsx'
     df_old.to_excel(path_df_old, index=False)
 
-    return path_df_new, path_df_old
+    path_df_new = f'{tmpdir}/df_new.xlsx'
+    df_new.to_excel(path_df_new, index=False)
+
+    return path_df_old, path_df_new
 
 
-def setup_csv(df_new, df_old, tmpdir):
-
-    path_df_new = f'{tmpdir}/df_new.csv'
-    df_new.to_csv(path_df_new, index=False)
+def setup_csv(df_old, df_new, tmpdir):
 
     path_df_old = f'{tmpdir}/df_old.csv'
     df_old.to_csv(path_df_old, index=False)
 
-    return path_df_new, path_df_old
+    path_df_new = f'{tmpdir}/df_new.csv'
+    df_new.to_csv(path_df_new, index=False)
+
+    return path_df_old, path_df_new
 
 
 
 def test_mode_new(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         verbosity=0,
         ).show('new').data
 
@@ -72,8 +72,8 @@ def test_mode_new(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         verbosity=0,
         ).show('new', 'Sheet1').data.astype('object')
@@ -81,8 +81,8 @@ def test_mode_new(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         verbosity=0,
         ).show('new').data.astype('object')
@@ -90,8 +90,8 @@ def test_mode_new(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         verbosity=0,
         ).show('new').data.astype('object')
@@ -99,12 +99,12 @@ def test_mode_new(tmpdir):
 
 
 def test_mode_new_ignore(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore='a',
         verbosity=0,
         ).show('new').data
@@ -137,8 +137,8 @@ def test_mode_new_ignore(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -147,8 +147,8 @@ def test_mode_new_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -157,8 +157,8 @@ def test_mode_new_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -168,12 +168,12 @@ def test_mode_new_ignore(tmpdir):
 
 
 def test_mode_new_ignore1(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore=['b'],
         verbosity=0
         ).show('new').data
@@ -206,8 +206,8 @@ def test_mode_new_ignore1(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['b'],
         verbosity=0,
@@ -216,8 +216,8 @@ def test_mode_new_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['b'],
         verbosity=0,
@@ -226,8 +226,8 @@ def test_mode_new_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['b'],
         verbosity=0,
@@ -237,12 +237,12 @@ def test_mode_new_ignore1(tmpdir):
 
 
 def test_mode_new_ignore2(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore=['a', 'b'],
         verbosity=0,
         ).show('new').data
@@ -275,8 +275,8 @@ def test_mode_new_ignore2(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0,
@@ -285,8 +285,8 @@ def test_mode_new_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0,
@@ -295,8 +295,8 @@ def test_mode_new_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0
@@ -311,12 +311,12 @@ def test_mode_new_ignore2(tmpdir):
 
 
 def test_mode_newplus(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         verbosity=0,
         ).show('new+').data
@@ -358,8 +358,8 @@ def test_mode_newplus(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         verbosity=0,
         ).show('new+').data.astype('object')
@@ -367,8 +367,8 @@ def test_mode_newplus(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         verbosity=0,
         ).show('new+').data.astype('object')
@@ -376,8 +376,8 @@ def test_mode_newplus(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         verbosity=0,
         ).show('new+').data.astype('object')
@@ -386,12 +386,12 @@ def test_mode_newplus(tmpdir):
 
 
 def test_mode_newplus_ignore(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ignore=['a'],
         verbosity=0,
@@ -434,8 +434,8 @@ def test_mode_newplus_ignore(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['a'],
         verbosity=0,
@@ -444,8 +444,8 @@ def test_mode_newplus_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['a'],
         verbosity=0,
@@ -454,8 +454,8 @@ def test_mode_newplus_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['a'],
         verbosity=0,
@@ -465,12 +465,12 @@ def test_mode_newplus_ignore(tmpdir):
 
 
 def test_mode_newplus_ignore1(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ignore='b',
         verbosity=0,
@@ -513,8 +513,8 @@ def test_mode_newplus_ignore1(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore='b',
         verbosity=0,
@@ -523,8 +523,8 @@ def test_mode_newplus_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore='b',
         verbosity=0,
@@ -533,8 +533,8 @@ def test_mode_newplus_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore='b',
         verbosity=0,
@@ -545,12 +545,12 @@ def test_mode_newplus_ignore1(tmpdir):
 
 
 def test_mode_newplus_ignore2(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ignore=['b', 'a'],
         verbosity=0,
@@ -593,8 +593,8 @@ def test_mode_newplus_ignore2(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['b', 'a'],
         verbosity=0,
@@ -603,8 +603,8 @@ def test_mode_newplus_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['b', 'a'],
         verbosity=0,
@@ -613,8 +613,8 @@ def test_mode_newplus_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['b', 'a'],
         verbosity=0,
@@ -624,12 +624,12 @@ def test_mode_newplus_ignore2(tmpdir):
 
 
 def test_mode_old(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         verbosity=0,
         ).show('old').data
 
@@ -661,8 +661,8 @@ def test_mode_old(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         verbosity=0,
         ).show('old').data.astype('object')
@@ -670,8 +670,8 @@ def test_mode_old(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         verbosity=0,
         ).show('old').data.astype('object')
@@ -679,8 +679,8 @@ def test_mode_old(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         verbosity=0,
         ).show('old').data.astype('object')
@@ -690,12 +690,12 @@ def test_mode_old(tmpdir):
 
 
 def test_mode_old_ignore(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore='a',
         verbosity=0,
         ).show('old').data
@@ -728,8 +728,8 @@ def test_mode_old_ignore(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -738,8 +738,8 @@ def test_mode_old_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -748,8 +748,8 @@ def test_mode_old_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -760,12 +760,12 @@ def test_mode_old_ignore(tmpdir):
 
 
 def test_mode_old_ignore1(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore='b',
         verbosity=0,
         ).show('old').data
@@ -798,8 +798,8 @@ def test_mode_old_ignore1(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore='b',
         verbosity=0,
@@ -808,8 +808,8 @@ def test_mode_old_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore='b',
         verbosity=0,
@@ -818,8 +818,8 @@ def test_mode_old_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore='b',
         verbosity=0,
@@ -830,12 +830,12 @@ def test_mode_old_ignore1(tmpdir):
 
 
 def test_mode_old_ignore2(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore=['a', 'b'],
         verbosity=0,
         ).show('old').data
@@ -868,8 +868,8 @@ def test_mode_old_ignore2(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0,
@@ -878,8 +878,8 @@ def test_mode_old_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0,
@@ -888,8 +888,8 @@ def test_mode_old_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0,
@@ -901,12 +901,12 @@ def test_mode_old_ignore2(tmpdir):
 
 
 def test_mode_mix(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         verbosity=0,
         ).show('mix').data
 
@@ -947,8 +947,8 @@ def test_mode_mix(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         verbosity=0,
         ).show('mix').data.astype('object')
@@ -956,8 +956,8 @@ def test_mode_mix(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         verbosity=0,
         ).show('mix').data.astype('object')
@@ -965,8 +965,8 @@ def test_mode_mix(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         verbosity=0,
         ).show('mix').data.astype('object')
@@ -975,12 +975,12 @@ def test_mode_mix(tmpdir):
 
 
 def test_mode_mix_ignore(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore='a',
         verbosity=0,
         ).show('mix').data
@@ -1022,8 +1022,8 @@ def test_mode_mix_ignore(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -1032,8 +1032,8 @@ def test_mode_mix_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -1042,8 +1042,8 @@ def test_mode_mix_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore='a',
         verbosity=0,
@@ -1055,12 +1055,12 @@ def test_mode_mix_ignore(tmpdir):
 
 
 def test_mode_mix_ignore1(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore=['b'],
         verbosity=0,
         ).show('mix').data
@@ -1102,8 +1102,8 @@ def test_mode_mix_ignore1(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['b'],
         verbosity=0,
@@ -1112,8 +1112,8 @@ def test_mode_mix_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['b'],
         verbosity=0,
@@ -1122,8 +1122,8 @@ def test_mode_mix_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['b'],
         verbosity=0,
@@ -1133,12 +1133,12 @@ def test_mode_mix_ignore1(tmpdir):
 
 
 def test_mode_mix_ignore2(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore=['a', 'b'],
         verbosity=0,
         ).show('mix').data
@@ -1180,8 +1180,8 @@ def test_mode_mix_ignore2(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0,
@@ -1190,8 +1190,8 @@ def test_mode_mix_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0,
@@ -1200,8 +1200,8 @@ def test_mode_mix_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['a', 'b'],
         verbosity=0,
@@ -1211,13 +1211,13 @@ def test_mode_mix_ignore2(tmpdir):
 
 
 def test_summary_stats(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     #reading from in memory df
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         )
 
     assert result.uid_cols[0] == 'uid'
@@ -1236,8 +1236,8 @@ def test_summary_stats(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         )
 
@@ -1268,13 +1268,13 @@ def test_summary_stats(tmpdir):
 
 
 def test_summary_stats_ignore(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     #reading from in memory df
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore='a',
         )
 
@@ -1294,8 +1294,8 @@ def test_summary_stats_ignore(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore='a',
         )
@@ -1323,13 +1323,13 @@ def test_summary_stats_ignore(tmpdir):
 
 
 def test_summary_stats_ignore1(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     #reading from in memory df
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore=['b'],
         )
 
@@ -1349,8 +1349,8 @@ def test_summary_stats_ignore1(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['b'],
         )
@@ -1378,13 +1378,13 @@ def test_summary_stats_ignore1(tmpdir):
 
 
 def test_summary_stats_ignore2(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     #reading from in memory df
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         ignore=['a', 'b'],
         )
 
@@ -1404,8 +1404,8 @@ def test_summary_stats_ignore2(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         )
@@ -1426,13 +1426,13 @@ def test_summary_stats_ignore2(tmpdir):
 
 
 def test_summary_str(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     #reading from in memory df
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ).str()
 
@@ -1467,8 +1467,8 @@ def test_summary_str(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ).str()
 
@@ -1507,8 +1507,8 @@ def test_summary_str(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ).str()
 
@@ -1545,8 +1545,8 @@ def test_summary_str(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ).str()
 
@@ -1583,13 +1583,13 @@ def test_summary_str(tmpdir):
 
 
 def test_summary_str_ignore(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     #reading from in memory df
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ignore='a',
         ).str()
@@ -1625,8 +1625,8 @@ def test_summary_str_ignore(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore='a',
         ).str()
@@ -1665,8 +1665,8 @@ def test_summary_str_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore='a',
         ).str()
@@ -1703,8 +1703,8 @@ def test_summary_str_ignore(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore='a',
         ).str()
@@ -1741,13 +1741,13 @@ def test_summary_str_ignore(tmpdir):
 
 
 def test_summary_str_ignore1(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     #reading from in memory df
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ignore=['b'],
         ).str()
@@ -1783,8 +1783,8 @@ def test_summary_str_ignore1(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['b'],
         ).str()
@@ -1823,8 +1823,8 @@ def test_summary_str_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['b'],
         ).str()
@@ -1861,8 +1861,8 @@ def test_summary_str_ignore1(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['b'],
         ).str()
@@ -1899,13 +1899,13 @@ def test_summary_str_ignore1(tmpdir):
 
 
 def test_summary_str_ignore2(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_file, df_old_file = setup(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
     #reading from in memory df
     result = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ignore=['a', 'b'],
         ).str()
@@ -1943,8 +1943,8 @@ def test_summary_str_ignore2(tmpdir):
 
     #reading from files
     result = qp.diff(
-        df_new_file,
         df_old_file,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         ).str()
@@ -1984,8 +1984,8 @@ def test_summary_str_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new_file,
         df_old,
+        df_new_file,
         uid='uid',
         ignore=['a', 'b'],
         ).str()
@@ -2023,8 +2023,8 @@ def test_summary_str_ignore2(tmpdir):
 
     #reading from file and in memory df
     result = qp.diff(
-        df_new,
         df_old_file,
+        df_new,
         uid='uid',
         ignore=['a', 'b'],
         ).str()
@@ -2062,53 +2062,53 @@ def test_summary_str_ignore2(tmpdir):
 
 
 def test_csv(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_csv, df_old_csv = setup_csv(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_csv, df_new_csv = setup_csv(df_old, df_new, tmpdir)
 
     result_df = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ).show('new').data.astype('object')
     result_csv = qp.diff(
-        df_new_csv,
         df_old_csv,
+        df_new_csv,
         uid='uid',
         ).show('new').data.astype('object')
     assert result_df.equals(result_csv), f'failed test for csv mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
 
     result_df = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ).show('new+').data.astype('object')
     result_csv = qp.diff(
-        df_new_csv,
         df_old_csv,
+        df_new_csv,
         uid='uid',
         ).show('new+').data.astype('object')
     assert result_df.equals(result_csv), f'failed test for csv mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
 
     result_df = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ).show('new+').data.astype('object')
     result_csv = qp.diff(
-        df_new_csv,
         df_old_csv,
+        df_new_csv,
         uid='uid',
         ).show('new+').data.astype('object')
     assert result_df.equals(result_csv), f'failed test for csv mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
 
     result_df = qp.diff(
-        df_new,
         df_old,
+        df_new,
         uid='uid',
         ).show('new+').data.astype('object')
     result_csv = qp.diff(
-        df_new_csv,
         df_old_csv,
+        df_new_csv,
         uid='uid',
         ).show('new+').data.astype('object')
     assert result_df.equals(result_csv), f'failed test for csv mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
@@ -2116,9 +2116,9 @@ def test_csv(tmpdir):
 
 
 def test_identical(tmpdir):
-    df_new, df_old = qp.get_dfs()
-    df_new_xlsx, df_old_xlsx = setup(df_new, df_old, tmpdir)
-    df_new_csv, df_old_csv = setup_csv(df_new, df_old, tmpdir)
+    df_old, df_new = qp.get_dfs()
+    df_old_xlsx, df_new_xlsx = setup(df_old, df_new, tmpdir)
+    df_old_csv, df_new_csv = setup_csv(df_old, df_new, tmpdir)
 
     diff1 = qp.diff(
         df_new,

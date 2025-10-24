@@ -308,8 +308,8 @@ def query(df_old, code=''):
             df_filtered.insert(0, 'meta', df_old.loc[settings.rows, 'meta'])
 
         result = diff(
-            df_filtered,
             df_old,
+            df_filtered,
             uid=False,
             verbosity=settings.verbosity
             ).show(mode=settings.diff)

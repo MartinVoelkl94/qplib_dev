@@ -61,7 +61,7 @@ def test_default():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_prefix():
@@ -87,7 +87,7 @@ def test_prefix():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_duplicates():
@@ -108,7 +108,7 @@ def test_duplicates():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_line_start():
@@ -144,7 +144,7 @@ def test_line_start():
             ],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_line_stop():
@@ -180,7 +180,7 @@ def test_line_stop():
             ],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 
@@ -215,7 +215,7 @@ def test_include():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_include1():
@@ -239,7 +239,7 @@ def test_include1():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_include2():
@@ -263,7 +263,7 @@ def test_include2():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_include3():
@@ -293,7 +293,7 @@ def test_include3():
             ],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_exclude():
@@ -322,7 +322,7 @@ def test_exclude():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_exclude1():
@@ -351,7 +351,7 @@ def test_exclude1():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_exclude2():
@@ -370,7 +370,7 @@ def test_exclude2():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 
@@ -391,7 +391,7 @@ def test_include_exclude():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 
@@ -417,7 +417,7 @@ def test_include_exclude1():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_include_exclude2():
@@ -437,7 +437,7 @@ def test_include_exclude2():
         'age': [42, 17, 55],
         'IC': ['y', 'n', 'y'],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_sequential():
@@ -484,8 +484,8 @@ def test_sequential():
             '',
             ],
         })
-    assert result1.equals(expected1), qp.diff(result1, expected1, output='str')
-    assert result2.equals(expected2), qp.diff(result2, expected2, output='str')
+    assert result1.equals(expected1), qp.diff(result1, expected1)
+    assert result2.equals(expected2), qp.diff(result2, expected2)
 
 
 def test_flatten_once():
@@ -531,7 +531,7 @@ def test_flatten_once():
             ],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_flatten_list():
@@ -575,7 +575,7 @@ def test_flatten_list():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_flatten_twice():
@@ -631,7 +631,7 @@ def test_flatten_twice():
             ],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_flatten_twice_prefix():
@@ -687,7 +687,7 @@ def test_flatten_twice_prefix():
             ],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_flatten_twice_prefix_duplicates():
@@ -728,7 +728,7 @@ def test_flatten_twice_prefix_duplicates():
             ],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_logging():
@@ -751,7 +751,7 @@ def test_logging():
             '',
             ],
         })
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
     check_message('WARNING: column "uid" is not unique in left dataframe')
 
     log(clear=True)

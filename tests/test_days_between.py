@@ -47,7 +47,7 @@ def test_all():
         'days_between_date1_and_date4': [np.nan, np.nan, np.nan],
         'days_between_date1_and_date5': [121, 121, np.nan],
         }).astype(object)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_col():
@@ -60,7 +60,7 @@ def test_col():
         'reference_date': [qp.date('2024-01-01'), qp.date('2024-02-01'), pd.NaT],
         'days_between_date1_and_date0': [-365, -147, np.nan],
         }).astype(object)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_cols():
@@ -74,7 +74,7 @@ def test_cols():
         'days_between_date1_and_date0': [-365, -147, np.nan],
         'days_between_date1_and_date2': [4, 9, np.nan],
         }).astype(object)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_date():
@@ -96,7 +96,7 @@ def test_date():
         'days_between_2024-01-01_and_date4': [np.nan, np.nan, 91],
         'days_between_2024-01-01_and_date5': [121, 152, 182],
         }).astype(object)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_logging():
@@ -105,7 +105,7 @@ def test_logging():
         cols=get_df().columns,
         )
     expected = get_df()
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
     check_message('ERROR: no reference date or column provided')
 
     result = days_between(
@@ -115,7 +115,7 @@ def test_logging():
         reference_date='date1',
         )
     expected = get_df()
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
     check_message('ERROR: both reference date and column provided')
 
     result = days_between(
@@ -125,7 +125,7 @@ def test_logging():
         )
     expected = get_df()
     expected['reference_date'] = [qp.date('2024-01-01'), qp.date('2024-02-01'), pd.NaT]
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
     check_message('ERROR: both reference date and column provided')
 
     df = get_df()
@@ -140,7 +140,7 @@ def test_logging():
         'reference_date': [qp.date('2024-01-01'), qp.date('2024-02-01'), pd.NaT],
         'days_between_date1_and_date0': [-365, -147, np.nan],
         }).astype(object)
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
     check_message('WARNING: column "reference_col" already exists, overwriting')
     check_message(
         'WARNING: column "days_between_date1_and_date0" already exists, overwriting'

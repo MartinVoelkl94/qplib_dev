@@ -60,7 +60,7 @@ def test_default1():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 
@@ -86,7 +86,7 @@ def test_default2():
         'MED2': [3, None, None],
         }).fillna('')
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_default3():
@@ -111,7 +111,7 @@ def test_default3():
             ],
         }).fillna('')
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 
@@ -137,7 +137,7 @@ def test_multiples():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_key_src():
@@ -163,7 +163,7 @@ def test_key_src():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_key_src1():
@@ -191,7 +191,7 @@ def test_key_src1():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 
@@ -218,7 +218,7 @@ def test_include():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_include1():
@@ -244,7 +244,7 @@ def test_include1():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_exclude():
@@ -270,7 +270,7 @@ def test_exclude():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_exclude1():
@@ -296,7 +296,7 @@ def test_exclude1():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_include_exclude():
@@ -323,7 +323,7 @@ def test_include_exclude():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
 
 
 def test_include_exclude1():
@@ -350,4 +350,4 @@ def test_include_exclude1():
         'MED2': [3, None, None],
         })
 
-    assert result.equals(expected), qp.diff(result, expected, output='str')
+    assert result.equals(expected), qp.diff(result, expected)
