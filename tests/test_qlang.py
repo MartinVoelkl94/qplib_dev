@@ -39,26 +39,26 @@ def test_check_df():
     check_message('ERROR: cols are not unique')
     check_message((
         'WARNING: the following colnames contain "%" which is used by the query syntax,'
-        ' use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']'))
+        " use a tick (´) to escape such characters:\n\t[\'$%&/\']"))
     check_message((
         'WARNING: the following colnames contain "&" which is used by the query syntax,'
-        ' use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']'))
+        " use a tick (´) to escape such characters:\n\t[\'$%&/\']"))
     check_message((
         'WARNING: the following colnames contain "/" which is used by the query syntax,'
-        ' use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']'))
+        " use a tick (´) to escape such characters:\n\t[\'$%&/\']"))
     check_message((
         'WARNING: the following colnames contain "$" which is used by the query syntax,'
-        ' use a tick (´) to escape such characters:<br>&emsp;[\'$%&/\']'))
+        " use a tick (´) to escape such characters:\n\t[\'$%&/\']"))
     check_message((
         'WARNING: the following colnames contain leading whitespace which should be'
-        ' removed:<br>&emsp;[\' a\']'))
+        " removed:\n\t[\' a\']"))
     check_message((
         'WARNING: the following colnames contain trailing whitespace which should be'
-        ' removed:<br>&emsp;[\'a \']'))
+        " removed:\n\t[\'a \']"))
     check_message((
         'WARNING: the following colnames start with a character sequence that can be'
         ' read as a query instruction symbol when the default instruction operator is'
-        ' inferred:<br>[\'=\']<br>explicitely use a valid operator to avoid conflicts.'
+        " inferred:\n[\'=\']\nexplicitely use a valid operator to avoid conflicts."
         ))
 
 
