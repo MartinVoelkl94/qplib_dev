@@ -5,6 +5,7 @@ import qplib as qp
 
 from importlib.resources import files
 from IPython.display import display
+
 from ipywidgets import (
     widgets,
     interactive_output,
@@ -14,7 +15,12 @@ from ipywidgets import (
     )
 
 from .util import log
-from .pandas import Diff as diff
+
+from .pandas import (
+    Diff as diff,
+    deduplicate,
+    )
+
 from .types import (
     _dict,
     _int,
@@ -1645,6 +1651,10 @@ def _modify_rows_vals(instruction, df_new, settings):
             df_new[vals_temp] = df_new.astype(str) + df_temp.astype(str)
         else:
             df_new[vals_temp] = df_new[vals_temp].astype(str) + value
+
+    elif operator == OPERATORS.DEDUPLICATE:
+        for col in df_new.columns[cols]:
+            df_new[col] = deduplicate(df_new[col], name=col)
 
     elif FLAGS.COL_EVAL in instruction.flags:
         if operator == OPERATORS.EVAL:

@@ -5,8 +5,8 @@ import re
 import os
 import shutil
 import datetime
-from IPython.display import display
 from IPython import get_ipython
+from IPython.display import display
 from .types import (
     _num,
     _na,
@@ -128,21 +128,22 @@ def log(
     if level_int <= verbosity:
         logs.append(message)
 
-        #make html friendly
-        message['text'] = (
-            message['text']
-            .replace('\n', '<br>')
-            .replace('\t', '&emsp;')
-            )
-        message['context'] = (
-            message['context']
-            .replace('\n', '<br>')
-            .replace('\t', '&emsp;')
-            )
-        message_df = pd.DataFrame(message, index=[len(logs)])
-
         #for jupyter
         if get_ipython().__class__.__name__ == 'ZMQInteractiveShell':  #pragma: no cover
+
+            #make html friendly
+            message['text'] = (
+                message['text']
+                .replace('\n', '<br>')
+                .replace('\t', '&emsp;')
+                )
+            message['context'] = (
+                message['context']
+                .replace('\n', '<br>')
+                .replace('\t', '&emsp;')
+                )
+            message_df = pd.DataFrame(message, index=[len(logs)])
+
             display(
                 message_df
                 .style
@@ -150,9 +151,19 @@ def log(
                 .apply(lambda x: [f'background-color: {color}' for i in x], axis=1)
                 .set_properties(**{'text-align': 'left'})
                 )
+
         #everywhere else
         else:
-            print(message_df)
+            context_formatted = context.replace('\n', '\n    ')
+            text_formatted = text.replace('\n', '\n    ')
+            string = (
+                f'{level} log message:\n'
+                f'  time: {time}\n'
+                f'  time since last log: {delta_ms:.2f} ms\n'
+                f'  context:{context_formatted}\n'
+                f'  text:\n    """{text_formatted}"""\n'
+                )
+            print(string)
 
 
 
