@@ -618,7 +618,7 @@ def days_between(
 
 
 
-def deduplicate(obj, name='object', verbosity=0):
+def deduplicate(obj, name='object', verbosity=3):
     """
     Deduplicate entries in object which can be converted
     to pandas Series by appending consecutive numbers.

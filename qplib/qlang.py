@@ -619,7 +619,11 @@ def parse(instruction_tokenized, settings):
         log(message, 'qp.qlang.parse', verbosity)
         instruction.value = ''
 
-    if flags.intersection(FLAGS.by_trait['copy_df']) and not INPLACE:
+    symbols_copy = (
+        bool(flags.intersection(FLAGS.by_trait['copy_df']))
+        or 'copy_df' in instruction.operator.traits
+        )
+    if symbols_copy and not INPLACE:
         message = (
             f'debug: df will be copied since instruction'
             f' "{instruction.code}" modifies data'
