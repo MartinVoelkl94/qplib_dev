@@ -1,9 +1,11 @@
 import pytest
 import datetime
 from qplib import log
+from freezegun import freeze_time
 
 
 
+@freeze_time("2025-11-04 09:33:40.390551")
 def test_log():
     log(clear=True)
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')

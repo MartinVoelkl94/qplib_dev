@@ -65,7 +65,7 @@ def log(
     if verbosity == 0:
         return
 
-    time = pd.Timestamp.now()
+    time = datetime.datetime.now()
     global logs
 
     if clear:
@@ -115,7 +115,7 @@ def log(
     if len(logs) == 0:
         delta_ms = 0.0
     else:
-        delta_ms = pd.Timestamp.now() - logs[-1]['time']
+        delta_ms = datetime.datetime.now() - logs[-1]['time']
         delta_ms = delta_ms.total_seconds() * 1000
     message = {
         'level': level,
