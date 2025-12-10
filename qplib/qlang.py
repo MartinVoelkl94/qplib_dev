@@ -14,13 +14,9 @@ from ipywidgets import (
     Layout,
     )
 
-from .util import log
-
-from .pandas import (
-    Diff as diff,
-    deduplicate,
-    )
-
+from .diffing import diff
+from .pandas import deduplicate
+from .util import log, ensure_unique_string
 from .types import (
     _dict,
     _int,
@@ -1197,15 +1193,8 @@ def _new_col(instruction, df_new, settings):
                 )
             log(message, 'qp.qlang._new_col', verbosity)
 
-    for i in range(1, 1001):
-        if i == 1000:  #pragma: no cover (unlikely to happen)
-            message = 'error: could not add new col. too many cols named "new<x>"'
-            log(message, 'qp.qlang._new_col', verbosity)
-            return df_new, settings
-        colname = 'new' + str(i)
-        if colname not in df_new.columns:
-            df_new[colname] = pd.NA
-            break
+    colname = ensure_unique_string('new', df_new.columns, strategy='increment')
+    df_new[colname] = pd.NA
 
     if operator == OPERATORS.SET:
         pass

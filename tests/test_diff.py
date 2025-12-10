@@ -1441,11 +1441,11 @@ def test_summary_str(tmpdir):
 
         uid col: uid
         cols shared: 2
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1479,11 +1479,11 @@ def test_summary_str(tmpdir):
         in both files: yes
         uid col: uid
         cols shared: 2
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1517,11 +1517,11 @@ def test_summary_str(tmpdir):
 
         uid col: uid
         cols shared: 2
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1555,11 +1555,11 @@ def test_summary_str(tmpdir):
 
         uid col: uid
         cols shared: 2
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1599,11 +1599,11 @@ def test_summary_str_ignore(tmpdir):
 
         uid col: uid
         cols shared: 1
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1638,11 +1638,11 @@ def test_summary_str_ignore(tmpdir):
         in both files: yes
         uid col: uid
         cols shared: 1
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1676,11 +1676,11 @@ def test_summary_str_ignore(tmpdir):
 
         uid col: uid
         cols shared: 1
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1714,11 +1714,11 @@ def test_summary_str_ignore(tmpdir):
 
         uid col: uid
         cols shared: 1
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1757,11 +1757,11 @@ def test_summary_str_ignore1(tmpdir):
 
         uid col: uid
         cols shared: 1
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1796,11 +1796,11 @@ def test_summary_str_ignore1(tmpdir):
         in both files: yes
         uid col: uid
         cols shared: 1
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1834,11 +1834,11 @@ def test_summary_str_ignore1(tmpdir):
 
         uid col: uid
         cols shared: 1
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1872,11 +1872,11 @@ def test_summary_str_ignore1(tmpdir):
 
         uid col: uid
         cols shared: 1
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1915,11 +1915,11 @@ def test_summary_str_ignore2(tmpdir):
 
         uid col: uid
         cols shared: 0
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1956,11 +1956,11 @@ def test_summary_str_ignore2(tmpdir):
         in both files: yes
         uid col: uid
         cols shared: 0
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -1995,11 +1995,11 @@ def test_summary_str_ignore2(tmpdir):
 
         uid col: uid
         cols shared: 0
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:
@@ -2034,11 +2034,11 @@ def test_summary_str_ignore2(tmpdir):
 
         uid col: uid
         cols shared: 0
-        rows shared: 2
         cols added:
             d
         cols removed:
             c
+        rows shared: 2
         rows added:
             x2
         rows removed:

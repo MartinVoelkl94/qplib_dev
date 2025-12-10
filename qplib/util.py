@@ -5,6 +5,8 @@ import re
 import os
 import shutil
 import datetime
+import random
+import string as str_module
 from IPython import get_ipython
 from IPython.display import display
 from .types import (
@@ -266,6 +268,56 @@ def match(patterns, value, regex=True):
     else:
         return value in patterns
 
+
+def ensure_unique_string(
+        string,
+        taken,
+        strategy='increment',
+        ) -> str:
+    """
+    Ensure that a string is unique within a set of taken strings.
+
+    Parameters
+    ----------
+    string : The original string to be made unique.
+    taken : An iterable of strings that are already taken.
+    strategy : The strategy to use for making the string unique. Default is 'increment'.
+        * "increment": use incrementing numbers appended to the string.
+        * "random": use random characters appended to the string.
+        * "timestamp": use a timestamp appended to the string.
+        * "datestamp": append the current date to the string.
+            If date is already taken, incrementing numbers are appended.
+
+    """
+
+    base_string = string
+
+    if strategy == 'increment':
+        counter = 1
+        while string in taken:
+            string = f"{base_string}{counter}"
+            counter += 1
+    elif strategy == 'random':
+        while string in taken:
+            chars = str_module.ascii_letters + str_module.digits
+            rand_str = ''.join(random.choices(chars, k=6))
+            string = f"{base_string}_{rand_str}"
+    elif strategy == 'timestamp':
+        while string in taken:
+            timestamp = datetime.datetime.now().strftime('%Y_%m_%d_%Hh%Mm%Ss')
+            string = f"{base_string}_{timestamp}"
+    elif strategy == 'datestamp':
+        datestamp = datetime.datetime.now().strftime('%Y_%m_%d')
+        string_temp = f"{base_string}_{datestamp}"
+        counter = 1
+        while string_temp in taken:
+            string_temp = f"{base_string}_{datestamp}_v{counter}"
+            counter += 1
+        string = string_temp
+    else:
+        raise ValueError(f'Unknown strategy: {strategy}')
+
+    return string
 
 
 def header(

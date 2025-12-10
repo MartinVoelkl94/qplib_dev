@@ -193,7 +193,7 @@ def test_diff_mix():
     result = result.reindex(sorted(result.columns), axis=1)
     expected = get_df()
     expected.insert(0, 'meta', '')
-    expected.insert(1, 'new1', ['a'] * 11)
+    expected.insert(1, 'new', ['a'] * 11)
     expected = expected.reindex(sorted(expected.columns), axis=1)
     assert result.equals(expected), qp.diff(result, expected).str()
 
@@ -202,7 +202,7 @@ def test_diff_new():
     result = get_df().q(r'$new=1   $diff=new').data
     expected = pd.DataFrame({
         'meta': [''] * 11,
-        'new1': ['1'] * 11,
+        'new': ['1'] * 11,
         })
     assert result.equals(expected), qp.diff(result, expected).str()
 
@@ -870,47 +870,47 @@ params = [
     (
         r'$new',
         '',
-        ['new1']
+        ['new']
     ),
     (
         r'$new a',
         'a',
-        ['new1']
+        ['new']
     ),
     (
         r'$newa',
         'a',
-        ['new1']
+        ['new']
     ),
     (
         r'$new =a',
         'a',
-        ['new1']
+        ['new']
     ),
     (
         r'$new= a',
         'a',
-        ['new1']
+        ['new']
     ),
     (
         r'$new = a',
         'a',
-        ['new1']
+        ['new']
     ),
     (
         r'$new ~ "a"',
         'a',
-        ['new1']
+        ['new']
     ),
     (
         r'$new ~ df["ID"]',
         get_df()['ID'],
-        ['new1']
+        ['new']
     ),
     (
         r'$new @ID',
         get_df()['ID'],
-        ['new1']
+        ['new']
     ),
     (
         r'$new  %id',
@@ -922,7 +922,7 @@ params = [
 def test_new_col(code, content, cols):
     result = get_df().q(code)
     expected = get_df()
-    expected['new1'] = content
+    expected['new'] = content
     expected = expected.loc[:, cols]
     text = (
         'failed test0: creating new col\nDIFF:\n'
@@ -943,35 +943,35 @@ def test_new_col1():
     assert result.equals(expected), text
 
 
-    result = get_df().q('$new a   &newb   /=new1 /=new2')
+    result = get_df().q('$new a   &newb   /=new /=new1')
     expected = get_df()
-    expected['new1'] = 'a'
-    expected = expected.loc[:, ['new1']]
+    expected['new'] = 'a'
+    expected = expected.loc[:, ['new']]
     text = (
         'failed test2: creating new col\nDIFF:\n'
         + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
-    check_message('WARNING: no cols fulfill the condition in "/=new2"')
+    check_message('WARNING: no cols fulfill the condition in "/=new1"')
 
 
-    result = get_df().q('$new a /new b   /=new1 /=new2')
+    result = get_df().q('$new a /new b   /=new /=new1')
     expected = get_df()
-    expected['new1'] = 'a'
-    expected = expected.loc[:, ['new1']]
+    expected['new'] = 'a'
+    expected = expected.loc[:, ['new']]
     text = (
         'failed test3: creating new col\nDIFF:\n'
         + qp.diff(result, expected).str()
         )
     assert result.equals(expected), text
-    check_message('WARNING: no cols fulfill the condition in "/=new2"')
+    check_message('WARNING: no cols fulfill the condition in "/=new1"')
 
 
-    result = get_df().q('$new a  $new b   /=new1 /=new2')
+    result = get_df().q('$new a  $new b   /=new /=new1')
     expected = get_df()
-    expected['new1'] = 'a'
-    expected['new2'] = 'b'
-    expected = expected.loc[:, ['new1', 'new2']]
+    expected['new'] = 'a'
+    expected['new1'] = 'b'
+    expected = expected.loc[:, ['new', 'new1']]
     text = (
         'failed test4: creating multiple new cols\nDIFF:\n'
         + qp.diff(result, expected).str()
@@ -981,8 +981,8 @@ def test_new_col1():
 
     result = get_df().q(r'%%idx = 0  $new a')
     expected = get_df()
-    expected['new1'] = 'a'
-    expected = expected.loc[[0], ['new1']]
+    expected['new'] = 'a'
+    expected = expected.loc[[0], ['new']]
     text = (
         'failed test5: creating new col with index\nDIFF:\n'
         + qp.diff(result, expected).str()
@@ -992,8 +992,8 @@ def test_new_col1():
 
     result = get_df().q(r'$new a  %%idx = 0  ')
     expected = get_df()
-    expected['new1'] = 'a'
-    expected = expected.loc[[0], ['new1']]
+    expected['new'] = 'a'
+    expected = expected.loc[[0], ['new']]
     text = (
         'failed test6: creating new col and select with index\nDIFF:\n'
         + qp.diff(result, expected).str()
@@ -1003,8 +1003,8 @@ def test_new_col1():
 
     result = get_df().q(r'%%idx = 0   $save1  %%is any;   $new a  %%load1')
     expected = get_df()
-    expected['new1'] = 'a'
-    expected = expected.loc[[0], ['new1']]
+    expected['new'] = 'a'
+    expected = expected.loc[[0], ['new']]
     text = (
         'failed test7: check if selection saving and'
         ' loading works correctly with new col creation\nDIFF:\n'
@@ -2358,7 +2358,7 @@ def test_style():
         """
         )
     isinstance(result, pd.io.formats.style.Styler)
-    expected = pd.DataFrame('a', index=df.index, columns=['new1'])
+    expected = pd.DataFrame('a', index=df.index, columns=['new'])
     text = (
         'failed test: updating style\nDIFF:\n'
         + qp.diff(result.data, expected).str()

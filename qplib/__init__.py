@@ -1,4 +1,5 @@
 from .qlang import query
+from .diffing import diff
 from .excel import hide, format_excel
 
 from .pandas import (
@@ -8,7 +9,6 @@ from .pandas import (
     embed,
     days_between,
     deduplicate,
-    Diff as diff,
     )
 
 from .util import (
@@ -46,6 +46,8 @@ from .types import (
 
 __all__ = (
     'query',
+    'diff',
+
     'hide',
     'format_excel',
 
@@ -55,7 +57,6 @@ __all__ = (
     'embed',
     'days_between',
     'deduplicate',
-    'diff',
 
     'log',
     'fetch',
