@@ -433,6 +433,77 @@ def _convert(value, errors='coerce', na=None):
     return result
 
 
+
+class Container:
+    """
+    lightweight attribute-centric datastructure:
+    - stores data as attributes
+    - prevents collisions with class methods and reserved attributes
+    - provides dict-like introspection via keys(), values(), items()
+    - debug-friendly self referential representation
+    """
+
+    #essential methods
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            self.__setattr__(key, value)
+
+    def __setattr__(self, name, value):
+        if name in dir(self.__class__):
+            raise AttributeError(f"{name!r} is a reserved attribute/method name.")
+        super().__setattr__(name, value)
+
+    #dict-like interface
+    def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise KeyError(f"Container keys must be strings, not {type(key)}.")
+        self.__setattr__(key, value)
+
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
+    def keys(self):
+        return self.__dict__.keys()
+
+    def values(self):
+        return self.__dict__.values()
+
+    def items(self):
+        return self.__dict__.items()
+
+    #list/iterator interface
+    def append(self, value):
+        counter = 0
+        key = 'i' + str(counter)
+        while key in self.__dict__:
+            counter += 1
+            key = 'i' + str(counter)
+        self.__dict__[key] = value
+
+    def __iter__(self):
+        return iter(self.__dict__)
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    #utility
+    def __repr__(self):
+        content = []
+        for k, v in self.__dict__.items():
+            if isinstance(v, Container):
+                v = str(v).replace('\n', '\n    ')
+                content.append(f'  {k} = {v},')
+            else:
+                content.append(f'  {k} = {v!r},')
+        return 'Container(\n' + '\n'.join(content) + '\n  )'
+
+
+
+msg_reserved_attr = (
+    ' is a reserved attribute and cannot be'
+    ' modified or used as a key or attribute name.'
+    'view all using ".reserved_attributes".'
+    )
 class _dict(dict):
     """
     Dictionary with some extra features:
@@ -441,15 +512,73 @@ class _dict(dict):
     - qp.dict().invert() will invert the key:value pairs to value:key pairs
     """
 
-    def __setattr__(self, name, value):
-        if name in dict().__dir__():
-            msg = (
-                f'Attribute "{name}" is needed for regular'
-                ' dict functionality and cannot be modified'
-                )
-            raise AttributeError(msg)
+    #handling equivalence of attributes and items
+
+    _reserved_attributes = dict().__dir__() + [
+        #not included in dict().__dir__() but still present
+        '__dict__',
+        '__weakref__',
+
+        #custom
+        '_reserved_attributes',
+        'values_flat',
+        'invert',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for key, value in self.items():
+            self.__setitemattr__(key, value)
+
+    def __setitemattr__(self, key, value):
+        if key in self._reserved_attributes:
+            raise AttributeError(f'"{key}"' + msg_reserved_attr)
+        elif not isinstance(key, str):
+            raise AttributeError('keys and attribute names must be strings')
         else:
-            super().__setattr__(name, value)
+            super().__setitem__(key, value)
+            super().__setattr__(key, value)
+
+    def __setitem__(self, key, value):
+        self.__setitemattr__(key, value)
+
+    def __setattr__(self, name, value):
+        self.__setitemattr__(name, value)
+
+    def __delitem__(self, key):
+        super().__delitem__(key)
+        super().__delattr__(key)
+
+    def __delattr__(self, name):
+        super().__delattr__(name)
+        super().__delitem__(name)
+
+    def pop(self, key):
+        super().__delattr__(key)
+        return super().pop(key)
+
+    def popitem(self):
+        key, value = super().popitem()
+        super().__delattr__(key)
+        return key, value
+
+    def update(self, *args, **kwargs):
+        super().update(*args, **kwargs)
+        for key, value in self.items():
+            self.__setitemattr__(key, value)
+
+    def fromkeys(self, *args, **kwargs):
+        return _dict(super().fromkeys(*args, **kwargs))
+
+    def clear(self):
+        for key in self.keys():
+            super().__delattr__(key)
+        super().clear()
+
+    def copy(self):
+        return _dict(super().copy())
+
+    #extra methods
 
     def values_flat(self):
         values_flat = []
@@ -467,4 +596,15 @@ class _dict(dict):
         return values_flat
 
     def invert(self):
-        return _dict({val: key for key, val in self.items()})
+        try:
+            inverted = _dict({val: key for key, val in self.items()})
+        except AttributeError as e:
+            if str(e).endswith(msg_reserved_attr):
+                msg = (
+                    'Cannot invert dictionary with reserved'
+                    ' attributes as values.'
+                    )
+                raise AttributeError(msg)
+            else:
+                raise e
+        return inverted
