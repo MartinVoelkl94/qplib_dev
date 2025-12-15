@@ -42,6 +42,7 @@ from .types import (
     _type as type,
     _convert as convert,
     _dict as dict,
+    Container,
     )
 
 __all__ = (
@@ -85,5 +86,6 @@ __all__ = (
     'yn',
     'type',
     'convert',
+    'Container',
     'dict',
     )

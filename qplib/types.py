@@ -490,13 +490,22 @@ class Container:
     def __repr__(self):
         content = []
         for k, v in self.__dict__.items():
-            if isinstance(v, Container):
+            if isinstance(v, self.__class__):
                 v = str(v).replace('\n', '\n    ')
                 content.append(f'  {k} = {v},')
             else:
                 content.append(f'  {k} = {v!r},')
         return 'Container(\n' + '\n'.join(content) + '\n  )'
 
+    def __eq__(self, value):
+        if not isinstance(value, self.__class__):
+            return False
+        else:
+            return self.__dict__ == value.__dict__
+
+    def clear(self):
+        for key in list(self.__dict__.keys()):
+            del self.__dict__[key]
 
 
 msg_reserved_attr = (

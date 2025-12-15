@@ -716,16 +716,162 @@ def test_convert(input, expected):
     assert result == expected, text
 
 
-def test_dict_setattr():
-    d = qp.dict()
-    d['key'] = 'value'
-    assert d['key'] == 'value'
 
-    d.new_attr = 'new_value'
-    assert d.new_attr == 'new_value'
+def test_Container_set_get():
+    c = qp.Container()
+    c['name'] = 1
+    assert c['name'] == 1
+    assert c.name == 1
+
+    c.name = 2
+    assert c.name == 2
+    assert c['name'] == 2
+
+    c.__setitem__('name', 4)
+    assert c.name == 4
+    assert c['name'] == 4
+
+    c.__setattr__('name', 3)
+    assert c.name == 3
+    assert c['name'] == 3
+
+
+def test_Container_other_methods():
+    c = qp.Container()
+    c.a = 1
+    c['b'] = 2
+    c.__setitem__('c', 3)
+    c.__setattr__('d', 4)
+    c.append(5)
+    c.append(6)
+
+    assert c.i0 == 5
+    assert c.i1 == 6
+    assert c == eval(c.__repr__(), globals={'Container': qp.Container})
+    assert list(c.keys()) == ['a', 'b', 'c', 'd']
+    assert list(c.values()) == [1, 2, 3, 4]
+    assert list(c.items()) == [('a', 1), ('b', 2), ('c', 3), ('d', 4)]
+
+    c.clear()
+    assert c == qp.Container()
+
+
+
+def test_dict_set_get():
+    d = qp.dict()
+    d['name'] = 1
+    assert d['name'] == 1
+    assert d.name == 1
+
+    d.name = 2
+    assert d.name == 2
+    assert d['name'] == 2
+
+    d.__setitem__('name', 4)
+    assert d.name == 4
+    assert d['name'] == 4
+
+    d.__setattr__('name', 3)
+    assert d.name == 3
+    assert d['name'] == 3
+
+
+def test_dict_keys_values_items():
+    d = qp.dict()
+    d.a = 1
+    d['b'] = 2
+
+    assert set(d.keys()) == {'a', 'b'}
+    assert set(d.values()) == {1, 2}
+    assert set(d.items()) == {('a', 1), ('b', 2)}
+
+
+def test_dict_clear():
+    d = qp.dict()
+
+    d.a = 1
+    d.clear()
+    with pytest.raises(AttributeError):
+        d.a
+
+    d.a = 1
+    d.clear()
+    with pytest.raises(KeyError):
+        d['a']
+
+    d['a'] = 1
+    d.clear()
+    with pytest.raises(KeyError):
+        d['a']
+
+    d['a'] = 1
+    d.clear()
+    with pytest.raises(AttributeError):
+        d.a
+
+
+def test_dict_copy():
+    d1 = qp.dict()
+    d1.a = 1
+    d1['b'] = 2
+
+    d2 = d1.copy()
+    assert d2.a == 1
+    assert d2['a'] == 1
+    assert d2.b == 2
+    assert d2['b'] == 2
+
+    d2.a = 3
+    assert d1.a == 1
+    assert d1['a'] == 1
+    assert d2.a == 3
+    assert d2['a'] == 3
+
+
+def test_dict_update():
+    d = qp.dict()
+    d.a = 1
+    d['b'] = 2
+
+    d.update({'a': 3, 'c': 4})
+    assert d.a == 3
+    assert d['a'] == 3
+    assert d.b == 2
+    assert d['b'] == 2
+    assert d.c == 4
+    assert d['c'] == 4
+
+    d.update(d=5, e=6)
+    assert d.d == 5
+    assert d['d'] == 5
+    assert d.e == 6
+    assert d['e'] == 6
+
+
+def test_dict_nonstring():
+    d = qp.dict()
 
     with pytest.raises(AttributeError):
-        d.keys = 'should_fail'
+        d[1] = 'one'
+
+    with pytest.raises(AttributeError):
+        d[1.0] = 'one'
+
+
+def test_dict_reserved_attributes():
+    reserved_attributes = dict().__dir__() + [
+        '__dict__',
+        '__weakref__',
+        '_reserved_attributes',
+        'values_flat',
+        'invert',
+        ]
+    d = qp.dict()
+    assert reserved_attributes == d._reserved_attributes
+    for attr in reserved_attributes:
+        with pytest.raises(AttributeError):
+            d[attr] = 'should_fail'
+
 
 def test_dict_values_flat():
     d = qp.dict({
@@ -748,13 +894,14 @@ def test_dict_values_flat():
         9,
         10,
         11,
-        12
+        12,
         ]
     assert d.values_flat() == values_expected, "Failed for nested structures"
 
-def test_dict_invert():
-    d = qp.dict({'a': 1, 'b': 2, 'c': 3})
-    assert d.invert() == qp.dict({1: 'a', 2: 'b', 3: 'c'})
 
-    d = qp.dict({'a': 1, 'b': 1, 'c': 3})
-    assert d.invert() == qp.dict({1: 'b', 3: 'c'})
+def test_dict_invert():
+    d = qp.dict({'a': '1', 'b': '2', 'c': '3'})
+    assert d.invert() == qp.dict({'1': 'a', '2': 'b', '3': 'c'})
+
+    d = qp.dict({'a': '1', 'b': '1', 'c': '3'})
+    assert d.invert() == qp.dict({'1': 'b', '3': 'c'})
