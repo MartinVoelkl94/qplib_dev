@@ -187,6 +187,7 @@ class Diff:
             self,
             mode='mix',
             prefix_old='old: ',
+            linebreak='<br>',
             ):
         """
         Generate a styled DataFrame showing differences between datasets.
@@ -236,21 +237,23 @@ class Diff:
                 index=df_diff.index,
                 columns=df_diff.columns,
                 )
-            df_diff['meta'] += 'removed sheet'
+            col_diff = ensure_unique_string('diff', df_diff.columns)
+            df_diff.insert(0, col_diff, 'removed dataset')
 
 
         elif old.empty:
-            df_diff = copy.deepcopy(new)
+            df_diff = new.copy()
             df_diff_style = pd.DataFrame(
                 f'background-color: {GREEN}',
                 index=df_diff.index,
                 columns=df_diff.columns,
                 )
-            df_diff['meta'] += 'added sheet'
+            col_diff = ensure_unique_string('diff', df_diff.columns)
+            df_diff.insert(0, col_diff, 'added dataset')
 
 
         elif mode in ['new', 'new+']:
-            df_diff = copy.deepcopy(new)
+            df_diff = new.copy()
             df_diff_style = pd.DataFrame(
                 '',
                 index=df_diff.index,
@@ -259,46 +262,50 @@ class Diff:
 
             #add metadata columns
             if mode == 'new+':
-                cols_new = ['meta']
                 cols_add = []
+                cols_reorder = []
                 for col in df_diff.columns:
-                    if not col.startswith(prefix_old) and col != 'meta':
-                        cols_new.append(col)
-                        if col != uid:
-                            cols_new.append(prefix_old + col)
-                            if prefix_old + col not in df_diff.columns:
-                                cols_add.append(prefix_old + col)
+                    cols_reorder.append(col)
+                    if col != uid:
+                        col_name = prefix_old + col
+                        cols_reorder.append(col_name)
+                        if col_name not in df_diff.columns:
+                            cols_add.append(col_name)
+
+                df_diff_add = pd.DataFrame(
+                    '',
+                    index=df_diff.index,
+                    columns=cols_add,
+                    )
+                df_diff_style_add = pd.DataFrame(
+                    'font-style: italic',
+                    index=df_diff.index,
+                    columns=cols_add
+                    )
 
                 df_diff = pd.concat(
-                    [
-                        df_diff,
-                        pd.DataFrame('', index=df_diff.index, columns=cols_add)
-                    ],
+                    [df_diff, df_diff_add],
                     axis=1,
                     )
                 df_diff_style = pd.concat(
-                    [
-                        df_diff_style,
-                        pd.DataFrame(
-                            'font-style: italic',
-                            index=df_diff.index,
-                            columns=cols_add
-                            )
-                    ],
+                    [df_diff_style, df_diff_style_add],
                     axis=1,
                     )
-                df_diff = df_diff[cols_new]
-                df_diff_style = df_diff_style[cols_new]
+
+                df_diff = df_diff[cols_reorder]
+                df_diff_style = df_diff_style[cols_reorder]
 
 
             df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
             df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
 
-            df_diff.loc[rows_added, 'meta'] += 'added row'
+            col_diff = ensure_unique_string('diff', df_diff.columns)
+            df_diff.insert(0, col_diff, '')
+            df_diff.loc[rows_added, col_diff] += 'added row'
 
 
         elif mode == 'old':
-            df_diff = copy.deepcopy(old)
+            df_diff = old.copy()
             df_diff_style = pd.DataFrame(
                 '',
                 index=df_diff.index,
@@ -308,7 +315,10 @@ class Diff:
             df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
             df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
 
-            df_diff.loc[rows_removed, 'meta'] += 'removed row'
+            col_diff = ensure_unique_string('diff', df_diff.columns)
+            df_diff.insert(0, col_diff, '')
+            df_diff.loc[rows_removed, col_diff] += 'removed row'
+
 
         elif mode == 'mix':
             inds_old = old.index.difference(new.index)
@@ -328,79 +338,81 @@ class Diff:
             df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
             df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
 
-            df_diff.loc[rows_added, 'meta'] += 'added row'
-            df_diff.loc[rows_removed, 'meta'] += 'removed row'
+            col_diff = ensure_unique_string('diff', df_diff.columns)
+            df_diff.insert(0, col_diff, '')
+            df_diff.loc[rows_added, col_diff] += 'added row'
+            df_diff.loc[rows_removed, col_diff] += 'removed row'
+
 
 
         #highlight values in shared columns
-        #column 0 contains metadata and is skipped
-        cols_shared_no_metadata = [
-            col for col
-            in cols_shared
-            if not col.startswith(prefix_old) and col != 'meta'
-            ]
 
-        df_old_isna = old.loc[rows_shared, cols_shared_no_metadata].isna()
-        df_new_isna = new.loc[rows_shared, cols_shared_no_metadata].isna()
+        # replace "<" and ">" with html entities to prevent interpretation as html tags
+        if pd.__version__ >= '2.1.0':
+            df_diff = df_diff.map(lambda x: _replace_gt_lt(x))
+        else:
+            df_diff = df_diff.applymap(lambda x: _replace_gt_lt(x))
+
+        df_old_isna = old.loc[rows_shared, cols_shared].isna()
+        df_new_isna = new.loc[rows_shared, cols_shared].isna()
         df_new_equals_old = (
-            new.loc[rows_shared, cols_shared_no_metadata]
-            == old.loc[rows_shared, cols_shared_no_metadata]
+            new.loc[rows_shared, cols_shared]
+            == old.loc[rows_shared, cols_shared]
             )
 
-        df_added = df_old_isna & ~df_new_isna
-        df_removed = df_new_isna & ~df_old_isna
-        df_changed = (~df_new_isna & ~df_old_isna & ~df_new_equals_old).astype(bool)
-        #the previous comparison can result in dtype "boolean" instead of "bool"
+        #these comparisons can result in dtype "boolean" instead of "bool"
         #"boolean" masks cannot be used to set values as str
+        df_added = (df_old_isna & ~df_new_isna).astype(bool)
+        df_removed = (df_new_isna & ~df_old_isna).astype(bool)
+        df_changed = (~df_new_isna & ~df_old_isna & ~df_new_equals_old).astype(bool)
 
-        df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
+        df_diff_style.loc[rows_shared, cols_shared] += (
             df_added
             .mask(df_added, f'background-color: {GREEN_LIGHT}')
             .where(df_added, '')
             )
 
-        df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
+        df_diff_style.loc[rows_shared, cols_shared] += (
             df_removed
             .mask(df_removed, f'background-color: {RED_LIGHT}')
             .where(df_removed, '')
             )
 
-        df_diff_style.loc[rows_shared, cols_shared_no_metadata] += (
+        df_diff_style.loc[rows_shared, cols_shared] += (
             df_changed
             .mask(df_changed, f'background-color: {ORANGE_LIGHT}')
             .where(df_changed, '')
             )
 
 
+        #summarize changes in diff column
+        sum_added = df_added.sum(axis=1)
+        sum_removed = df_removed.sum(axis=1)
+        sum_changed = df_changed.sum(axis=1)
 
-        df_added_sum = df_added.sum(axis=1)
-        df_removed_sum = df_removed.sum(axis=1)
-        df_changed_sum = df_changed.sum(axis=1)
+        added = sum_added[sum_added > 0].index
+        removed = sum_removed[sum_removed > 0].index
+        changed = sum_changed[sum_changed > 0].index
 
-        # vals_added.append(int(df_added_sum.sum()))
-        # vals_removed.append(int(df_removed_sum.sum()))
-        # vals_changed.append(int(df_changed_sum.sum()))
+        df_diff.loc[added, col_diff] += 'vals added: '
+        df_diff.loc[added, col_diff] += sum_added[added].astype(str)
+        df_diff.loc[added.intersection(removed), col_diff] += linebreak
+        df_diff.loc[added.intersection(changed), col_diff] += linebreak
 
-        df_diff.loc[rows_shared, 'meta'] += (
-            df_added_sum
-            .apply(lambda x: f'<br>vals added: {x}' if x > 0 else '')
-            )
-        df_diff.loc[rows_shared, 'meta'] += (
-            df_removed_sum
-            .apply(lambda x: f'<br>vals removed: {x}' if x > 0 else '')
-            )
-        df_diff.loc[rows_shared, 'meta'] += (
-            df_changed_sum
-            .apply(lambda x: f'<br>vals changed: {x}' if x > 0 else '')
-            )
+        df_diff.loc[removed, col_diff] += 'vals removed: '
+        df_diff.loc[removed, col_diff] += sum_removed[removed].astype(str)
+        df_diff.loc[removed.intersection(changed), col_diff] += linebreak
+
+        df_diff.loc[changed, col_diff] += 'vals changed: '
+        df_diff.loc[changed, col_diff] += sum_changed[changed].astype(str)
 
 
         if mode == 'new+':
-            cols_shared_metadata = [prefix_old + col for col in cols_shared_no_metadata]
+            cols_shared_metadata = [prefix_old + col for col in cols_shared]
             df_all_modifications = (df_added | df_removed | df_changed)
             df_old_changed = (
                 old
-                .loc[rows_shared, cols_shared_no_metadata]
+                .loc[rows_shared, cols_shared]
                 .where(df_all_modifications, '')
                 )
             df_diff.loc[rows_shared, cols_shared_metadata] = df_old_changed.values
@@ -414,28 +426,11 @@ class Diff:
                 )
             log(msg, 'qp.Diff', self.verbosity)
 
-        #replace "<" and ">" with html entities to prevent interpretation as html tags
-        cols_no_metadata = [
-            col for col
-            in df_diff.columns
-            if not col.startswith(prefix_old) and col != 'meta'
-            ]
-
-        if pd.__version__ >= '2.1.0':
-            df_diff.loc[:, cols_no_metadata] = (
-                df_diff
-                .loc[:, cols_no_metadata]
-                .map(lambda x: _try_replace_gt_lt(x))
-                )
-        else:
-            df_diff.loc[:, cols_no_metadata] = (
-                df_diff
-                .loc[:, cols_no_metadata]
-                .applymap(lambda x: _try_replace_gt_lt(x))
-                )
-
-
         diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
+        diff_styled = diff_styled.set_properties(**{
+            # 'text-align': 'left',  #not working on all rows
+            'white-space': 'pre-wrap',
+            })
         return diff_styled
 
 
@@ -683,6 +678,7 @@ class Diffs:
             mode='mix',
             sheet=0,
             prefix_old='old: ',
+            linebreak='<br>',
             ):
         """
         """
@@ -702,6 +698,7 @@ class Diffs:
         result = diff.show(
             mode,
             prefix_old,
+            linebreak,
             )
         return result
 
@@ -920,7 +917,7 @@ def _to_str(obj, linebreak='<br>', concat_limit=1000):
 #     return iter_new
 
 
-def _try_replace_gt_lt(x):
+def _replace_gt_lt(x):
     if isinstance(x, str):
         return x.replace('<', '&lt;').replace('>', '&gt;')
     elif isinstance(x, type):
