@@ -1,12 +1,13 @@
 
 import pandas as pd
-import copy
+import openpyxl
 
 from .types import Container
 from .pandas import deduplicate
-from .excel import hide, format_excel
+from .excel import format_excel
 from .util import (
     log,
+    match,
     _arg_to_list,
     ensure_unique_string,
     GREEN,
@@ -15,8 +16,6 @@ from .util import (
     ORANGE_LIGHT,
     RED_LIGHT,
     )
-
-
 
 
 
@@ -31,37 +30,47 @@ class Diff:
             old: pd.DataFrame,
             new: pd.DataFrame,
             uid=None,
-            ignore=None,
-            rename=None,
-            name='',
+            rename_cols=None,
+            ignore_cols=None,
+            name='data',
             verbosity=3,
             ):
-
         self.verbosity = verbosity
         self.name = name
         self.old = old.copy()
         self.new = new.copy()
-        self.rename_cols(rename)
-        self.ignore_cols(ignore)  #sets: self.cols_ignore
+        self.rename_cols(rename_cols)
+        self.ignore_cols(ignore_cols)  #sets: self.cols_ignore
         self.set_uid(uid)  #sets: self.uid, self.old.index, self.new.index
+        if not self.old.index.name:
+            self.old.index.name = 'index'
+        if not self.new.index.name:
+            self.new.index.name = 'index'
 
-    def rename_cols(self, rename=None):
-        if isinstance(rename, dict):
-            self.old = self.old.rename(columns=rename)
-            self.new = self.new.rename(columns=rename)
+    def rename_cols(self, mapping=None):
+        if isinstance(mapping, dict):
+            self.old = self.old.rename(columns=mapping)
+            self.new = self.new.rename(columns=mapping)
         return self
 
-    def ignore_cols(self, ignore=None):
+    def ignore_cols(self, cols=None):
         cols_ignore = (
             self.old.columns
             .union(self.new.columns)
-            .intersection(_arg_to_list(ignore))
+            .intersection(_arg_to_list(cols))
             )
         self.cols_ignore = cols_ignore
         return self
 
+
     def set_uid(self, uid=None):
+        """
+        Set the unique identifier (uid) column for
+        comparing rows between old and new datasets.
+        """
         if uid is False:
+            msg = 'debug: using index for comparison'
+            log(msg, 'qp.Diff', self.verbosity)
             uid = ''
         elif uid is None:
             msg = 'debug: searching for suitable uid column'
@@ -87,8 +96,8 @@ class Diff:
         self.uid = uid
         return self
 
-    def _find_uid(self):
 
+    def _find_uid(self):
         uids_potential = self.new.columns.intersection(self.old.columns)
         uids_by_uniqueness = {}
         for uid in uids_potential:
@@ -112,8 +121,9 @@ class Diff:
 
         return uid
 
-    def summary(self, detailed=False):
+    def details(self, head=5):
         """
+        Detailed information about differences between datasets.
         """
         cols_shared = (
             self.new
@@ -159,35 +169,63 @@ class Diff:
                     }
                 dtypes_changed[col] = changed
 
-        summary = Container()
-        summary.name = self.name
-        summary.uid = self.uid
-        summary.n_cols_shared = len(cols_shared)
-        summary.n_cols_added = len(cols_added)
-        summary.n_cols_removed = len(cols_removed)
-        summary.n_rows_shared = len(rows_shared)
-        summary.n_rows_added = len(rows_added)
-        summary.n_rows_removed = len(rows_removed)
-        summary.n_dtypes_changed = len(dtypes_changed)
-        if detailed:
-            summary.cols_shared = cols_shared
-            summary.cols_added = cols_added
-            summary.cols_removed = cols_removed
-            summary.rows_shared = rows_shared
-            summary.rows_added = rows_added
-            summary.rows_removed = rows_removed
-            summary.dtypes_changed = dtypes_changed
-        return summary
+        details = Container()
 
-    def details(self):
-        details = self.summary(detailed=True)
+        #basic info
+        details.name = self.name
+        details.uid = self.uid
+
+        #numerical summary of changes
+        details.cols_shared = len(cols_shared)
+        details.cols_added = len(cols_added)
+        details.cols_removed = len(cols_removed)
+        details.rows_shared = len(rows_shared)
+        details.rows_added = len(rows_added)
+        details.rows_removed = len(rows_removed)
+        details.dtypes_changed = len(dtypes_changed)
+
+        #first {head} changes
+        details.cols_shared_head = cols_shared[:head]
+        details.cols_added_head = cols_added[:head]
+        details.cols_removed_head = cols_removed[:head]
+        details.rows_shared_head = rows_shared[:head]
+        details.rows_added_head = rows_added[:head]
+        details.rows_removed_head = rows_removed[:head]
+        keys = []
+        for i, key in enumerate(dtypes_changed.keys()):
+            if i == head:
+                break
+            keys.append(key)
+        details.dtypes_changed_head = {key: dtypes_changed[key] for key in keys}
+
+        #all changes
+        details.cols_shared_all = cols_shared
+        details.cols_added_all = cols_added
+        details.cols_removed_all = cols_removed
+        details.rows_shared_all = rows_shared
+        details.rows_added_all = rows_added
+        details.rows_removed_all = rows_removed
+        details.dtypes_changed_all = dtypes_changed
+
         return details
+
+    def summary(self, head=5):
+        """
+        Summary of differences between datasets.
+        """
+        details = self.details(head)
+        summary = Container()
+        for key, val in details.items():
+            if key.endswith('_all'):
+                continue
+            summary[key] = val
+        return summary
 
     def show(
             self,
             mode='mix',
             prefix_old='old: ',
-            linebreak='<br>',
+            linebreak='\n',
             ):
         """
         Generate a styled DataFrame showing differences between datasets.
@@ -211,26 +249,32 @@ class Diff:
         Returns
         -------
         pandas.io.formats.style.Styler
-            Styled DataFrame with color-coded differences, or None if sheet not found
+            Styled DataFrame with color-coded differences
         """
 
         old = self.old
         new = self.new
         uid = self.uid
         details = self.details()
-        cols_added = details.cols_added
-        cols_removed = details.cols_removed
-        cols_shared = details.cols_shared
-        rows_added = details.rows_added
-        rows_removed = details.rows_removed
-        rows_shared = details.rows_shared
+        cols_added = details.cols_added_all
+        cols_removed = details.cols_removed_all
+        cols_shared = details.cols_shared_all
+        rows_added = details.rows_added_all
+        rows_removed = details.rows_removed_all
+        rows_shared = details.rows_shared_all
 
         if mode not in ('new', 'new+', 'old', 'mix'):
             log(f'error: unknown mode: {mode}', 'qp.Diff', self.verbosity)
             raise ValueError(f'Unknown mode: {mode}')
 
 
-        if new.empty:
+        if new.empty and old.empty:
+            df_diff = pd.DataFrame({'diff': ['empty datasets']})
+            df_diff.index.name = 'index'
+            diff_styled = df_diff.style
+            return diff_styled
+
+        elif new.empty:
             df_diff = old.copy()
             df_diff_style = pd.DataFrame(
                 f'background-color: {RED}',
@@ -238,8 +282,10 @@ class Diff:
                 columns=df_diff.columns,
                 )
             col_diff = ensure_unique_string('diff', df_diff.columns)
-            df_diff.insert(0, col_diff, 'removed dataset')
-
+            df_diff.insert(0, col_diff, 'dataset removed')
+            diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
+            diff_styled = diff_styled.set_properties(white_space='pre-wrap')
+            return diff_styled
 
         elif old.empty:
             df_diff = new.copy()
@@ -249,7 +295,10 @@ class Diff:
                 columns=df_diff.columns,
                 )
             col_diff = ensure_unique_string('diff', df_diff.columns)
-            df_diff.insert(0, col_diff, 'added dataset')
+            df_diff.insert(0, col_diff, 'dataset added')
+            diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
+            diff_styled = diff_styled.set_properties(white_space='pre-wrap')
+            return diff_styled
 
 
         elif mode in ['new', 'new+']:
@@ -301,7 +350,7 @@ class Diff:
 
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
-            df_diff.loc[rows_added, col_diff] += 'added row'
+            df_diff.loc[rows_added, col_diff] += 'row added'
 
 
         elif mode == 'old':
@@ -317,7 +366,7 @@ class Diff:
 
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
-            df_diff.loc[rows_removed, col_diff] += 'removed row'
+            df_diff.loc[rows_removed, col_diff] += 'row removed'
 
 
         elif mode == 'mix':
@@ -340,8 +389,8 @@ class Diff:
 
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
-            df_diff.loc[rows_added, col_diff] += 'added row'
-            df_diff.loc[rows_removed, col_diff] += 'removed row'
+            df_diff.loc[rows_added, col_diff] += 'row added'
+            df_diff.loc[rows_removed, col_diff] += 'row removed'
 
 
 
@@ -427,18 +476,14 @@ class Diff:
             log(msg, 'qp.Diff', self.verbosity)
 
         diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
-        diff_styled = diff_styled.set_properties(**{
-            # 'text-align': 'left',  #not working on all rows
-            'white-space': 'pre-wrap',
-            })
+        diff_styled = diff_styled.set_properties(white_space='pre-wrap')
         return diff_styled
 
 
 
 class Diffs:
     """
-    Class to calculate and store differences between
-    dataframes, csv or excel files.
+    Stores differences between (multiple) datasets.
     Used as return type of the diff() function.
     """
 
@@ -447,8 +492,8 @@ class Diffs:
             old: pd.DataFrame | str,
             new: pd.DataFrame | str,
             uid=None,
-            ignore=None,
-            rename=None,
+            rename_cols=None,
+            ignore_cols=None,
             verbosity=3,
             ):
         self.verbosity = verbosity
@@ -456,17 +501,33 @@ class Diffs:
             old,
             new,
             uid,
-            ignore,
-            rename,
+            rename_cols,
+            ignore_cols,
             )
+        self.cols_summary = [
+            'uid',
+            'in both datasets',
+            'cols shared',
+            'cols added',
+            'cols removed',
+            'rows shared',
+            'rows added',
+            'rows removed',
+            'dtypes changed',
+            'first 5 cols added',
+            'first 5 cols removed',
+            'first 5 rows added',
+            'first 5 rows removed',
+            'first 5 dtypes changed',
+            ]
 
     def _get_Diffs(
             self,
             old,
             new,
             uid=None,
-            ignore=None,
-            rename=None,
+            rename_cols=None,
+            ignore_cols=None,
             ):
         """
         Loads dataframes from various sources (pd.DataFrame, CSV files, Excel files)
@@ -487,9 +548,9 @@ class Diffs:
             diffs = self._get_excel_Diffs(
                 old,
                 new,
-                uid=uid,
-                ignore=ignore,
-                rename=rename,
+                uid,
+                rename_cols,
+                ignore_cols,
                 )
             return diffs
 
@@ -529,10 +590,10 @@ class Diffs:
             diff = Diff(
                 df_old,
                 df_new,
-                uid=uid,
-                ignore=ignore,
-                rename=rename,
-                verbosity=self.verbosity,
+                uid,
+                rename_cols,
+                ignore_cols,
+                self.verbosity,
                 )
             diff.sheet = ''
             diff.in_both_datasets = 'yes'
@@ -544,8 +605,8 @@ class Diffs:
             old,
             new,
             uid=None,
-            ignore=None,
-            rename=None,
+            rename_cols=None,
+            ignore_cols=None,
             ):
         """
         Read all sheets from two Excel files.
@@ -573,9 +634,9 @@ class Diffs:
             diff = Diff(
                 df_old,
                 df_new,
-                uid=uid,
-                ignore=ignore,
-                rename=rename,
+                uid,
+                rename_cols,
+                ignore_cols,
                 name=sheet,
                 verbosity=self.verbosity,
                 )
@@ -586,91 +647,115 @@ class Diffs:
         return diffs
 
     def rename_cols(self, rename=None, sheet=None):
-        """
-        """
         for diff in self.all:
             if sheet is None or diff.name == sheet:
                 diff.rename_cols(rename)
         return self
 
-    def ignore_cols(self, ignore=None, sheet=None):
-        """
-        """
+    def ignore_cols(self, cols=None, sheet=None):
         for diff in self.all:
             if sheet is None or diff.name == sheet:
-                diff.ignore_cols(ignore)
+                diff.ignore_cols(cols)
         return self
 
     def set_uid(self, uid=None, sheet=None):
-        """
-        """
         for diff in self.all:
             if sheet is None or diff.name == sheet:
                 diff.set_uid(uid)
         return self
 
     def __getitem__(self, key):
-        return self.all[key]
+        if isinstance(key, int):
+            item = self.all[key]
+        else:
+            for diff in self.all:
+                if diff.name == key:
+                    item = diff
+                    break
+            else:
+                msg = f'error: sheet "{key}" not found in diffs'
+                log(msg, 'qp.Diff', self.verbosity)
+                return None
+        return item
 
-    def summary(self, detailed=False, linebreak='<br>', concat_limit=1000):
+    def details(
+            self,
+            head=5,
+            separator=',',
+            linebreak='\n',
+            ):
         """
+        Detailed information about differences between datasets.
         """
 
-        sheets = [diff.name for diff in self.all]
+        datasets = [diff.name for diff in self.all]
         data = {
             'uid': [diff.uid for diff in self.all],
-            'in_both_datasets': [diff.in_both_datasets for diff in self.all],
+            'in both datasets': [diff.in_both_datasets for diff in self.all],
             }
-        summary = pd.DataFrame(data, index=sheets)
+        details = pd.DataFrame(data, index=datasets)
+        details.index.name = 'dataset'
 
-        cols = [
-            'n_cols_shared',
-            'n_cols_added',
-            'n_cols_removed',
-            'n_rows_shared',
-            'n_rows_added',
-            'n_rows_removed',
-            'n_dtypes_changed',
-            ]
-        if detailed:
-            cols += [
-                'cols_shared',
-                'cols_added',
-                'cols_removed',
-                'rows_shared',
-                'rows_added',
-                'rows_removed',
-                'dtypes_changed',
-                ]
+        cols = {
+            #numerical summary
+            'cols_shared': 'cols shared',
+            'cols_added': 'cols added',
+            'cols_removed': 'cols removed',
+            'rows_shared': 'rows shared',
+            'rows_added': 'rows added',
+            'rows_removed': 'rows removed',
+            'dtypes_changed': 'dtypes changed',
+            #first {head} changes
+            'cols_shared_head': f'first {head} cols shared',
+            'cols_added_head': f'first {head} cols added',
+            'cols_removed_head': f'first {head} cols removed',
+            'rows_shared_head': f'first {head} rows shared',
+            'rows_added_head': f'first {head} rows added',
+            'rows_removed_head': f'first {head} rows removed',
+            'dtypes_changed_head': f'first {head} dtypes changed',
+            #all changes
+            'cols_shared_all': 'all cols shared',
+            'cols_added_all': 'all cols added',
+            'cols_removed_all': 'all cols removed',
+            'rows_shared_all': 'all rows shared',
+            'rows_added_all': 'all rows added',
+            'rows_removed_all': 'all rows removed',
+            'dtypes_changed_all': 'all dtypes changed',
+            }
 
         for diff in self.all:
-            diff_summary = diff.summary(detailed=detailed)
-            for col in cols:
+            diff_details = diff.details(head)
+            for key, col in cols.items():
                 string = _to_str(
-                    diff_summary[col],
+                    diff_details[key],
+                    separator,
                     linebreak,
-                    concat_limit,
                     )
-                summary.loc[diff.name, col] = string
+                details.loc[diff.name, col] = string
 
-        summary.columns = [col.replace('_', ' ') for col in summary.columns]
+        details = details.style.set_properties(**{
+            # 'text-align': 'left',
+            'white-space': 'pre-wrap',
+            })
+        return details
+
+
+    def summary(
+            self,
+            head=5,
+            separator=',',
+            linebreak='\n',
+            ):
+        """
+        Summary of differences between datasets.
+        """
+        details = self.details(head, separator, linebreak).data
+        summary = details[self.cols_summary]
         summary = summary.style.set_properties(**{
-            'text-align': 'left',
+            # 'text-align': 'left',
             'white-space': 'pre-wrap',
             })
         return summary
-
-
-    def details(self, linebreak='<br>', concat_limit=1000):
-        """
-        """
-        details = self.summary(
-            detailed=True,
-            linebreak=linebreak,
-            concat_limit=concat_limit,
-            )
-        return details
-
 
 
     def show(
@@ -678,23 +763,35 @@ class Diffs:
             mode='mix',
             sheet=0,
             prefix_old='old: ',
-            linebreak='<br>',
+            linebreak='\n',
             ):
         """
+        Generate a styled DataFrame showing differences between datasets.
+        Differences are highlighted with color-coded styles,
+        supporting multiple visualization modes.
+
+        Parameters
+        ----------
+
+        mode : str, default 'mix'
+            Display mode for differences:
+            - 'new': Show new DataFrame with added and changed elements highlighted
+            - 'new+': Show new DataFrame with old values in additional (hidden) columns
+            - 'old': Show old DataFrame with removed elements highlighted
+            - 'mix': Combine both DataFrames showing all changes
+
+        sheet : str | int, default 0
+            Sheet name or index to show differences for (if there are multiple sheets)
+
+        prefix_old : str, default 'old: '
+            Prefix for columns showing old values (used in 'new+' mode)
+
+        Returns
+        -------
+        pandas.io.formats.style.Styler
+            Styled DataFrame with color-coded differences
         """
-
-        if isinstance(sheet, int):
-            diff = self.all[sheet]
-        else:
-            for sheet in self.all:
-                if sheet.name == sheet:
-                    diff = sheet
-                    break
-            else:
-                msg = f'error: sheet "{sheet}" not found in diffs'
-                log(msg, 'qp.Diff', self.verbosity)
-                return None
-
+        diff = self[sheet]
         result = diff.show(
             mode,
             prefix_old,
@@ -703,80 +800,108 @@ class Diffs:
         return result
 
 
-    # def to_excel(
-    #         self,
-    #         path,
-    #         mode='new+',
-    #         index=False,
-    #         prefix_old='old: ',
-    #         linebreak='\n',
-    #         ):
-    #     """
-    #     Export diff results to an Excel file with formatting.
+    def to_excel(
+            self,
+            path,
+            mode='new+',
+            index=True,
+            prefix_old='old: ',
+            hide_details=True,
+            hide_summary=False,
+            summary_head=5,
+            summary_separator=',',
+            summary_linebreak='\n',
+            ):
+        """
+        Export diff results to an Excel file with formatting.
 
-    #     Creates an Excel file containing a summary sheet and individual
-    #     sheets for each comparison with highlighted differences. Applies
-    #     Excel-specific formatting and hides old value columns.
-
-
-    #     Parameters
-    #     ----------
-    #     path : str
-    #         File path for the output Excel file
-    #     mode : str, default 'mix'
-    #         Display mode for differences (see show() method for options)
-    #     index : bool, default False
-    #         Whether to include row indices in the Excel output
-    #     prefix_old : str, default 'old: '
-    #         Prefix for columns showing old values (used in 'new+' mode)
-    #     linebreak : str, default '\\n'
-    #         String to use for line breaks in Excel cells
-    #     """
-
-    #     details = self.details(linebreak=linebreak)
-    #     name = ensure_unique_string('diff', details.index)
-    #     with pd.ExcelWriter(path) as writer:
-    #         pd.DataFrame().to_excel(
-    #             writer,
-    #             sheet_name=name,
-    #             )
+        Creates an Excel file containing a summary sheet and individual
+        sheets for each comparison with highlighted differences. Applies
+        Excel-specific formatting and hides columns with old values.
 
 
-    #     for i, diff in enumerate(self.all):
+        Parameters
+        ----------
+        path : str
+            File path for the output Excel file
+        mode : str, default 'mix'
+            Display mode for differences (see show() method for options)
+        index : bool, default False
+            Whether to include row indices in the Excel output
+        prefix_old : str, default 'old: '
+            Prefix for columns showing old values (used in 'new+' mode)
+        hide_details : bool, default True
+            Whether to hide the details sheets in the Excel file
+        hide_summary : bool, default False
+            Whether to hide the summary sheet in the Excel file
+        summary_head : int, default 5
+            Number of added/removed/changed rows/cols to show in summary/details
+        summary_separator : str, default ','
+            Separator string for lists in summary/details
+        summary_linebreak : str, default '\\n'
+            String to use for line breaks in summary/details
+        """
 
+        with pd.ExcelWriter(path) as writer:
 
-    #         result = self.show(
-    #             mode=mode,
-    #             sheet=i,
-    #             prefix_old=prefix_old,
-    #             )
+            summary = self.summary(
+                summary_head,
+                summary_separator,
+                summary_linebreak,
+                )
+            sheet_summary = ensure_unique_string(
+                'summary',
+                summary.index,  #contains all sheet names
+                )
+            summary.to_excel(
+                writer,
+                sheet_name=sheet_summary,
+                index=True,
+                )
 
-    #         result.data['meta'] = result.data['meta'].str.replace('<br>', '\n')
+            details = self.details(
+                summary_head,
+                summary_separator,
+                summary_linebreak,
+                )
+            sheet_details = ensure_unique_string(
+                'details',
+                details.index,  #contains all sheet names
+                )
+            details.to_excel(
+                writer,
+                sheet_name=sheet_details,
+                index=True,
+                )
 
-    #         with pd.ExcelWriter(path) as writer:
-    #             result.to_excel(
-    #                 writer,
-    #                 sheet_name=sheet,
-    #                 index=index,
-    #                 )
+            for diff in self.all:
+                result = diff.show(
+                    mode,
+                    prefix_old,
+                    summary_linebreak,
+                    )
+                result.to_excel(
+                    writer,
+                    sheet_name=diff.name,
+                    index=index,
+                    )
 
-    #     with pd.ExcelWriter(path) as writer:
-    #         self.summary(linebreak).to_excel(
-    #             writer,
-    #             sheet_name='diff_summary',
-    #             index=index,
-    #             )
-
-    #     if mode == 'new+':
-    #         hide(
-    #             path,
-    #             axis='col',
-    #             patterns=f'{prefix_old}.*',
-    #             hide=True,
-    #             verbosity=self._verbosity,
-    #             )
-    #     format_excel(path)
-    #     log(f'info: differences saved to "{path}"', 'qp.Diff', self._verbosity)
+        #post-process excel file
+        if hide_details or hide_summary or mode == 'new+':
+            wb = openpyxl.load_workbook(path)
+            for ws in wb.worksheets:
+                if hide_summary and ws.title == sheet_summary:
+                    ws.sheet_state = 'hidden'
+                elif hide_details and ws.title == sheet_details:
+                    ws.sheet_state = 'hidden'
+                else:
+                    for col in ws.columns:
+                        if match(f'{prefix_old}.*', col[0].value, regex=True):
+                            ws.column_dimensions[col[0].column_letter].hidden = True
+            wb.save(path)
+            wb.close()
+        format_excel(path)
+        log(f'info: differences saved to "{path}"', 'qp.Diff', self.verbosity)
 
 
     # def print(self):
@@ -824,8 +949,12 @@ class Diffs:
     #                 string += _sheet_to_str(summary, i)
     #     return string
 
+    def __iter__(self):
+        for diff in self.all:
+            yield diff
 
-def _to_str(obj, linebreak='<br>', concat_limit=1000):
+
+def _to_str(obj, separator=',', linebreak='\n'):
 
     if isinstance(obj, int):
         if obj == 0:
@@ -836,20 +965,16 @@ def _to_str(obj, linebreak='<br>', concat_limit=1000):
     elif isinstance(obj, dict):
         if len(obj) == 0:
             string = ''
-        elif len(obj) > concat_limit:
-            string = f'over {concat_limit} values'
         else:
-            strings = [f'{k} -> {v}' for k, v in obj.items()]
-            string = f';{linebreak}'.join(strings)
+            strings = [f'{k}: {v['old']!r} -> {v['new']!r}' for k, v in obj.items()]
+            string = f'{separator}{linebreak}'.join(strings)
 
     elif isinstance(obj, (list, set, tuple, pd.Index)):
         if len(obj) == 0:
             string = ''
-        elif len(obj) > concat_limit:
-            string = f'over {concat_limit} values'
         else:
-            strings = [str(x) for x in obj]
-            string = f';{linebreak}'.join(strings)
+            items = [f'{x!r}' for x in obj]
+            string = f'{separator}{linebreak}'.join(items)
 
     else:
         string = str(obj)
@@ -885,7 +1010,7 @@ def _to_str(obj, linebreak='<br>', concat_limit=1000):
 #     return iter_new
 
 
-# def _dicts_to_str(iter, linebreak='<br>'):
+# def _dicts_to_str(iter, linebreak='\n'):
 #     iter_new = []
 #     for dictionary in iter:
 #         if dictionary:
@@ -899,14 +1024,14 @@ def _to_str(obj, linebreak='<br>', concat_limit=1000):
 #     return iter_new
 
 
-# def _iters_to_str(iters, linebreak='<br>'):
+# def _iters_to_str(iters, linebreak='\n'):
 #     iters_new = []
 #     for iter in iters:
 #         iters_new.append(f';{linebreak}'.join([str(x) for x in iter]))
 #     return iters_new
 
 
-# def _nested_dicts_to_str(iter, linebreak='<br>'):
+# def _nested_dicts_to_str(iter, linebreak='\n'):
 #     iter_new = []
 #     for dictionary in iter:
 #         string = ''
@@ -930,8 +1055,8 @@ def diff(
         old: pd.DataFrame | str,
         new: pd.DataFrame | str,
         uid=None,
-        ignore=None,
-        rename=None,
+        rename_cols=None,
+        ignore_cols=None,
         verbosity=3,
         ) -> Diffs:
     """
@@ -952,13 +1077,13 @@ def diff(
         when comparing multiple sheets from excel files, a dictionary
         with sheet names as keys and uid column names as values can be provided.
 
-    ignore : column name or list of column names to ignore for comparison
-
-    rename : dictionary to rename columns before comparison.
+    rename_cols : dictionary to rename columns before comparison.
         Note that renaming is done before uid and columns to ignore
         are determined, meaning that those must use the new column names.
         This can also be used to fix situations where corrresponding columns
         in old and new data have different names (see examples)
+
+    ignore_cols : column name or list of column names to ignore for comparison
 
 
     Examples
@@ -967,12 +1092,13 @@ def diff(
     basic usage:
 
     >>> import qplib as qp
-    >>> diff = qp.diff(df_old, df_new)
-    >>> diff.show()  #returns df with highlighted differences
-    >>> diff.summary()  #returns df with summary stats
-    >>> diff.str()  #string version of summary stats
-    >>> diff.print()  #prints the string version
-    >>> diff.to_excel('diff.xlsx')  #writes summary and dfs to file
+    >>> diffs = qp.diff('old.xlsx', 'new.xlsx')
+    >>> diffs.summary()  #returns df with summary stats
+    >>> diffs.details()  #returns df with more detailed stats
+    >>> diffs.show()  #returns df.style with highlighted differences
+    >>> diffs.str()  #string version of summary stats
+    >>> diffs.print()  #prints the string version
+    >>> diffs.to_excel('diffs.xlsx')  #writes summary and dfs to file
 
 
     align inconsistently named columns before comparison:
@@ -982,8 +1108,8 @@ def diff(
             'birthyear': 'yob',
             },
     >>> qp.diff(
-            df_old,
-            df_new,
+            'old.xlsx',
+            'new.xlsx',
             rename=corrections,
             )
     """
@@ -991,8 +1117,8 @@ def diff(
         old,
         new,
         uid,
-        ignore,
-        rename,
+        rename_cols,
+        ignore_cols,
         verbosity,
         )
     return diffs
