@@ -37,6 +37,27 @@ RED_LIGHT = '#f7746a'
 
 
 logs = []
+levels = {
+    'TRACE': 5,
+    'DEBUG': 4,
+    'INFO': 3,
+    'WARNING': 2,
+    'ERROR': 1,
+    }
+colors = {
+    'TRACE': GREY_LIGHT,
+    'DEBUG': BLUE_LIGHT,
+    'INFO': GREEN_LIGHT,
+    'WARNING': ORANGE_LIGHT,
+    'ERROR': RED_LIGHT,
+    }
+formats = {
+    'TRACE': f'background-color: {colors["TRACE"]}',
+    'DEBUG': f'background-color: {colors["DEBUG"]}',
+    'INFO': f'background-color: {colors["INFO"]}',
+    'WARNING': f'background-color: {colors["WARNING"]}',
+    'ERROR': f'background-color: {colors["ERROR"]}',
+    }
 def log(
         text=None,
         context='',
@@ -77,23 +98,21 @@ def log(
         return
 
     if text is None:
-        return pd.DataFrame(logs)
-
-
-    levels = {
-        'TRACE': 5,
-        'DEBUG': 4,
-        'INFO': 3,
-        'WARNING': 2,
-        'ERROR': 1,
-        }
-    colors = {
-        'TRACE': GREY_LIGHT,
-        'DEBUG': BLUE_LIGHT,
-        'INFO': GREEN_LIGHT,
-        'WARNING': ORANGE_LIGHT,
-        'ERROR': RED_LIGHT,
-        }
+        if len(logs) == 0:
+            return pd.DataFrame().style
+        df = pd.DataFrame(logs)
+        col_format = df['level'].replace(formats)
+        df_style = pd.DataFrame(
+            {col: col_format for col in df.columns},
+            index=df.index,
+            )
+        df_styled = (
+            df
+            .style
+            .apply(lambda x: df_style, axis=None)
+            .set_properties(**{'text-align': 'left'})
+            )
+        return df_styled
 
     color = GREEN_LIGHT
     level = 'INFO'
@@ -115,15 +134,19 @@ def log(
         verbosity = level_int
 
     if len(logs) == 0:
+        total_ms = 0.0
         delta_ms = 0.0
     else:
+        total_ms = datetime.datetime.now() - logs[0]['time']
         delta_ms = datetime.datetime.now() - logs[-1]['time']
+        total_ms = total_ms.total_seconds() * 1000
         delta_ms = delta_ms.total_seconds() * 1000
     message = {
         'level': level,
         'text': text,
         'context': context,
         'time': time,
+        'total_ms': total_ms,
         'delta_ms': delta_ms,
         }
 
@@ -161,6 +184,7 @@ def log(
             string = (
                 f'{level} log message:\n'
                 f'  time: {time}\n'
+                f'  time since first log: {total_ms:.2f} ms\n'
                 f'  time since last log: {delta_ms:.2f} ms\n'
                 f'  context:{context_formatted}\n'
                 f'  text:\n    """{text_formatted}"""\n'

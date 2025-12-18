@@ -10,7 +10,7 @@ def test_log():
     log(clear=True)
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     log('test')
-    logs = log()
+    logs = log().data
     last = len(logs) - 1
     result_text = logs.loc[last, 'text']
     result_context = logs.loc[last, 'context']
@@ -34,6 +34,6 @@ def test_log():
 def test_log_levels(input, expected):
     log(clear=True)
     log(input)
-    logs = log()
+    logs = log().data
     result = logs.loc[len(logs) - 1, 'level']
     assert result == expected, f'expected: {expected}, got: "{result}"'
