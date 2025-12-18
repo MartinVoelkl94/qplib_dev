@@ -19,7 +19,7 @@ def get_df_simple_tagged():
 
 
 def check_message(expected_message):
-    logs = qp.log()
+    logs = qp.log().data
     logs['text_full'] = logs['level'] + ': ' + logs['text']
     log_texts = logs['text_full'].to_list()
     text = f'did not find expected message: {expected_message}\nin logs:\n{log_texts}'
@@ -192,7 +192,7 @@ def test_diff_mix():
     result = get_df().q(r'$new=a   $diff=mix').data
     result = result.reindex(sorted(result.columns), axis=1)
     expected = get_df()
-    expected.insert(0, 'meta', '')
+    expected.insert(0, 'diff', '')
     expected.insert(1, 'new', ['a'] * 11)
     expected = expected.reindex(sorted(expected.columns), axis=1)
     assert result.equals(expected), qp.diff(result, expected).str()
@@ -201,7 +201,7 @@ def test_diff_mix():
 def test_diff_new():
     result = get_df().q(r'$new=1   $diff=new').data
     expected = pd.DataFrame({
-        'meta': [''] * 11,
+        'diff': [''] * 11,
         'new': ['1'] * 11,
         })
     assert result.equals(expected), qp.diff(result, expected).str()
@@ -213,7 +213,7 @@ def test_diff_new_plus():
         })
     result = df.q(r'$vals=b   $diff=new+').data
     expected = pd.DataFrame({
-        'meta': ['<br>vals changed: 1', '<br>vals changed: 1', '<br>vals changed: 1'],
+        'diff': ['vals changed: 1', 'vals changed: 1', 'vals changed: 1'],
         'a': ['b', 'b', 'b'],
         'old: a': [1, 2, 3],
         })
@@ -224,15 +224,16 @@ def test_diff_new_plus():
 def test_diff_old():
     result = get_df().q(r'$new=1   $diff=old').data
     expected = get_df()
-    expected.insert(0, 'meta', '')
+    expected.insert(0, 'diff', '')
     assert result.equals(expected), qp.diff(result, expected).str()
 
 
-def test_diff_retain_meta():
+def test_diff_exists():
     df = get_df()
-    df.insert(0, 'meta', 'test')
-    result = df.q(r'id $diff=new').data
-    expected = df.loc[:, ['meta', 'ID']]
+    df.insert(0, 'diff', 'test')
+    result = df.q(r'id  /=diff $diff=new').data
+    expected = df.loc[:, ['diff', 'ID']]
+    expected.insert(0, 'diff1', [''] * 11)
     assert result.equals(expected), qp.diff(result, expected).str()
 
 
@@ -509,7 +510,7 @@ def test_logging():
     qp.qlang.VERBOSITY = 0
     result = df.q(r'$verbosity=0')
     qp.qlang.VERBOSITY = 3
-    assert len(log()) == 0, 'log should be empty when verbosity is set to 0'
+    assert len(log().data) == 0, 'log should be empty when verbosity is set to 0'
 
     log(clear=True, verbosity=1)
     result = df.q(r'$diff=old+')
