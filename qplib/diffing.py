@@ -1,6 +1,7 @@
 
 import pandas as pd
 import openpyxl
+import os
 
 from .types import Container
 from .pandas import deduplicate
@@ -39,7 +40,8 @@ class Diff:
         self.name = name
         self.old = old.copy()
         self.new = new.copy()
-        self.rename_cols(rename_cols)
+        if rename_cols:
+            self.rename_cols(rename_cols)
         self.ignore_cols(ignore_cols)  #sets: self.cols_ignore
         self.set_uid(uid)  #sets: self.uid, self.old.index, self.new.index
         if not self.old.index.name:
@@ -47,18 +49,30 @@ class Diff:
         if not self.new.index.name:
             self.new.index.name = 'index'
 
-    def rename_cols(self, mapping=None):
-        if isinstance(mapping, dict):
-            self.old = self.old.rename(columns=mapping)
-            self.new = self.new.rename(columns=mapping)
+    def rename_cols(self, mapping):
+        if not isinstance(mapping, dict):
+            msg = (
+                'error: mapping for renaming columns must'
+                f' be a dict but is {type(mapping)!r}'
+                )
+            log(msg, 'qp.Diff', self.verbosity)
+            return self
+        self.old = self.old.rename(columns=mapping)
+        self.new = self.new.rename(columns=mapping)
+        msg = f'trace: renamed columns for {self.name!r}'
+        log(msg, 'qp.Diff', self.verbosity)
         return self
 
-    def ignore_cols(self, cols=None):
-        cols_ignore = (
-            self.old.columns
-            .union(self.new.columns)
-            .intersection(_arg_to_list(cols))
-            )
+    def ignore_cols(self, cols):
+        if cols is None:
+            cols_ignore = pd.Index([])
+        else:
+            cols_ignore = (
+                self.old
+                .columns
+                .union(self.new.columns)
+                .intersection(_arg_to_list(cols))
+                )
         self.cols_ignore = cols_ignore
         return self
 
@@ -69,11 +83,11 @@ class Diff:
         comparing rows between old and new datasets.
         """
         if uid is False:
-            msg = 'debug: using index for comparison'
+            msg = 'trace: using index as uid'
             log(msg, 'qp.Diff', self.verbosity)
             uid = ''
         elif uid is None:
-            msg = 'debug: searching for suitable uid column'
+            msg = 'trace: searching for suitable uid column'
             log(msg, 'qp.Diff', self.verbosity)
             uid = self._find_uid()
 
@@ -106,20 +120,22 @@ class Diff:
             unique_shared = unique_in_new.intersection(unique_in_old)
             uids_by_uniqueness[uid] = len(unique_shared)
 
+        uids_by_uniqueness = sorted(
+            uids_by_uniqueness.items(),
+            key=lambda item: item[1],
+            reverse=True,
+            )
         if len(uids_by_uniqueness) > 0:
-            uid = sorted(
-                uids_by_uniqueness.items(),
-                key=lambda item: item[1],
-                reverse=True,
-                )[0][0]
-            msg = f'debug: found uid "{uid}" for comparison'
+            uid = uids_by_uniqueness[0][0]
+            msg = f'debug: found uid {uid!r} for {self.name!r}'
             log(msg, 'qp.Diff', self.verbosity)
         else:
             uid = ''
-            msg = 'info: no uid found. using index for comparison'
+            msg = f'debug: no uid found. using index for {self.name!r}'
             log(msg, 'qp.Diff', self.verbosity)
 
         return uid
+
 
     def details(self, head=5):
         """
@@ -207,7 +223,10 @@ class Diff:
         details.rows_removed_all = rows_removed
         details.dtypes_changed_all = dtypes_changed
 
+        msg = 'debug: calculated (detailed) summary of differences'
+        log(msg, 'qp.Diff', self.verbosity)
         return details
+
 
     def summary(self, head=5):
         """
@@ -220,6 +239,7 @@ class Diff:
                 continue
             summary[key] = val
         return summary
+
 
     def show(
             self,
@@ -268,23 +288,10 @@ class Diff:
             raise ValueError(f'Unknown mode: {mode}')
 
 
-        if new.empty and old.empty:
+        if old.empty and new.empty:
             df_diff = pd.DataFrame({'diff': ['empty datasets']})
             df_diff.index.name = 'index'
             diff_styled = df_diff.style
-            return diff_styled
-
-        elif new.empty:
-            df_diff = old.copy()
-            df_diff_style = pd.DataFrame(
-                f'background-color: {RED}',
-                index=df_diff.index,
-                columns=df_diff.columns,
-                )
-            col_diff = ensure_unique_string('diff', df_diff.columns)
-            df_diff.insert(0, col_diff, 'dataset removed')
-            diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
-            diff_styled = diff_styled.set_properties(white_space='pre-wrap')
             return diff_styled
 
         elif old.empty:
@@ -296,6 +303,19 @@ class Diff:
                 )
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, 'dataset added')
+            diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
+            diff_styled = diff_styled.set_properties(white_space='pre-wrap')
+            return diff_styled
+
+        elif new.empty:
+            df_diff = old.copy()
+            df_diff_style = pd.DataFrame(
+                f'background-color: {RED}',
+                index=df_diff.index,
+                columns=df_diff.columns,
+                )
+            col_diff = ensure_unique_string('diff', df_diff.columns)
+            df_diff.insert(0, col_diff, 'dataset removed')
             diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
             diff_styled = diff_styled.set_properties(white_space='pre-wrap')
             return diff_styled
@@ -475,10 +495,43 @@ class Diff:
                 )
             log(msg, 'qp.Diff', self.verbosity)
 
-        diff_styled = df_diff.style.apply(lambda x: df_diff_style, axis=None)
-        diff_styled = diff_styled.set_properties(white_space='pre-wrap')
+        diff_styled = (
+            df_diff
+            .style
+            .apply(lambda x: df_diff_style, axis=None)
+            .set_properties(white_space='pre-wrap')
+            )
+        msg = 'debug: created df with highlighted differences'
+        log(msg, 'qp.Diff', self.verbosity)
         return diff_styled
 
+
+    def str(self):
+        string = f'Diff of {self.name!r}:\n'
+        if self.old.empty and self.new.empty:
+            string += '  both datasets are empty\n'
+        elif self.old.empty:
+            string += '  old dataset is empty\n'
+        elif self.new.empty:
+            string += '  new dataset is empty\n'
+        elif self.old.equals(self.new):
+            string += '  datasets are identical\n'
+        else:
+            details = self.details()
+            string += (
+                f' cols shared: {details.cols_shared}\n'
+                f' cols added: {details.cols_added}\n'
+                f' cols removed: {details.cols_removed}\n'
+                f' rows shared: {details.rows_shared}\n'
+                f' rows added: {details.rows_added}\n'
+                f' rows removed: {details.rows_removed}\n'
+                f' dtypes changed: {details.dtypes_changed}\n'
+                )
+        return string
+
+    def print(self):
+        print(self.str())
+        return self
 
 
 class Diffs:
@@ -521,6 +574,7 @@ class Diffs:
             'first 5 dtypes changed',
             ]
 
+
     def _get_Diffs(
             self,
             old,
@@ -533,6 +587,10 @@ class Diffs:
         Loads dataframes from various sources (pd.DataFrame, CSV files, Excel files)
         and determines whether to compare single sheets or multiple Excel sheets.
         """
+        msg = 'Debug: getting data for Diffs'
+        log(msg, 'qp.Diffs', self.verbosity)
+        self.old = old
+        self.new = new
 
         #when both inputs are excel files, they might
         #contain multiple sheets to be compared
@@ -543,8 +601,6 @@ class Diffs:
             and new.endswith('.xlsx')
             )
         if conditions_excel_comp:
-            msg = 'debug: comparing all sheets from 2 excel files'
-            log(msg, 'qp.Diff', self.verbosity)
             diffs = self._get_excel_Diffs(
                 old,
                 new,
@@ -565,12 +621,14 @@ class Diffs:
                     df_old = pd.read_excel(old)
                 else:
                     msg = f'error: unknown file extension: {old}'
-                    log(msg, 'qp.Diff', self.verbosity)
+                    log(msg, 'qp.Diffs', self.verbosity)
+                    raise ValueError(msg)
             elif isinstance(old, pd.DataFrame):
                 df_old = old
             else:
                 msg = 'error: incompatible type for old df'
-                log(msg, 'qp.Diff', self.verbosity)
+                log(msg, 'qp.Diffs', self.verbosity)
+                raise ValueError(msg)
 
             if isinstance(new, str):
                 if new.endswith('.csv'):
@@ -579,13 +637,13 @@ class Diffs:
                     df_new = pd.read_excel(new)
                 else:
                     msg = f'error: unknown file extension: {new}'
-                    log(msg, 'qp.Diff', self.verbosity)
+                    log(msg, 'qp.Diffs', self.verbosity)
             elif isinstance(new, pd.DataFrame):
                 df_new = new
 
             else:
                 msg = 'error: incompatible type for new df'
-                log(msg, 'qp.Diff', self.verbosity)
+                log(msg, 'qp.Diffs', self.verbosity)
 
             diff = Diff(
                 df_old,
@@ -599,6 +657,7 @@ class Diffs:
             diff.in_both_datasets = 'yes'
             diffs = [diff]
             return diffs
+
 
     def _get_excel_Diffs(
             self,
@@ -631,10 +690,15 @@ class Diffs:
                 df_new = pd.DataFrame()
                 in_both_datasets = 'only in old'
 
+            if isinstance(uid, dict):
+                uid_sheet = uid.get(sheet, None)
+            else:
+                uid_sheet = uid
+
             diff = Diff(
                 df_old,
                 df_new,
-                uid,
+                uid_sheet,
                 rename_cols,
                 ignore_cols,
                 name=sheet,
@@ -644,24 +708,37 @@ class Diffs:
             diff.in_both_datasets = in_both_datasets
             diffs.append(diff)
 
+        msg = 'debug: created Diffs for 2 excel files'
+        log(msg, 'qp.Diffs', self.verbosity)
         return diffs
 
-    def rename_cols(self, rename=None, sheet=None):
-        for diff in self.all:
-            if sheet is None or diff.name == sheet:
-                diff.rename_cols(rename)
+    def rename_cols(self, mappings):
+        for sheet, mapping in mappings.items():
+            diff = self[sheet]
+            if diff is not None:
+                diff.rename_cols(mapping)
         return self
 
-    def ignore_cols(self, cols=None, sheet=None):
-        for diff in self.all:
-            if sheet is None or diff.name == sheet:
+    def ignore_cols(self, cols):
+        if isinstance(cols, dict):
+            for sheet, cols_sheet in cols.items():
+                diff = self[sheet]
+                if diff is not None:
+                    diff.ignore_cols(cols_sheet)
+        else:
+            for diff in self.all:
                 diff.ignore_cols(cols)
         return self
 
-    def set_uid(self, uid=None, sheet=None):
-        for diff in self.all:
-            if sheet is None or diff.name == sheet:
-                diff.set_uid(uid)
+    def set_uid(self, uids=None):
+        if isinstance(uids, dict):
+            for sheet, uid in uids.items():
+                diff = self[sheet]
+                if diff is not None:
+                    diff.set_uid(uid)
+        else:
+            for diff in self.all:
+                diff.set_uid(uids)
         return self
 
     def __getitem__(self, key):
@@ -677,6 +754,35 @@ class Diffs:
                 log(msg, 'qp.Diff', self.verbosity)
                 return None
         return item
+
+
+    def info(self):
+        """
+        Basic information about the datasets.
+        """
+        if isinstance(self.old, str):
+            name_old = self.old
+            size_old = os.path.getsize(self.old) / 1024
+        else:
+            name_old = type(self.old).__name__
+            size_old = self.old.memory_usage(deep=True).sum() / 1024
+        if isinstance(self.new, str):
+            name_new = self.new
+            size_new = os.path.getsize(self.new) / 1024
+        else:
+            name_new = type(self.new).__name__
+            size_new = self.new.memory_usage(deep=True).sum() / 1024
+        data = {
+            'name': [name_old, name_new],
+            'size (KB)': [size_old, size_new],
+            }
+        info = pd.DataFrame(
+            data,
+            index=['old dataset', 'new dataset'],
+            )
+        info.index.name = 'dataset'
+        return info
+
 
     def details(
             self,
@@ -806,6 +912,7 @@ class Diffs:
             mode='new+',
             index=True,
             prefix_old='old: ',
+            hide_info=True,
             hide_details=True,
             hide_summary=False,
             summary_head=5,
@@ -843,6 +950,17 @@ class Diffs:
         """
 
         with pd.ExcelWriter(path) as writer:
+
+            info = self.info()
+            sheet_info = ensure_unique_string(
+                'info',
+                info.index,
+                )
+            info.to_excel(
+                writer,
+                sheet_name=sheet_info,
+                index=True,
+                )
 
             summary = self.summary(
                 summary_head,
@@ -890,6 +1008,8 @@ class Diffs:
         if hide_details or hide_summary or mode == 'new+':
             wb = openpyxl.load_workbook(path)
             for ws in wb.worksheets:
+                if hide_info and ws.title == sheet_info:
+                    ws.sheet_state = 'hidden'
                 if hide_summary and ws.title == sheet_summary:
                     ws.sheet_state = 'hidden'
                 elif hide_details and ws.title == sheet_details:
@@ -904,50 +1024,15 @@ class Diffs:
         log(f'info: differences saved to "{path}"', 'qp.Diff', self.verbosity)
 
 
-    # def print(self):
-    #     """
-    #     Print the string representation of differences to console.
+    def str(self):
+        string = 'Diffs summary:\n'
+        for diff in self.all:
+            string += '\n  ' + diff.str().replace('\n', '\n  ')
+        return string
 
-    #     Convenience method that prints the output of str() method,
-    #     providing a readable summary of all differences found.
-    #     """
-    #     print(self.str())
-
-
-    # def str(self):
-    #     """
-    #     Get string representation of differences.
-
-    #     Convenience method that calls __str__() to return a formatted
-    #     string summary of all differences found between datasets.
-    #     """
-    #     return str(self)
-
-
-    # def __str__(self):
-    #     """
-    #     Generate a human-readable string summary of all differences.
-
-    #     Creates a detailed text summary showing differences for single
-    #     DataFrame comparisons or multi-sheet Excel file comparisons.
-    #     Handles cases where datasets are identical.
-    #     """
-    #     summary = self.summary()
-    #     if len(self.sheets) == 1 and self.sheets[0] is None:
-    #         if self.dfs_new[0].equals(self.dfs_old[0]):
-    #             string = 'both dataframes are identical'
-    #         else:
-    #             string = 'Diff between 2 dataframes\n'
-    #             string += _sheet_to_str(summary, 0)
-    #     else:
-    #         string = f'Diff between 2 excel files with {len(self.sheets)} sheets\n'
-    #         for i, sheet in enumerate(self.sheets):
-    #             if self.dfs_new[i].equals(self.dfs_old[i]):
-    #                 string += f'\nSheet "{sheet}" is identical in both files\n'
-    #             else:
-    #                 string += f'\nSheet: {sheet}\n'
-    #                 string += _sheet_to_str(summary, i)
-    #     return string
+    def print(self):
+        print(self.str())
+        return self
 
     def __iter__(self):
         for diff in self.all:
