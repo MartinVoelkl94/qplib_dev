@@ -7,7 +7,7 @@ from qplib import merge, log
 
 
 def check_message(expected_message):
-    logs = qp.log()
+    logs = qp.log().data
     logs['text_full'] = logs['level'] + ': ' + logs['text']
     log_texts = logs['text_full'].to_list()
     text = f'did not find expected message: {expected_message}\nin logs:\n{log_texts}'

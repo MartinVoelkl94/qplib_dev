@@ -45,23 +45,23 @@ def test_mode_new(tmpdir):
         ).show('new').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'b', 'a'],
+        columns=['diff', 'uid', 'd', 'b', 'a'],
         index=['y', 'x2', 'z']
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = '<br>vals changed: 1'
+    expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'a'] = 0
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'b'] = 1
     expected.loc['x2', 'a'] = 1
 
-    expected.loc['z', 'meta'] = '<br>vals added: 1<br>vals removed: 1'
+    expected.loc['z', 'diff'] = 'vals added: 1\nvals removed: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
@@ -105,28 +105,28 @@ def test_mode_new_ignore(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('new').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'b', 'a'],
+        columns=['diff', 'uid', 'd', 'b', 'a'],
         index=['y', 'x2', 'z']
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = ''
+    expected.loc['y', 'diff'] = ''
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'a'] = 0
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'b'] = 1
     expected.loc['x2', 'a'] = 1
 
-    expected.loc['z', 'meta'] = '<br>vals added: 1'
+    expected.loc['z', 'diff'] = 'vals added: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
@@ -140,7 +140,7 @@ def test_mode_new_ignore(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -150,7 +150,7 @@ def test_mode_new_ignore(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -160,7 +160,7 @@ def test_mode_new_ignore(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -174,28 +174,28 @@ def test_mode_new_ignore1(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore=['b'],
+        ignore_cols=['b'],
         verbosity=0
         ).show('new').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'b', 'a'],
+        columns=['diff', 'uid', 'd', 'b', 'a'],
         index=['y', 'x2', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = '<br>vals changed: 1'
+    expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'a'] = 0
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'b'] = 1
     expected.loc['x2', 'a'] = 1
 
-    expected.loc['z', 'meta'] = '<br>vals removed: 1'
+    expected.loc['z', 'diff'] = 'vals removed: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
@@ -209,7 +209,7 @@ def test_mode_new_ignore1(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         verbosity=0,
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -219,7 +219,7 @@ def test_mode_new_ignore1(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         verbosity=0,
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -229,7 +229,7 @@ def test_mode_new_ignore1(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         verbosity=0,
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -243,28 +243,28 @@ def test_mode_new_ignore2(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('new').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'b', 'a'],
+        columns=['diff', 'uid', 'd', 'b', 'a'],
         index=['y', 'x2', 'z']
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = ''
+    expected.loc['y', 'diff'] = ''
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'a'] = 0
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'b'] = 1
     expected.loc['x2', 'a'] = 1
 
-    expected.loc['z', 'meta'] = ''
+    expected.loc['z', 'diff'] = ''
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
@@ -278,7 +278,7 @@ def test_mode_new_ignore2(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -288,7 +288,7 @@ def test_mode_new_ignore2(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -298,7 +298,7 @@ def test_mode_new_ignore2(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0
         ).show('new').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -322,13 +322,13 @@ def test_mode_newplus(tmpdir):
         ).show('new+').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
+        columns=['diff', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
         index=['y', 'x2', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = '<br>vals changed: 1'
+    expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'old: d'] = ''
     expected.loc['y', 'b'] = 2
@@ -336,7 +336,7 @@ def test_mode_newplus(tmpdir):
     expected.loc['y', 'a'] = 0
     expected.loc['y', 'old: a'] = 2
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'old: d'] = ''
     expected.loc['x2', 'b'] = 1
@@ -344,7 +344,7 @@ def test_mode_newplus(tmpdir):
     expected.loc['x2', 'a'] = 1
     expected.loc['x2', 'old: a'] = ''
 
-    expected.loc['z', 'meta'] = '<br>vals added: 1<br>vals removed: 1'
+    expected.loc['z', 'diff'] = 'vals added: 1\nvals removed: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'old: d'] = ''
     expected.loc['z', 'b'] = 3
@@ -393,18 +393,18 @@ def test_mode_newplus_ignore(tmpdir):
         df_old,
         df_new,
         uid='uid',
-        ignore=['a'],
+        ignore_cols=['a'],
         verbosity=0,
         ).show('new+').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
+        columns=['diff', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
         index=['y', 'x2', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = ''
+    expected.loc['y', 'diff'] = ''
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'old: d'] = ''
     expected.loc['y', 'b'] = 2
@@ -412,7 +412,7 @@ def test_mode_newplus_ignore(tmpdir):
     expected.loc['y', 'a'] = 0
     expected.loc['y', 'old: a'] = ''
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'old: d'] = ''
     expected.loc['x2', 'b'] = 1
@@ -420,7 +420,7 @@ def test_mode_newplus_ignore(tmpdir):
     expected.loc['x2', 'a'] = 1
     expected.loc['x2', 'old: a'] = ''
 
-    expected.loc['z', 'meta'] = '<br>vals added: 1'
+    expected.loc['z', 'diff'] = 'vals added: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'old: d'] = ''
     expected.loc['z', 'b'] = 3
@@ -437,7 +437,7 @@ def test_mode_newplus_ignore(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['a'],
+        ignore_cols=['a'],
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -447,7 +447,7 @@ def test_mode_newplus_ignore(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['a'],
+        ignore_cols=['a'],
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -457,7 +457,7 @@ def test_mode_newplus_ignore(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['a'],
+        ignore_cols=['a'],
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -472,18 +472,18 @@ def test_mode_newplus_ignore1(tmpdir):
         df_old,
         df_new,
         uid='uid',
-        ignore='b',
+        ignore_cols='b',
         verbosity=0,
         ).show('new+').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
+        columns=['diff', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
         index=['y', 'x2', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = '<br>vals changed: 1'
+    expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'old: d'] = ''
     expected.loc['y', 'b'] = 2
@@ -491,7 +491,7 @@ def test_mode_newplus_ignore1(tmpdir):
     expected.loc['y', 'a'] = 0
     expected.loc['y', 'old: a'] = 2
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'old: d'] = ''
     expected.loc['x2', 'b'] = 1
@@ -499,7 +499,7 @@ def test_mode_newplus_ignore1(tmpdir):
     expected.loc['x2', 'a'] = 1
     expected.loc['x2', 'old: a'] = ''
 
-    expected.loc['z', 'meta'] = '<br>vals removed: 1'
+    expected.loc['z', 'diff'] = 'vals removed: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'old: d'] = ''
     expected.loc['z', 'b'] = 3
@@ -516,7 +516,7 @@ def test_mode_newplus_ignore1(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore='b',
+        ignore_cols='b',
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -526,7 +526,7 @@ def test_mode_newplus_ignore1(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore='b',
+        ignore_cols='b',
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -536,7 +536,7 @@ def test_mode_newplus_ignore1(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore='b',
+        ignore_cols='b',
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -552,18 +552,18 @@ def test_mode_newplus_ignore2(tmpdir):
         df_old,
         df_new,
         uid='uid',
-        ignore=['b', 'a'],
+        ignore_cols=['b', 'a'],
         verbosity=0,
         ).show('new+').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
+        columns=['diff', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
         index=['y', 'x2', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = ''
+    expected.loc['y', 'diff'] = ''
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'old: d'] = ''
     expected.loc['y', 'b'] = 2
@@ -571,7 +571,7 @@ def test_mode_newplus_ignore2(tmpdir):
     expected.loc['y', 'a'] = 0
     expected.loc['y', 'old: a'] = ''
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'old: d'] = ''
     expected.loc['x2', 'b'] = 1
@@ -579,7 +579,7 @@ def test_mode_newplus_ignore2(tmpdir):
     expected.loc['x2', 'a'] = 1
     expected.loc['x2', 'old: a'] = ''
 
-    expected.loc['z', 'meta'] = ''
+    expected.loc['z', 'diff'] = ''
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'old: d'] = ''
     expected.loc['z', 'b'] = 3
@@ -596,7 +596,7 @@ def test_mode_newplus_ignore2(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['b', 'a'],
+        ignore_cols=['b', 'a'],
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -606,7 +606,7 @@ def test_mode_newplus_ignore2(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['b', 'a'],
+        ignore_cols=['b', 'a'],
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -616,7 +616,7 @@ def test_mode_newplus_ignore2(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['b', 'a'],
+        ignore_cols=['b', 'a'],
         verbosity=0,
         ).show('new+').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -634,23 +634,23 @@ def test_mode_old(tmpdir):
         ).show('old').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'a', 'b', 'c'],
+        columns=['diff', 'uid', 'a', 'b', 'c'],
         index=['x', 'y', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['x', 'meta'] = 'removed row'
+    expected.loc['x', 'diff'] = 'row removed'
     expected.loc['x', 'a'] = 1
     expected.loc['x', 'b'] = 1
     expected.loc['x', 'c'] = 1
 
-    expected.loc['y', 'meta'] = '<br>vals changed: 1'
+    expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'a'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'c'] = 2
 
-    expected.loc['z', 'meta'] = '<br>vals added: 1<br>vals removed: 1'
+    expected.loc['z', 'diff'] = 'vals added: 1\nvals removed: 1'
     expected.loc['z', 'a'] = 3
     expected.loc['z', 'b'] = None
     expected.loc['z', 'c'] = 3
@@ -696,28 +696,28 @@ def test_mode_old_ignore(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('old').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'a', 'b', 'c'],
+        columns=['diff', 'uid', 'a', 'b', 'c'],
         index=['x', 'y', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['x', 'meta'] = 'removed row'
+    expected.loc['x', 'diff'] = 'row removed'
     expected.loc['x', 'a'] = 1
     expected.loc['x', 'b'] = 1
     expected.loc['x', 'c'] = 1
 
-    expected.loc['y', 'meta'] = ''
+    expected.loc['y', 'diff'] = ''
     expected.loc['y', 'a'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'c'] = 2
 
-    expected.loc['z', 'meta'] = '<br>vals added: 1'
+    expected.loc['z', 'diff'] = 'vals added: 1'
     expected.loc['z', 'a'] = 3
     expected.loc['z', 'b'] = None
     expected.loc['z', 'c'] = 3
@@ -731,7 +731,7 @@ def test_mode_old_ignore(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -741,7 +741,7 @@ def test_mode_old_ignore(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -751,7 +751,7 @@ def test_mode_old_ignore(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -766,28 +766,28 @@ def test_mode_old_ignore1(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore='b',
+        ignore_cols='b',
         verbosity=0,
         ).show('old').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'a', 'b', 'c'],
+        columns=['diff', 'uid', 'a', 'b', 'c'],
         index=['x', 'y', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['x', 'meta'] = 'removed row'
+    expected.loc['x', 'diff'] = 'row removed'
     expected.loc['x', 'a'] = 1
     expected.loc['x', 'b'] = 1
     expected.loc['x', 'c'] = 1
 
-    expected.loc['y', 'meta'] = '<br>vals changed: 1'
+    expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'a'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'c'] = 2
 
-    expected.loc['z', 'meta'] = '<br>vals removed: 1'
+    expected.loc['z', 'diff'] = 'vals removed: 1'
     expected.loc['z', 'a'] = 3
     expected.loc['z', 'b'] = None
     expected.loc['z', 'c'] = 3
@@ -801,7 +801,7 @@ def test_mode_old_ignore1(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore='b',
+        ignore_cols='b',
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -811,7 +811,7 @@ def test_mode_old_ignore1(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore='b',
+        ignore_cols='b',
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -821,7 +821,7 @@ def test_mode_old_ignore1(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore='b',
+        ignore_cols='b',
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -836,28 +836,28 @@ def test_mode_old_ignore2(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('old').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'a', 'b', 'c'],
+        columns=['diff', 'uid', 'a', 'b', 'c'],
         index=['x', 'y', 'z'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['x', 'meta'] = 'removed row'
+    expected.loc['x', 'diff'] = 'row removed'
     expected.loc['x', 'a'] = 1
     expected.loc['x', 'b'] = 1
     expected.loc['x', 'c'] = 1
 
-    expected.loc['y', 'meta'] = ''
+    expected.loc['y', 'diff'] = ''
     expected.loc['y', 'a'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'c'] = 2
 
-    expected.loc['z', 'meta'] = ''
+    expected.loc['z', 'diff'] = ''
     expected.loc['z', 'a'] = 3
     expected.loc['z', 'b'] = None
     expected.loc['z', 'c'] = 3
@@ -871,7 +871,7 @@ def test_mode_old_ignore2(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -881,7 +881,7 @@ def test_mode_old_ignore2(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -891,7 +891,7 @@ def test_mode_old_ignore2(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -911,31 +911,31 @@ def test_mode_mix(tmpdir):
         ).show('mix').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'b', 'a', 'c'],
+        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
         index=['y', 'x2', 'z', 'x'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = '<br>vals changed: 1'
+    expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'a'] = 0
     expected.loc['y', 'c'] = 2
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'b'] = 1
     expected.loc['x2', 'a'] = 1
     expected.loc['x2', 'c'] = np.nan
 
-    expected.loc['z', 'meta'] = '<br>vals added: 1<br>vals removed: 1'
+    expected.loc['z', 'diff'] = 'vals added: 1\nvals removed: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
     expected.loc['z', 'c'] = 3
 
-    expected.loc['x', 'meta'] = 'removed row'
+    expected.loc['x', 'diff'] = 'row removed'
     expected.loc['x', 'd'] = None
     expected.loc['x', 'b'] = 1
     expected.loc['x', 'a'] = 1
@@ -981,36 +981,36 @@ def test_mode_mix_ignore(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('mix').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'b', 'a', 'c'],
+        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
         index=['y', 'x2', 'z', 'x'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = ''
+    expected.loc['y', 'diff'] = ''
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'a'] = 0
     expected.loc['y', 'c'] = 2
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'b'] = 1
     expected.loc['x2', 'a'] = 1
     expected.loc['x2', 'c'] = np.nan
 
-    expected.loc['z', 'meta'] = '<br>vals added: 1'
+    expected.loc['z', 'diff'] = 'vals added: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
     expected.loc['z', 'c'] = 3
 
-    expected.loc['x', 'meta'] = 'removed row'
+    expected.loc['x', 'diff'] = 'row removed'
     expected.loc['x', 'd'] = None
     expected.loc['x', 'b'] = 1
     expected.loc['x', 'a'] = 1
@@ -1025,7 +1025,7 @@ def test_mode_mix_ignore(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1035,7 +1035,7 @@ def test_mode_mix_ignore(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1045,7 +1045,7 @@ def test_mode_mix_ignore(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1061,36 +1061,36 @@ def test_mode_mix_ignore1(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore=['b'],
+        ignore_cols=['b'],
         verbosity=0,
         ).show('mix').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'b', 'a', 'c'],
+        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
         index=['y', 'x2', 'z', 'x'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = '<br>vals changed: 1'
+    expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'a'] = 0
     expected.loc['y', 'c'] = 2
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'b'] = 1
     expected.loc['x2', 'a'] = 1
     expected.loc['x2', 'c'] = np.nan
 
-    expected.loc['z', 'meta'] = '<br>vals removed: 1'
+    expected.loc['z', 'diff'] = 'vals removed: 1'
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
     expected.loc['z', 'c'] = 3
 
-    expected.loc['x', 'meta'] = 'removed row'
+    expected.loc['x', 'diff'] = 'row removed'
     expected.loc['x', 'd'] = None
     expected.loc['x', 'b'] = 1
     expected.loc['x', 'a'] = 1
@@ -1105,7 +1105,7 @@ def test_mode_mix_ignore1(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1115,7 +1115,7 @@ def test_mode_mix_ignore1(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1125,7 +1125,7 @@ def test_mode_mix_ignore1(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1139,36 +1139,36 @@ def test_mode_mix_ignore2(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('mix').data
 
     expected = pd.DataFrame(
-        columns=['meta', 'uid', 'd', 'b', 'a', 'c'],
+        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
         index=['y', 'x2', 'z', 'x'],
         )
 
     expected['uid'] = expected.index
 
-    expected.loc['y', 'meta'] = ''
+    expected.loc['y', 'diff'] = ''
     expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
     expected.loc['y', 'a'] = 0
     expected.loc['y', 'c'] = 2
 
-    expected.loc['x2', 'meta'] = 'added row'
+    expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
     expected.loc['x2', 'b'] = 1
     expected.loc['x2', 'a'] = 1
     expected.loc['x2', 'c'] = np.nan
 
-    expected.loc['z', 'meta'] = ''
+    expected.loc['z', 'diff'] = ''
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
     expected.loc['z', 'c'] = 3
 
-    expected.loc['x', 'meta'] = 'removed row'
+    expected.loc['x', 'diff'] = 'row removed'
     expected.loc['x', 'd'] = None
     expected.loc['x', 'b'] = 1
     expected.loc['x', 'a'] = 1
@@ -1183,7 +1183,7 @@ def test_mode_mix_ignore2(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1193,7 +1193,7 @@ def test_mode_mix_ignore2(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1203,7 +1203,7 @@ def test_mode_mix_ignore2(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
@@ -1218,20 +1218,23 @@ def test_summary_stats(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        )
+        ).summary().data
 
-    assert result.uid_cols[0] == 'uid'
-    assert len(result.cols_shared[0]) == 2
-    assert len(result.rows_shared[0]) == 2
-    assert result.cols_added[0] == ['d']
-    assert result.cols_removed[0] == ['c']
-    assert result.rows_added[0] == ['x2']
-    assert result.rows_removed[0] == ['x']
-    assert not result.dtypes_changed[0]
-    assert not result.cols_renamed_new[0]
-    assert not result.cols_renamed_old[0]
-    assert not result.cols_ignored_new[0]
-    assert not result.cols_ignored_old[0]
+    assert result.at['data', 'uid'] == 'uid'
+    assert result.at['data', 'in both datasets'] == 'yes'
+    assert result.at['data', 'cols shared'] == '2'
+    assert result.at['data', 'rows shared'] == '2'
+    assert result.at['data', 'cols added'] == '1'
+    assert result.at['data', 'cols removed'] == '1'
+    assert result.at['data', 'rows added'] == '1'
+    assert result.at['data', 'rows removed'] == '1'
+    assert result.at['data', 'dtypes changed'] == ''
+
+    assert result.at['data', 'first 5 cols added'] == "'d'"
+    assert result.at['data', 'first 5 cols removed'] == "'c'"
+    assert result.at['data', 'first 5 rows added'] == "'x2'"
+    assert result.at['data', 'first 5 rows removed'] == "'x'"
+    assert result.at['data', 'first 5 dtypes changed'] == ''
 
 
     #reading from files
@@ -1239,31 +1242,25 @@ def test_summary_stats(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        )
+        ).summary().data
 
-    dtypes = {
-        'a': {
-            'new': dtype('float64'),
-            'old': dtype('int64'),
-            },
-        'b': {
-            'new': dtype('int64'),
-            'old': dtype('float64'),
-            },
-        }
+    dtypes_changed = "'a': 'int64' -> 'float64',\n'b': 'float64' -> 'int64'"
 
-    assert result.uid_cols[0] == 'uid'
-    assert len(result.cols_shared[0]) == 2
-    assert len(result.rows_shared[0]) == 2
-    assert result.cols_added[0] == ['d']
-    assert result.cols_removed[0] == ['c']
-    assert result.rows_added[0] == ['x2']
-    assert result.rows_removed[0] == ['x']
-    assert result.dtypes_changed[0] == dtypes
-    assert not result.cols_renamed_new[0]
-    assert not result.cols_renamed_old[0]
-    assert not result.cols_ignored_new[0]
-    assert not result.cols_ignored_old[0]
+
+    assert result.at['Sheet1', 'uid'] == 'uid'
+    assert result.at['Sheet1', 'cols shared'] == '2'
+    assert result.at['Sheet1', 'rows shared'] == '2'
+    assert result.at['Sheet1', 'cols added'] == '1'
+    assert result.at['Sheet1', 'cols removed'] == '1'
+    assert result.at['Sheet1', 'rows added'] == '1'
+    assert result.at['Sheet1', 'rows removed'] == '1'
+    assert result.at['Sheet1', 'dtypes changed'] == '2'
+
+    assert result.at['Sheet1', 'first 5 cols added'] == "'d'"
+    assert result.at['Sheet1', 'first 5 cols removed'] == "'c'"
+    assert result.at['Sheet1', 'first 5 rows added'] == "'x2'"
+    assert result.at['Sheet1', 'first 5 rows removed'] == "'x'"
+    assert result.at['Sheet1', 'first 5 dtypes changed'] == dtypes_changed
 
 
 
@@ -1275,21 +1272,24 @@ def test_summary_stats_ignore(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore='a',
-        )
+        ignore_cols='a',
+        ).summary().data
 
-    assert result.uid_cols[0] == 'uid'
-    assert len(result.cols_shared[0]) == 1
-    assert len(result.rows_shared[0]) == 2
-    assert result.cols_added[0] == ['d']
-    assert result.cols_removed[0] == ['c']
-    assert result.rows_added[0] == ['x2']
-    assert result.rows_removed[0] == ['x']
-    assert not result.dtypes_changed[0]
-    assert not result.cols_renamed_new[0]
-    assert not result.cols_renamed_old[0]
-    assert result.cols_ignored_new[0] == ['a']
-    assert result.cols_ignored_old[0] == ['a']
+    assert result.at['data', 'uid'] == 'uid'
+    assert result.at['data', 'in both datasets'] == 'yes'
+    assert result.at['data', 'cols shared'] == '1'
+    assert result.at['data', 'rows shared'] == '2'
+    assert result.at['data', 'cols added'] == '1'
+    assert result.at['data', 'cols removed'] == '1'
+    assert result.at['data', 'rows added'] == '1'
+    assert result.at['data', 'rows removed'] == '1'
+    assert result.at['data', 'dtypes changed'] == ''
+
+    assert result.at['data', 'first 5 cols added'] == "'d'"
+    assert result.at['data', 'first 5 cols removed'] == "'c'"
+    assert result.at['data', 'first 5 rows added'] == "'x2'"
+    assert result.at['data', 'first 5 rows removed'] == "'x'"
+    assert result.at['data', 'first 5 dtypes changed'] == ''
 
 
     #reading from files
@@ -1297,28 +1297,26 @@ def test_summary_stats_ignore(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore='a',
-        )
+        ignore_cols='a',
+        ).summary().data
 
-    dtypes = {
-        'b': {
-            'new': dtype('int64'),
-            'old': dtype('float64'),
-            },
-        }
+    dtypes_changed = "'b': 'float64' -> 'int64'"
 
-    assert result.uid_cols[0] == 'uid'
-    assert len(result.cols_shared[0]) == 1
-    assert len(result.rows_shared[0]) == 2
-    assert result.cols_added[0] == ['d']
-    assert result.cols_removed[0] == ['c']
-    assert result.rows_added[0] == ['x2']
-    assert result.rows_removed[0] == ['x']
-    assert result.dtypes_changed[0] == dtypes
-    assert not result.cols_renamed_new[0]
-    assert not result.cols_renamed_old[0]
-    assert result.cols_ignored_new[0] == ['a']
-    assert result.cols_ignored_old[0] == ['a']
+
+    assert result.at['Sheet1', 'uid'] == 'uid'
+    assert result.at['Sheet1', 'cols shared'] == '1'
+    assert result.at['Sheet1', 'rows shared'] == '2'
+    assert result.at['Sheet1', 'cols added'] == '1'
+    assert result.at['Sheet1', 'cols removed'] == '1'
+    assert result.at['Sheet1', 'rows added'] == '1'
+    assert result.at['Sheet1', 'rows removed'] == '1'
+    assert result.at['Sheet1', 'dtypes changed'] == '1'
+
+    assert result.at['Sheet1', 'first 5 cols added'] == "'d'"
+    assert result.at['Sheet1', 'first 5 cols removed'] == "'c'"
+    assert result.at['Sheet1', 'first 5 rows added'] == "'x2'"
+    assert result.at['Sheet1', 'first 5 rows removed'] == "'x'"
+    assert result.at['Sheet1', 'first 5 dtypes changed'] == dtypes_changed
 
 
 
@@ -1330,21 +1328,24 @@ def test_summary_stats_ignore1(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore=['b'],
-        )
+        ignore_cols=['b'],
+        ).summary().data
 
-    assert result.uid_cols[0] == 'uid'
-    assert len(result.cols_shared[0]) == 1
-    assert len(result.rows_shared[0]) == 2
-    assert result.cols_added[0] == ['d']
-    assert result.cols_removed[0] == ['c']
-    assert result.rows_added[0] == ['x2']
-    assert result.rows_removed[0] == ['x']
-    assert not result.dtypes_changed[0]
-    assert not result.cols_renamed_new[0]
-    assert not result.cols_renamed_old[0]
-    assert result.cols_ignored_new[0] == ['b']
-    assert result.cols_ignored_old[0] == ['b']
+    assert result.at['data', 'uid'] == 'uid'
+    assert result.at['data', 'in both datasets'] == 'yes'
+    assert result.at['data', 'cols shared'] == '1'
+    assert result.at['data', 'rows shared'] == '2'
+    assert result.at['data', 'cols added'] == '1'
+    assert result.at['data', 'cols removed'] == '1'
+    assert result.at['data', 'rows added'] == '1'
+    assert result.at['data', 'rows removed'] == '1'
+    assert result.at['data', 'dtypes changed'] == ''
+
+    assert result.at['data', 'first 5 cols added'] == "'d'"
+    assert result.at['data', 'first 5 cols removed'] == "'c'"
+    assert result.at['data', 'first 5 rows added'] == "'x2'"
+    assert result.at['data', 'first 5 rows removed'] == "'x'"
+    assert result.at['data', 'first 5 dtypes changed'] == ''
 
 
     #reading from files
@@ -1352,28 +1353,26 @@ def test_summary_stats_ignore1(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['b'],
-        )
+        ignore_cols=['b'],
+        ).summary().data
 
-    dtypes = {
-        'a': {
-            'new': dtype('float64'),
-            'old': dtype('int64'),
-            },
-        }
+    dtypes_changed = "'a': 'int64' -> 'float64'"
 
-    assert result.uid_cols[0] == 'uid'
-    assert len(result.cols_shared[0]) == 1
-    assert len(result.rows_shared[0]) == 2
-    assert result.cols_added[0] == ['d']
-    assert result.cols_removed[0] == ['c']
-    assert result.rows_added[0] == ['x2']
-    assert result.rows_removed[0] == ['x']
-    assert result.dtypes_changed[0] == dtypes
-    assert not result.cols_renamed_new[0]
-    assert not result.cols_renamed_old[0]
-    assert result.cols_ignored_new[0] == ['b']
-    assert result.cols_ignored_old[0] == ['b']
+
+    assert result.at['Sheet1', 'uid'] == 'uid'
+    assert result.at['Sheet1', 'cols shared'] == '1'
+    assert result.at['Sheet1', 'rows shared'] == '2'
+    assert result.at['Sheet1', 'cols added'] == '1'
+    assert result.at['Sheet1', 'cols removed'] == '1'
+    assert result.at['Sheet1', 'rows added'] == '1'
+    assert result.at['Sheet1', 'rows removed'] == '1'
+    assert result.at['Sheet1', 'dtypes changed'] == '1'
+
+    assert result.at['Sheet1', 'first 5 cols added'] == "'d'"
+    assert result.at['Sheet1', 'first 5 cols removed'] == "'c'"
+    assert result.at['Sheet1', 'first 5 rows added'] == "'x2'"
+    assert result.at['Sheet1', 'first 5 rows removed'] == "'x'"
+    assert result.at['Sheet1', 'first 5 dtypes changed'] == dtypes_changed
 
 
 
@@ -1385,21 +1384,24 @@ def test_summary_stats_ignore2(tmpdir):
     result = qp.diff(
         df_old,
         df_new,
-        ignore=['a', 'b'],
-        )
+        ignore_cols=['a', 'b'],
+        ).summary().data
 
-    assert result.uid_cols[0] == 'uid'
-    assert len(result.cols_shared[0]) == 0
-    assert len(result.rows_shared[0]) == 2
-    assert result.cols_added[0] == ['d']
-    assert result.cols_removed[0] == ['c']
-    assert result.rows_added[0] == ['x2']
-    assert result.rows_removed[0] == ['x']
-    assert not result.dtypes_changed[0]
-    assert not result.cols_renamed_new[0]
-    assert not result.cols_renamed_old[0]
-    assert result.cols_ignored_new[0] == ['b', 'a']
-    assert result.cols_ignored_old[0] == ['a', 'b']
+    assert result.at['data', 'uid'] == 'uid'
+    assert result.at['data', 'in both datasets'] == 'yes'
+    assert result.at['data', 'cols shared'] == ''
+    assert result.at['data', 'rows shared'] == '2'
+    assert result.at['data', 'cols added'] == '1'
+    assert result.at['data', 'cols removed'] == '1'
+    assert result.at['data', 'rows added'] == '1'
+    assert result.at['data', 'rows removed'] == '1'
+    assert result.at['data', 'dtypes changed'] == ''
+
+    assert result.at['data', 'first 5 cols added'] == "'d'"
+    assert result.at['data', 'first 5 cols removed'] == "'c'"
+    assert result.at['data', 'first 5 rows added'] == "'x2'"
+    assert result.at['data', 'first 5 rows removed'] == "'x'"
+    assert result.at['data', 'first 5 dtypes changed'] == ''
 
 
     #reading from files
@@ -1407,25 +1409,30 @@ def test_summary_stats_ignore2(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
-        )
+        ignore_cols=['a', 'b'],
+        ).summary().data
 
-    assert result.uid_cols[0] == 'uid'
-    assert len(result.cols_shared[0]) == 0
-    assert len(result.rows_shared[0]) == 2
-    assert result.cols_added[0] == ['d']
-    assert result.cols_removed[0] == ['c']
-    assert result.rows_added[0] == ['x2']
-    assert result.rows_removed[0] == ['x']
-    assert not result.dtypes_changed[0]
-    assert not result.cols_renamed_new[0]
-    assert not result.cols_renamed_old[0]
-    assert result.cols_ignored_new[0] == ['b', 'a']
-    assert result.cols_ignored_old[0] == ['a', 'b']
+    dtypes_changed = ''
 
 
+    assert result.at['Sheet1', 'uid'] == 'uid'
+    assert result.at['Sheet1', 'cols shared'] == ''
+    assert result.at['Sheet1', 'rows shared'] == '2'
+    assert result.at['Sheet1', 'cols added'] == '1'
+    assert result.at['Sheet1', 'cols removed'] == '1'
+    assert result.at['Sheet1', 'rows added'] == '1'
+    assert result.at['Sheet1', 'rows removed'] == '1'
+    assert result.at['Sheet1', 'dtypes changed'] == ''
 
-def test_summary_str(tmpdir):
+    assert result.at['Sheet1', 'first 5 cols added'] == "'d'"
+    assert result.at['Sheet1', 'first 5 cols removed'] == "'c'"
+    assert result.at['Sheet1', 'first 5 rows added'] == "'x2'"
+    assert result.at['Sheet1', 'first 5 rows removed'] == "'x'"
+    assert result.at['Sheet1', 'first 5 dtypes changed'] == dtypes_changed
+
+
+
+def test_str(tmpdir):
     df_old, df_new = qp.get_dfs()
     df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
@@ -1437,28 +1444,30 @@ def test_summary_str(tmpdir):
         ).str()
 
     expected = """
-        Diff between 2 dataframes
-
-        uid col: uid
-        cols shared: 2
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-
-        cols ignored in old:
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 2
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 0
+          first 5 cols shared:
+            'a',
+            'b'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
 
         """
 
@@ -1473,32 +1482,32 @@ def test_summary_str(tmpdir):
         ).str()
 
     expected = """
-        Diff between 2 excel files with 1 sheets
-
-        Sheet: Sheet1
-        in both files: yes
-        uid col: uid
-        cols shared: 2
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            a: int64 -> float64
-            b: float64 -> int64
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-
-        cols ignored in old:
+        Diffs summary:
+          Diff of 'Sheet1':
+            cols shared: 2
+            cols added: 1
+            cols removed: 1
+            rows shared: 2
+            rows added: 1
+            rows removed: 1
+            dtypes changed: 2
+            first 5 cols shared:
+              'a',
+              'b'
+            first 5 cols added:
+              'd'
+            first 5 cols removed:
+              'c'
+            first 5 rows shared:
+              'y',
+              'z'
+            first 5 rows added:
+              'x2'
+            first 5 rows removed:
+              'x'
+            first 5 dtypes changed:
+              'a': 'int64' -> 'float64',
+              'b': 'float64' -> 'int64'
 
         """
 
@@ -1513,30 +1522,32 @@ def test_summary_str(tmpdir):
         ).str()
 
     expected = """
-        Diff between 2 dataframes
-
-        uid col: uid
-        cols shared: 2
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            a: object -> float64
-            b: object -> int64
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-
-        cols ignored in old:
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 2
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 2
+          first 5 cols shared:
+            'a',
+            'b'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
+            'a': 'object' -> 'float64',
+            'b': 'object' -> 'int64'
 
         """
 
@@ -1551,30 +1562,32 @@ def test_summary_str(tmpdir):
         ).str()
 
     expected = """
-        Diff between 2 dataframes
-
-        uid col: uid
-        cols shared: 2
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            a: int64 -> object
-            b: float64 -> object
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-
-        cols ignored in old:
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 2
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 2
+          first 5 cols shared:
+            'a',
+            'b'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
+            'a': 'int64' -> 'object',
+            'b': 'float64' -> 'object'
 
         """
 
@@ -1582,7 +1595,7 @@ def test_summary_str(tmpdir):
 
 
 
-def test_summary_str_ignore(tmpdir):
+def test_str_ignore(tmpdir):
     df_old, df_new = qp.get_dfs()
     df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
@@ -1591,33 +1604,34 @@ def test_summary_str_ignore(tmpdir):
         df_old,
         df_new,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 1
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 0
+          first 5 cols shared:
+            'b'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
 
-        uid col: uid
-        cols shared: 1
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            a
-        cols ignored in old:
-            a
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -1628,36 +1642,35 @@ def test_summary_str_ignore(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         ).str()
 
     expected = """
-        Diff between 2 excel files with 1 sheets
+        Diffs summary:
+          Diff of 'Sheet1':
+            cols shared: 1
+            cols added: 1
+            cols removed: 1
+            rows shared: 2
+            rows added: 1
+            rows removed: 1
+            dtypes changed: 1
+            first 5 cols shared:
+              'b'
+            first 5 cols added:
+              'd'
+            first 5 cols removed:
+              'c'
+            first 5 rows shared:
+              'y',
+              'z'
+            first 5 rows added:
+              'x2'
+            first 5 rows removed:
+              'x'
+            first 5 dtypes changed:
+              'b': 'float64' -> 'int64'
 
-        Sheet: Sheet1
-        in both files: yes
-        uid col: uid
-        cols shared: 1
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            b: float64 -> int64
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            a
-        cols ignored in old:
-            a
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -1668,34 +1681,35 @@ def test_summary_str_ignore(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 1
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 1
+          first 5 cols shared:
+            'b'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
+            'b': 'object' -> 'int64'
 
-        uid col: uid
-        cols shared: 1
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            b: object -> int64
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            a
-        cols ignored in old:
-            a
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -1706,41 +1720,42 @@ def test_summary_str_ignore(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore='a',
+        ignore_cols='a',
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 1
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 1
+          first 5 cols shared:
+            'b'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
+            'b': 'float64' -> 'object'
 
-        uid col: uid
-        cols shared: 1
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            b: float64 -> object
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            a
-        cols ignored in old:
-            a
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
 
 
-def test_summary_str_ignore1(tmpdir):
+def test_str_ignore1(tmpdir):
     df_old, df_new = qp.get_dfs()
     df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
@@ -1749,33 +1764,34 @@ def test_summary_str_ignore1(tmpdir):
         df_old,
         df_new,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 1
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 0
+          first 5 cols shared:
+            'a'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
 
-        uid col: uid
-        cols shared: 1
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            b
-        cols ignored in old:
-            b
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -1786,36 +1802,35 @@ def test_summary_str_ignore1(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         ).str()
 
     expected = """
-        Diff between 2 excel files with 1 sheets
+        Diffs summary:
+          Diff of 'Sheet1':
+            cols shared: 1
+            cols added: 1
+            cols removed: 1
+            rows shared: 2
+            rows added: 1
+            rows removed: 1
+            dtypes changed: 1
+            first 5 cols shared:
+              'a'
+            first 5 cols added:
+              'd'
+            first 5 cols removed:
+              'c'
+            first 5 rows shared:
+              'y',
+              'z'
+            first 5 rows added:
+              'x2'
+            first 5 rows removed:
+              'x'
+            first 5 dtypes changed:
+              'a': 'int64' -> 'float64'
 
-        Sheet: Sheet1
-        in both files: yes
-        uid col: uid
-        cols shared: 1
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            a: int64 -> float64
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            b
-        cols ignored in old:
-            b
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -1826,34 +1841,35 @@ def test_summary_str_ignore1(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 1
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 1
+          first 5 cols shared:
+            'a'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
+            'a': 'object' -> 'float64'
 
-        uid col: uid
-        cols shared: 1
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            a: object -> float64
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            b
-        cols ignored in old:
-            b
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -1864,41 +1880,42 @@ def test_summary_str_ignore1(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['b'],
+        ignore_cols=['b'],
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 1
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 1
+          first 5 cols shared:
+            'a'
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
+            'a': 'int64' -> 'object'
 
-        uid col: uid
-        cols shared: 1
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-            a: int64 -> object
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            b
-        cols ignored in old:
-            b
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
 
 
-def test_summary_str_ignore2(tmpdir):
+def test_str_ignore2(tmpdir):
     df_old, df_new = qp.get_dfs()
     df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
@@ -1907,35 +1924,33 @@ def test_summary_str_ignore2(tmpdir):
         df_old,
         df_new,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 0
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 0
+          first 5 cols shared:
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
 
-        uid col: uid
-        cols shared: 0
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            b;
-            a
-        cols ignored in old:
-            a;
-            b
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -1946,37 +1961,33 @@ def test_summary_str_ignore2(tmpdir):
         df_old_file,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         ).str()
 
     expected = """
-        Diff between 2 excel files with 1 sheets
+        Diffs summary:
+          Diff of 'Sheet1':
+            cols shared: 0
+            cols added: 1
+            cols removed: 1
+            rows shared: 2
+            rows added: 1
+            rows removed: 1
+            dtypes changed: 0
+            first 5 cols shared:
+            first 5 cols added:
+              'd'
+            first 5 cols removed:
+              'c'
+            first 5 rows shared:
+              'y',
+              'z'
+            first 5 rows added:
+              'x2'
+            first 5 rows removed:
+              'x'
+            first 5 dtypes changed:
 
-        Sheet: Sheet1
-        in both files: yes
-        uid col: uid
-        cols shared: 0
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            b;
-            a
-        cols ignored in old:
-            a;
-            b
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -1987,35 +1998,33 @@ def test_summary_str_ignore2(tmpdir):
         df_old,
         df_new_file,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 0
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 0
+          first 5 cols shared:
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
 
-        uid col: uid
-        cols shared: 0
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            b;
-            a
-        cols ignored in old:
-            a;
-            b
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -2026,35 +2035,33 @@ def test_summary_str_ignore2(tmpdir):
         df_old_file,
         df_new,
         uid='uid',
-        ignore=['a', 'b'],
+        ignore_cols=['a', 'b'],
         ).str()
 
     expected = """
-        Diff between 2 dataframes
+        Diffs summary:
+          Diff of 'data':
+          cols shared: 0
+          cols added: 1
+          cols removed: 1
+          rows shared: 2
+          rows added: 1
+          rows removed: 1
+          dtypes changed: 0
+          first 5 cols shared:
+          first 5 cols added:
+            'd'
+          first 5 cols removed:
+            'c'
+          first 5 rows shared:
+            'y',
+            'z'
+          first 5 rows added:
+            'x2'
+          first 5 rows removed:
+            'x'
+          first 5 dtypes changed:
 
-        uid col: uid
-        cols shared: 0
-        cols added:
-            d
-        cols removed:
-            c
-        rows shared: 2
-        rows added:
-            x2
-        rows removed:
-            x
-        dtypes changed:
-
-        cols renamed in new:
-
-        cols renamed in old:
-
-        cols ignored in new:
-            b;
-            a
-        cols ignored in old:
-            a;
-            b
         """
 
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
@@ -2165,25 +2172,37 @@ def test_identical(tmpdir):
     str2 = diff2.str()
     str3 = diff3.str()
 
-    expected = 'both dataframes are identical'
+    expected = (
+        'Diffs summary:\n'
+        "  Diff of 'data':\n"
+        '    datasets are identical\n  '
+        )
     expected3 = (
-        'Diff between 2 excel files with 1 sheets'
-        'Sheet "Sheet1" is identical in both files'
+        'Diffs summary:\n'
+        "  Diff of 'Sheet1':\n"
+        '    datasets are identical\n  '
         )
 
-    assert str1 == str3 == expected, f"Strings are not equal:\n{str1}\n{str3}"  # noqa E501
+    assert str1 == str3 == expected, f"Strings are not equal:\n{str1}\n{str3}\n{expected}"  # noqa E501
     assert process_str(str2) == process_str(expected3), f"EXPECTED:\n{expected3}\nRESULT:\n{str2}"  # noqa E501
 
     for diff in [diff1, diff2, diff3]:
-        assert diff.uid_cols[0] == 'uid'
-        assert len(diff.cols_shared[0]) == 3
-        assert len(diff.rows_shared[0]) == 3
-        assert len(diff.cols_added[0]) == 0
-        assert len(diff.cols_removed[0]) == 0
-        assert len(diff.rows_added[0]) == 0
-        assert len(diff.rows_removed[0]) == 0
-        assert not diff.dtypes_changed[0]
-        assert not diff.cols_renamed_new[0]
-        assert not diff.cols_renamed_old[0]
-        assert not diff.cols_ignored_new[0]
-        assert not diff.cols_ignored_old[0]
+        summary = diff.summary().data
+        summary.index = ['data']
+        summary.index.name = 'dataset'
+
+        assert summary.at['data', 'uid'] == 'uid'
+        assert summary.at['data', 'in both datasets'] == 'yes'
+        assert summary.at['data', 'cols shared'] == '3'
+        assert summary.at['data', 'rows shared'] == '3'
+        assert summary.at['data', 'cols added'] == ''
+        assert summary.at['data', 'cols removed'] == ''
+        assert summary.at['data', 'rows added'] == ''
+        assert summary.at['data', 'rows removed'] == ''
+        assert summary.at['data', 'dtypes changed'] == ''
+
+        assert summary.at['data', 'first 5 cols added'] == ''
+        assert summary.at['data', 'first 5 cols removed'] == ''
+        assert summary.at['data', 'first 5 rows added'] == ''
+        assert summary.at['data', 'first 5 rows removed'] == ''
+        assert summary.at['data', 'first 5 dtypes changed'] == ''

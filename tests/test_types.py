@@ -748,9 +748,16 @@ def test_Container_other_methods():
     assert c.i0 == 5
     assert c.i1 == 6
     assert c == eval(c.__repr__(), globals={'Container': qp.Container})
-    assert list(c.keys()) == ['a', 'b', 'c', 'd']
-    assert list(c.values()) == [1, 2, 3, 4]
-    assert list(c.items()) == [('a', 1), ('b', 2), ('c', 3), ('d', 4)]
+    assert list(c.keys()) == ['a', 'b', 'c', 'd', 'i0', 'i1']
+    assert list(c.values()) == [1, 2, 3, 4, 5, 6]
+    assert list(c.items()) == [
+        ('a', 1),
+        ('b', 2),
+        ('c', 3),
+        ('d', 4),
+        ('i0', 5),
+        ('i1', 6),
+        ]
 
     c.clear()
     assert c == qp.Container()

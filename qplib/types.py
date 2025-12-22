@@ -491,7 +491,7 @@ class Container:
         content = []
         for k, v in self.__dict__.items():
             if isinstance(v, self.__class__):
-                v = str(v).replace('\n', '\n    ')
+                v = str(v).replace('\n', '\n  ')
                 content.append(f'  {k} = {v},')
             else:
                 content.append(f'  {k} = {v!r},')

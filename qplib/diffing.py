@@ -82,6 +82,12 @@ class Diff:
         Set the unique identifier (uid) column for
         comparing rows between old and new datasets.
         """
+        #in case a uid was already set before
+        if hasattr(self, 'uid') and self.uid in self.cols_ignore:
+            msg = f'trace: removing old uid {self.uid!r} from .cols_ignore'
+            log(msg, 'qp.Diff', self.verbosity)
+            self.cols_ignore = self.cols_ignore.drop(self.uid)
+
         if uid is False:
             msg = 'trace: using index as uid'
             log(msg, 'qp.Diff', self.verbosity)
@@ -94,6 +100,7 @@ class Diff:
         if uid in self.old.columns and uid in self.new.columns:
             self.old.index = self.old[uid]
             self.new.index = self.new[uid]
+            self.cols_ignore = self.cols_ignore.append(pd.Index([uid]))
 
         if not self.old.index.is_unique:
             self.old.index = deduplicate(
@@ -180,8 +187,8 @@ class Diff:
         for col in cols_shared:
             if self.old[col].dtype != self.new[col].dtype:
                 changed = {
-                    'old': self.old[col].dtype,
-                    'new': self.new[col].dtype
+                    'old': self.old[col].dtype.name,
+                    'new': self.new[col].dtype.name
                     }
                 dtypes_changed[col] = changed
 
@@ -416,11 +423,13 @@ class Diff:
 
         #highlight values in shared columns
 
-        # replace "<" and ">" with html entities to prevent interpretation as html tags
-        if pd.__version__ >= '2.1.0':
-            df_diff = df_diff.map(lambda x: _replace_gt_lt(x))
-        else:
-            df_diff = df_diff.applymap(lambda x: _replace_gt_lt(x))
+        #replace "<" and ">" with html entities to prevent interpretation as html tags
+        #doing this also impacts dtypes, which might be more problematic than the odd
+        #html tag
+        # if pd.__version__ >= '2.1.0':
+        #     df_diff = df_diff.map(lambda x: _replace_gt_lt(x))
+        # else:
+        #     df_diff = df_diff.applymap(lambda x: _replace_gt_lt(x))
 
         df_old_isna = old.loc[rows_shared, cols_shared].isna()
         df_new_isna = new.loc[rows_shared, cols_shared].isna()
@@ -506,7 +515,7 @@ class Diff:
         return diff_styled
 
 
-    def str(self):
+    def str(self, head=5):
         string = f'Diff of {self.name!r}:\n'
         if self.old.empty and self.new.empty:
             string += '  both datasets are empty\n'
@@ -518,6 +527,34 @@ class Diff:
             string += '  datasets are identical\n'
         else:
             details = self.details()
+            cols_shared_str = _to_str(
+                details.cols_shared_head,
+                linebreak='\n  ',
+                )
+            cols_added_str = _to_str(
+                details.cols_added_head,
+                linebreak='\n  ',
+                )
+            cols_removed_str = _to_str(
+                details.cols_removed_head,
+                linebreak='\n  ',
+                )
+            rows_shared_str = _to_str(
+                details.rows_shared_head,
+                linebreak='\n  ',
+                )
+            rows_added_str = _to_str(
+                details.rows_added_head,
+                linebreak='\n  ',
+                )
+            rows_removed_str = _to_str(
+                details.rows_removed_head,
+                linebreak='\n  ',
+                )
+            dtypes_changed_str = _to_str(
+                details.dtypes_changed_head,
+                linebreak='\n  ',
+                )
             string += (
                 f' cols shared: {details.cols_shared}\n'
                 f' cols added: {details.cols_added}\n'
@@ -526,6 +563,13 @@ class Diff:
                 f' rows added: {details.rows_added}\n'
                 f' rows removed: {details.rows_removed}\n'
                 f' dtypes changed: {details.dtypes_changed}\n'
+                f' first {head} cols shared:\n  {cols_shared_str}\n'
+                f' first {head} cols added:\n  {cols_added_str}\n'
+                f' first {head} cols removed:\n  {cols_removed_str}\n'
+                f' first {head} rows shared:\n  {rows_shared_str}\n'
+                f' first {head} rows added:\n  {rows_added_str}\n'
+                f' first {head} rows removed:\n  {rows_removed_str}\n'
+                f' first {head} dtypes changed:\n  {dtypes_changed_str}\n'
                 )
         return string
 
@@ -551,11 +595,11 @@ class Diffs:
             ):
         self.verbosity = verbosity
         self.all = self._get_Diffs(
-            old,
-            new,
-            uid,
-            rename_cols,
-            ignore_cols,
+            old=old,
+            new=new,
+            uid=uid,
+            rename_cols=rename_cols,
+            ignore_cols=ignore_cols,
             )
         self.cols_summary = [
             'uid',
@@ -602,11 +646,11 @@ class Diffs:
             )
         if conditions_excel_comp:
             diffs = self._get_excel_Diffs(
-                old,
-                new,
-                uid,
-                rename_cols,
-                ignore_cols,
+                old=old,
+                new=new,
+                uid=uid,
+                rename_cols=rename_cols,
+                ignore_cols=ignore_cols,
                 )
             return diffs
 
@@ -646,12 +690,12 @@ class Diffs:
                 log(msg, 'qp.Diffs', self.verbosity)
 
             diff = Diff(
-                df_old,
-                df_new,
-                uid,
-                rename_cols,
-                ignore_cols,
-                self.verbosity,
+                old=df_old,
+                new=df_new,
+                uid=uid,
+                rename_cols=rename_cols,
+                ignore_cols=ignore_cols,
+                verbosity=self.verbosity,
                 )
             diff.sheet = ''
             diff.in_both_datasets = 'yes'
@@ -696,11 +740,11 @@ class Diffs:
                 uid_sheet = uid
 
             diff = Diff(
-                df_old,
-                df_new,
-                uid_sheet,
-                rename_cols,
-                ignore_cols,
+                old=df_old,
+                new=df_new,
+                uid=uid_sheet,
+                rename_cols=rename_cols,
+                ignore_cols=ignore_cols,
                 name=sheet,
                 verbosity=self.verbosity,
                 )
@@ -1025,7 +1069,7 @@ class Diffs:
 
 
     def str(self):
-        string = 'Diffs summary:\n'
+        string = 'Diffs summary:'
         for diff in self.all:
             string += '\n  ' + diff.str().replace('\n', '\n  ')
         return string
@@ -1051,7 +1095,7 @@ def _to_str(obj, separator=',', linebreak='\n'):
         if len(obj) == 0:
             string = ''
         else:
-            strings = [f'{k}: {v['old']!r} -> {v['new']!r}' for k, v in obj.items()]
+            strings = [f'{k!r}: {v['old']!r} -> {v['new']!r}' for k, v in obj.items()]
             string = f'{separator}{linebreak}'.join(strings)
 
     elif isinstance(obj, (list, set, tuple, pd.Index)):
@@ -1065,66 +1109,6 @@ def _to_str(obj, separator=',', linebreak='\n'):
         string = str(obj)
 
     return string
-
-
-# def _sheet_to_str(summary, row):
-#     string = ''
-#     one_liners = [
-#         'in both files',
-#         'uid col',
-#         'cols shared',
-#         'rows shared',
-#         ]
-#     for col in summary.data.columns:
-#         if col == 'sheets':
-#             continue
-#         elif col in one_liners:
-#             string += f'  {col}: {summary.data.loc[row, col]}\n'
-#         else:
-#             string += f'  {col}:\n    {summary.data.loc[row, col]}\n'
-#     return string.replace('<br>', '\n    ')
-
-
-# def _cols_to_str(iter):
-#     iter_new = []
-#     for col in iter:
-#         if col is None:
-#             iter_new.append('')
-#         else:
-#             iter_new.append(str(col))
-#     return iter_new
-
-
-# def _dicts_to_str(iter, linebreak='\n'):
-#     iter_new = []
-#     for dictionary in iter:
-#         if dictionary:
-#             iter_new.append(
-#                 f';{linebreak}'.join(
-#                     [f'{k} -> {v}' for k, v in dictionary.items()]
-#                     )
-#                 )
-#         else:
-#             iter_new.append('')
-#     return iter_new
-
-
-# def _iters_to_str(iters, linebreak='\n'):
-#     iters_new = []
-#     for iter in iters:
-#         iters_new.append(f';{linebreak}'.join([str(x) for x in iter]))
-#     return iters_new
-
-
-# def _nested_dicts_to_str(iter, linebreak='\n'):
-#     iter_new = []
-#     for dictionary in iter:
-#         string = ''
-#         if dictionary:
-#             for k, v in dictionary.items():
-#                 string += f'{k}: {v["old"]} -> {v["new"]}{linebreak}'
-#         iter_new.append(string)
-#     return iter_new
 
 
 def _replace_gt_lt(x):
@@ -1199,11 +1183,11 @@ def diff(
             )
     """
     diffs = Diffs(
-        old,
-        new,
-        uid,
-        rename_cols,
-        ignore_cols,
-        verbosity,
+        old=old,
+        new=new,
+        uid=uid,
+        rename_cols=rename_cols,
+        ignore_cols=ignore_cols,
+        verbosity=verbosity,
         )
     return diffs
