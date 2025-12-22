@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import qplib as qp
-from numpy import dtype
 
 
 def process_str(string):

@@ -1095,7 +1095,11 @@ def _to_str(obj, separator=',', linebreak='\n'):
         if len(obj) == 0:
             string = ''
         else:
-            strings = [f'{k!r}: {v['old']!r} -> {v['new']!r}' for k, v in obj.items()]
+            strings = []
+            for key, val in obj.items():
+                val_old = val['old']
+                val_new = val['new']
+                strings.append(f'{key!r}: {val_old!r} -> {val_new!r}')
             string = f'{separator}{linebreak}'.join(strings)
 
     elif isinstance(obj, (list, set, tuple, pd.Index)):
