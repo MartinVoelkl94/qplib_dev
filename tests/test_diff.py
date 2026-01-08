@@ -1229,22 +1229,12 @@ def test_summary_stats(tmpdir):
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
 
-    assert result.at['data', 'first 5 cols added'] == "'d'"
-    assert result.at['data', 'first 5 cols removed'] == "'c'"
-    assert result.at['data', 'first 5 rows added'] == "'x2'"
-    assert result.at['data', 'first 5 rows removed'] == "'x'"
-    assert result.at['data', 'first 5 dtypes changed'] == ''
-
-
     #reading from files
     result = qp.diff(
         df_old_file,
         df_new_file,
         uid='uid',
         ).summary().data
-
-    dtypes_changed = "'a': 'int64' -> 'float64',\n'b': 'float64' -> 'int64'"
-
 
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '2'
@@ -1254,13 +1244,6 @@ def test_summary_stats(tmpdir):
     assert result.at['Sheet1', 'rows added'] == '1'
     assert result.at['Sheet1', 'rows removed'] == '1'
     assert result.at['Sheet1', 'dtypes changed'] == '2'
-
-    assert result.at['Sheet1', 'first 5 cols added'] == "'d'"
-    assert result.at['Sheet1', 'first 5 cols removed'] == "'c'"
-    assert result.at['Sheet1', 'first 5 rows added'] == "'x2'"
-    assert result.at['Sheet1', 'first 5 rows removed'] == "'x'"
-    assert result.at['Sheet1', 'first 5 dtypes changed'] == dtypes_changed
-
 
 
 def test_summary_stats_ignore(tmpdir):
@@ -1284,13 +1267,6 @@ def test_summary_stats_ignore(tmpdir):
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
 
-    assert result.at['data', 'first 5 cols added'] == "'d'"
-    assert result.at['data', 'first 5 cols removed'] == "'c'"
-    assert result.at['data', 'first 5 rows added'] == "'x2'"
-    assert result.at['data', 'first 5 rows removed'] == "'x'"
-    assert result.at['data', 'first 5 dtypes changed'] == ''
-
-
     #reading from files
     result = qp.diff(
         df_old_file,
@@ -1298,9 +1274,6 @@ def test_summary_stats_ignore(tmpdir):
         uid='uid',
         ignore_cols='a',
         ).summary().data
-
-    dtypes_changed = "'b': 'float64' -> 'int64'"
-
 
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '1'
@@ -1310,13 +1283,6 @@ def test_summary_stats_ignore(tmpdir):
     assert result.at['Sheet1', 'rows added'] == '1'
     assert result.at['Sheet1', 'rows removed'] == '1'
     assert result.at['Sheet1', 'dtypes changed'] == '1'
-
-    assert result.at['Sheet1', 'first 5 cols added'] == "'d'"
-    assert result.at['Sheet1', 'first 5 cols removed'] == "'c'"
-    assert result.at['Sheet1', 'first 5 rows added'] == "'x2'"
-    assert result.at['Sheet1', 'first 5 rows removed'] == "'x'"
-    assert result.at['Sheet1', 'first 5 dtypes changed'] == dtypes_changed
-
 
 
 def test_summary_stats_ignore1(tmpdir):
@@ -1340,13 +1306,6 @@ def test_summary_stats_ignore1(tmpdir):
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
 
-    assert result.at['data', 'first 5 cols added'] == "'d'"
-    assert result.at['data', 'first 5 cols removed'] == "'c'"
-    assert result.at['data', 'first 5 rows added'] == "'x2'"
-    assert result.at['data', 'first 5 rows removed'] == "'x'"
-    assert result.at['data', 'first 5 dtypes changed'] == ''
-
-
     #reading from files
     result = qp.diff(
         df_old_file,
@@ -1354,9 +1313,6 @@ def test_summary_stats_ignore1(tmpdir):
         uid='uid',
         ignore_cols=['b'],
         ).summary().data
-
-    dtypes_changed = "'a': 'int64' -> 'float64'"
-
 
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '1'
@@ -1366,12 +1322,6 @@ def test_summary_stats_ignore1(tmpdir):
     assert result.at['Sheet1', 'rows added'] == '1'
     assert result.at['Sheet1', 'rows removed'] == '1'
     assert result.at['Sheet1', 'dtypes changed'] == '1'
-
-    assert result.at['Sheet1', 'first 5 cols added'] == "'d'"
-    assert result.at['Sheet1', 'first 5 cols removed'] == "'c'"
-    assert result.at['Sheet1', 'first 5 rows added'] == "'x2'"
-    assert result.at['Sheet1', 'first 5 rows removed'] == "'x'"
-    assert result.at['Sheet1', 'first 5 dtypes changed'] == dtypes_changed
 
 
 
@@ -1396,12 +1346,6 @@ def test_summary_stats_ignore2(tmpdir):
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
 
-    assert result.at['data', 'first 5 cols added'] == "'d'"
-    assert result.at['data', 'first 5 cols removed'] == "'c'"
-    assert result.at['data', 'first 5 rows added'] == "'x2'"
-    assert result.at['data', 'first 5 rows removed'] == "'x'"
-    assert result.at['data', 'first 5 dtypes changed'] == ''
-
 
     #reading from files
     result = qp.diff(
@@ -1410,6 +1354,218 @@ def test_summary_stats_ignore2(tmpdir):
         uid='uid',
         ignore_cols=['a', 'b'],
         ).summary().data
+
+    assert result.at['Sheet1', 'uid'] == 'uid'
+    assert result.at['Sheet1', 'cols shared'] == ''
+    assert result.at['Sheet1', 'rows shared'] == '2'
+    assert result.at['Sheet1', 'cols added'] == '1'
+    assert result.at['Sheet1', 'cols removed'] == '1'
+    assert result.at['Sheet1', 'rows added'] == '1'
+    assert result.at['Sheet1', 'rows removed'] == '1'
+    assert result.at['Sheet1', 'dtypes changed'] == ''
+
+
+def test_details_stats(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+
+    #reading from in memory df
+    result = qp.diff(
+        df_old,
+        df_new,
+        ).details().data
+
+    assert result.at['data', 'uid'] == 'uid'
+    assert result.at['data', 'in both datasets'] == 'yes'
+    assert result.at['data', 'cols shared'] == '2'
+    assert result.at['data', 'rows shared'] == '2'
+    assert result.at['data', 'cols added'] == '1'
+    assert result.at['data', 'cols removed'] == '1'
+    assert result.at['data', 'rows added'] == '1'
+    assert result.at['data', 'rows removed'] == '1'
+    assert result.at['data', 'dtypes changed'] == ''
+
+    assert result.at['data', 'all cols added'] == "'d'"
+    assert result.at['data', 'all cols removed'] == "'c'"
+    assert result.at['data', 'all rows added'] == "'x2'"
+    assert result.at['data', 'all rows removed'] == "'x'"
+    assert result.at['data', 'all dtypes changed'] == ''
+
+
+    #reading from files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        uid='uid',
+        ).details().data
+
+    dtypes_changed = "'a': 'int64' -> 'float64',\n'b': 'float64' -> 'int64'"
+
+
+    assert result.at['Sheet1', 'uid'] == 'uid'
+    assert result.at['Sheet1', 'cols shared'] == '2'
+    assert result.at['Sheet1', 'rows shared'] == '2'
+    assert result.at['Sheet1', 'cols added'] == '1'
+    assert result.at['Sheet1', 'cols removed'] == '1'
+    assert result.at['Sheet1', 'rows added'] == '1'
+    assert result.at['Sheet1', 'rows removed'] == '1'
+    assert result.at['Sheet1', 'dtypes changed'] == '2'
+
+    assert result.at['Sheet1', 'all cols added'] == "'d'"
+    assert result.at['Sheet1', 'all cols removed'] == "'c'"
+    assert result.at['Sheet1', 'all rows added'] == "'x2'"
+    assert result.at['Sheet1', 'all rows removed'] == "'x'"
+    assert result.at['Sheet1', 'all dtypes changed'] == dtypes_changed
+
+
+
+def test_details_stats_ignore(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+
+    #reading from in memory df
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols='a',
+        ).details().data
+
+    assert result.at['data', 'uid'] == 'uid'
+    assert result.at['data', 'in both datasets'] == 'yes'
+    assert result.at['data', 'cols shared'] == '1'
+    assert result.at['data', 'rows shared'] == '2'
+    assert result.at['data', 'cols added'] == '1'
+    assert result.at['data', 'cols removed'] == '1'
+    assert result.at['data', 'rows added'] == '1'
+    assert result.at['data', 'rows removed'] == '1'
+    assert result.at['data', 'dtypes changed'] == ''
+
+    assert result.at['data', 'all cols added'] == "'d'"
+    assert result.at['data', 'all cols removed'] == "'c'"
+    assert result.at['data', 'all rows added'] == "'x2'"
+    assert result.at['data', 'all rows removed'] == "'x'"
+    assert result.at['data', 'all dtypes changed'] == ''
+
+
+    #reading from files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        uid='uid',
+        ignore_cols='a',
+        ).details().data
+
+    dtypes_changed = "'b': 'float64' -> 'int64'"
+
+
+    assert result.at['Sheet1', 'uid'] == 'uid'
+    assert result.at['Sheet1', 'cols shared'] == '1'
+    assert result.at['Sheet1', 'rows shared'] == '2'
+    assert result.at['Sheet1', 'cols added'] == '1'
+    assert result.at['Sheet1', 'cols removed'] == '1'
+    assert result.at['Sheet1', 'rows added'] == '1'
+    assert result.at['Sheet1', 'rows removed'] == '1'
+    assert result.at['Sheet1', 'dtypes changed'] == '1'
+
+    assert result.at['Sheet1', 'all cols added'] == "'d'"
+    assert result.at['Sheet1', 'all cols removed'] == "'c'"
+    assert result.at['Sheet1', 'all rows added'] == "'x2'"
+    assert result.at['Sheet1', 'all rows removed'] == "'x'"
+    assert result.at['Sheet1', 'all dtypes changed'] == dtypes_changed
+
+
+
+def test_details_stats_ignore1(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+
+    #reading from in memory df
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['b'],
+        ).details().data
+
+    assert result.at['data', 'uid'] == 'uid'
+    assert result.at['data', 'in both datasets'] == 'yes'
+    assert result.at['data', 'cols shared'] == '1'
+    assert result.at['data', 'rows shared'] == '2'
+    assert result.at['data', 'cols added'] == '1'
+    assert result.at['data', 'cols removed'] == '1'
+    assert result.at['data', 'rows added'] == '1'
+    assert result.at['data', 'rows removed'] == '1'
+    assert result.at['data', 'dtypes changed'] == ''
+
+    assert result.at['data', 'all cols added'] == "'d'"
+    assert result.at['data', 'all cols removed'] == "'c'"
+    assert result.at['data', 'all rows added'] == "'x2'"
+    assert result.at['data', 'all rows removed'] == "'x'"
+    assert result.at['data', 'all dtypes changed'] == ''
+
+
+    #reading from files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        uid='uid',
+        ignore_cols=['b'],
+        ).details().data
+
+    dtypes_changed = "'a': 'int64' -> 'float64'"
+
+
+    assert result.at['Sheet1', 'uid'] == 'uid'
+    assert result.at['Sheet1', 'cols shared'] == '1'
+    assert result.at['Sheet1', 'rows shared'] == '2'
+    assert result.at['Sheet1', 'cols added'] == '1'
+    assert result.at['Sheet1', 'cols removed'] == '1'
+    assert result.at['Sheet1', 'rows added'] == '1'
+    assert result.at['Sheet1', 'rows removed'] == '1'
+    assert result.at['Sheet1', 'dtypes changed'] == '1'
+
+    assert result.at['Sheet1', 'all cols added'] == "'d'"
+    assert result.at['Sheet1', 'all cols removed'] == "'c'"
+    assert result.at['Sheet1', 'all rows added'] == "'x2'"
+    assert result.at['Sheet1', 'all rows removed'] == "'x'"
+    assert result.at['Sheet1', 'all dtypes changed'] == dtypes_changed
+
+
+
+def test_details_stats_ignore2(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+
+    #reading from in memory df
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['a', 'b'],
+        ).details().data
+
+    assert result.at['data', 'uid'] == 'uid'
+    assert result.at['data', 'in both datasets'] == 'yes'
+    assert result.at['data', 'cols shared'] == ''
+    assert result.at['data', 'rows shared'] == '2'
+    assert result.at['data', 'cols added'] == '1'
+    assert result.at['data', 'cols removed'] == '1'
+    assert result.at['data', 'rows added'] == '1'
+    assert result.at['data', 'rows removed'] == '1'
+    assert result.at['data', 'dtypes changed'] == ''
+
+    assert result.at['data', 'all cols added'] == "'d'"
+    assert result.at['data', 'all cols removed'] == "'c'"
+    assert result.at['data', 'all rows added'] == "'x2'"
+    assert result.at['data', 'all rows removed'] == "'x'"
+    assert result.at['data', 'all dtypes changed'] == ''
+
+
+    #reading from files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        uid='uid',
+        ignore_cols=['a', 'b'],
+        ).details().data
 
     dtypes_changed = ''
 
@@ -1423,11 +1579,11 @@ def test_summary_stats_ignore2(tmpdir):
     assert result.at['Sheet1', 'rows removed'] == '1'
     assert result.at['Sheet1', 'dtypes changed'] == ''
 
-    assert result.at['Sheet1', 'first 5 cols added'] == "'d'"
-    assert result.at['Sheet1', 'first 5 cols removed'] == "'c'"
-    assert result.at['Sheet1', 'first 5 rows added'] == "'x2'"
-    assert result.at['Sheet1', 'first 5 rows removed'] == "'x'"
-    assert result.at['Sheet1', 'first 5 dtypes changed'] == dtypes_changed
+    assert result.at['Sheet1', 'all cols added'] == "'d'"
+    assert result.at['Sheet1', 'all cols removed'] == "'c'"
+    assert result.at['Sheet1', 'all rows added'] == "'x2'"
+    assert result.at['Sheet1', 'all rows removed'] == "'x'"
+    assert result.at['Sheet1', 'all dtypes changed'] == dtypes_changed
 
 
 
@@ -1452,21 +1608,21 @@ def test_str(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 0
-          first 5 cols shared:
+          all cols shared:
             'a',
             'b'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
 
         """
 
@@ -1490,21 +1646,21 @@ def test_str(tmpdir):
             rows added: 1
             rows removed: 1
             dtypes changed: 2
-            first 5 cols shared:
+            all cols shared:
               'a',
               'b'
-            first 5 cols added:
+            all cols added:
               'd'
-            first 5 cols removed:
+            all cols removed:
               'c'
-            first 5 rows shared:
+            all rows shared:
               'y',
               'z'
-            first 5 rows added:
+            all rows added:
               'x2'
-            first 5 rows removed:
+            all rows removed:
               'x'
-            first 5 dtypes changed:
+            all dtypes changed:
               'a': 'int64' -> 'float64',
               'b': 'float64' -> 'int64'
 
@@ -1530,21 +1686,21 @@ def test_str(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 2
-          first 5 cols shared:
+          all cols shared:
             'a',
             'b'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
             'a': 'object' -> 'float64',
             'b': 'object' -> 'int64'
 
@@ -1570,21 +1726,21 @@ def test_str(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 2
-          first 5 cols shared:
+          all cols shared:
             'a',
             'b'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
             'a': 'int64' -> 'object',
             'b': 'float64' -> 'object'
 
@@ -1616,20 +1772,20 @@ def test_str_ignore(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 0
-          first 5 cols shared:
+          all cols shared:
             'b'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
 
         """
 
@@ -1654,20 +1810,20 @@ def test_str_ignore(tmpdir):
             rows added: 1
             rows removed: 1
             dtypes changed: 1
-            first 5 cols shared:
+            all cols shared:
               'b'
-            first 5 cols added:
+            all cols added:
               'd'
-            first 5 cols removed:
+            all cols removed:
               'c'
-            first 5 rows shared:
+            all rows shared:
               'y',
               'z'
-            first 5 rows added:
+            all rows added:
               'x2'
-            first 5 rows removed:
+            all rows removed:
               'x'
-            first 5 dtypes changed:
+            all dtypes changed:
               'b': 'float64' -> 'int64'
 
         """
@@ -1693,20 +1849,20 @@ def test_str_ignore(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 1
-          first 5 cols shared:
+          all cols shared:
             'b'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
             'b': 'object' -> 'int64'
 
         """
@@ -1732,20 +1888,20 @@ def test_str_ignore(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 1
-          first 5 cols shared:
+          all cols shared:
             'b'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
             'b': 'float64' -> 'object'
 
         """
@@ -1776,20 +1932,20 @@ def test_str_ignore1(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 0
-          first 5 cols shared:
+          all cols shared:
             'a'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
 
         """
 
@@ -1814,20 +1970,20 @@ def test_str_ignore1(tmpdir):
             rows added: 1
             rows removed: 1
             dtypes changed: 1
-            first 5 cols shared:
+            all cols shared:
               'a'
-            first 5 cols added:
+            all cols added:
               'd'
-            first 5 cols removed:
+            all cols removed:
               'c'
-            first 5 rows shared:
+            all rows shared:
               'y',
               'z'
-            first 5 rows added:
+            all rows added:
               'x2'
-            first 5 rows removed:
+            all rows removed:
               'x'
-            first 5 dtypes changed:
+            all dtypes changed:
               'a': 'int64' -> 'float64'
 
         """
@@ -1853,20 +2009,20 @@ def test_str_ignore1(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 1
-          first 5 cols shared:
+          all cols shared:
             'a'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
             'a': 'object' -> 'float64'
 
         """
@@ -1892,20 +2048,20 @@ def test_str_ignore1(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 1
-          first 5 cols shared:
+          all cols shared:
             'a'
-          first 5 cols added:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
             'a': 'int64' -> 'object'
 
         """
@@ -1936,19 +2092,19 @@ def test_str_ignore2(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 0
-          first 5 cols shared:
-          first 5 cols added:
+          all cols shared:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
 
         """
 
@@ -1973,19 +2129,19 @@ def test_str_ignore2(tmpdir):
             rows added: 1
             rows removed: 1
             dtypes changed: 0
-            first 5 cols shared:
-            first 5 cols added:
+            all cols shared:
+            all cols added:
               'd'
-            first 5 cols removed:
+            all cols removed:
               'c'
-            first 5 rows shared:
+            all rows shared:
               'y',
               'z'
-            first 5 rows added:
+            all rows added:
               'x2'
-            first 5 rows removed:
+            all rows removed:
               'x'
-            first 5 dtypes changed:
+            all dtypes changed:
 
         """
 
@@ -2010,19 +2166,19 @@ def test_str_ignore2(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 0
-          first 5 cols shared:
-          first 5 cols added:
+          all cols shared:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
 
         """
 
@@ -2047,19 +2203,19 @@ def test_str_ignore2(tmpdir):
           rows added: 1
           rows removed: 1
           dtypes changed: 0
-          first 5 cols shared:
-          first 5 cols added:
+          all cols shared:
+          all cols added:
             'd'
-          first 5 cols removed:
+          all cols removed:
             'c'
-          first 5 rows shared:
+          all rows shared:
             'y',
             'z'
-          first 5 rows added:
+          all rows added:
             'x2'
-          first 5 rows removed:
+          all rows removed:
             'x'
-          first 5 dtypes changed:
+          all dtypes changed:
 
         """
 
@@ -2200,8 +2356,22 @@ def test_identical(tmpdir):
         assert summary.at['data', 'rows removed'] == ''
         assert summary.at['data', 'dtypes changed'] == ''
 
-        assert summary.at['data', 'first 5 cols added'] == ''
-        assert summary.at['data', 'first 5 cols removed'] == ''
-        assert summary.at['data', 'first 5 rows added'] == ''
-        assert summary.at['data', 'first 5 rows removed'] == ''
-        assert summary.at['data', 'first 5 dtypes changed'] == ''
+        details = diff.details().data
+        details.index = ['data']
+        details.index.name = 'dataset'
+
+        assert details.at['data', 'uid'] == 'uid'
+        assert details.at['data', 'in both datasets'] == 'yes'
+        assert details.at['data', 'cols shared'] == '3'
+        assert details.at['data', 'rows shared'] == '3'
+        assert details.at['data', 'cols added'] == ''
+        assert details.at['data', 'cols removed'] == ''
+        assert details.at['data', 'rows added'] == ''
+        assert details.at['data', 'rows removed'] == ''
+        assert details.at['data', 'dtypes changed'] == ''
+
+        assert details.at['data', 'all cols added'] == ''
+        assert details.at['data', 'all cols removed'] == ''
+        assert details.at['data', 'all rows added'] == ''
+        assert details.at['data', 'all rows removed'] == ''
+        assert details.at['data', 'all dtypes changed'] == ''

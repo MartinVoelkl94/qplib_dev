@@ -144,7 +144,7 @@ class Diff:
         return uid
 
 
-    def details(self, head=5):
+    def details(self):
         """
         Detailed information about differences between datasets.
         """
@@ -207,20 +207,6 @@ class Diff:
         details.rows_removed = len(rows_removed)
         details.dtypes_changed = len(dtypes_changed)
 
-        #first {head} changes
-        details.cols_shared_head = cols_shared[:head]
-        details.cols_added_head = cols_added[:head]
-        details.cols_removed_head = cols_removed[:head]
-        details.rows_shared_head = rows_shared[:head]
-        details.rows_added_head = rows_added[:head]
-        details.rows_removed_head = rows_removed[:head]
-        keys = []
-        for i, key in enumerate(dtypes_changed.keys()):
-            if i == head:
-                break
-            keys.append(key)
-        details.dtypes_changed_head = {key: dtypes_changed[key] for key in keys}
-
         #all changes
         details.cols_shared_all = cols_shared
         details.cols_added_all = cols_added
@@ -239,7 +225,7 @@ class Diff:
         """
         Summary of differences between datasets.
         """
-        details = self.details(head)
+        details = self.details()
         summary = Container()
         for key, val in details.items():
             if key.endswith('_all'):
@@ -515,7 +501,7 @@ class Diff:
         return diff_styled
 
 
-    def str(self, head=5):
+    def str(self):
         string = f'Diff of {self.name!r}:\n'
         if self.old.empty and self.new.empty:
             string += '  both datasets are empty\n'
@@ -528,31 +514,31 @@ class Diff:
         else:
             details = self.details()
             cols_shared_str = _to_str(
-                details.cols_shared_head,
+                details.cols_shared_all,
                 linebreak='\n  ',
                 )
             cols_added_str = _to_str(
-                details.cols_added_head,
+                details.cols_added_all,
                 linebreak='\n  ',
                 )
             cols_removed_str = _to_str(
-                details.cols_removed_head,
+                details.cols_removed_all,
                 linebreak='\n  ',
                 )
             rows_shared_str = _to_str(
-                details.rows_shared_head,
+                details.rows_shared_all,
                 linebreak='\n  ',
                 )
             rows_added_str = _to_str(
-                details.rows_added_head,
+                details.rows_added_all,
                 linebreak='\n  ',
                 )
             rows_removed_str = _to_str(
-                details.rows_removed_head,
+                details.rows_removed_all,
                 linebreak='\n  ',
                 )
             dtypes_changed_str = _to_str(
-                details.dtypes_changed_head,
+                details.dtypes_changed_all,
                 linebreak='\n  ',
                 )
             string += (
@@ -563,13 +549,13 @@ class Diff:
                 f' rows added: {details.rows_added}\n'
                 f' rows removed: {details.rows_removed}\n'
                 f' dtypes changed: {details.dtypes_changed}\n'
-                f' first {head} cols shared:\n  {cols_shared_str}\n'
-                f' first {head} cols added:\n  {cols_added_str}\n'
-                f' first {head} cols removed:\n  {cols_removed_str}\n'
-                f' first {head} rows shared:\n  {rows_shared_str}\n'
-                f' first {head} rows added:\n  {rows_added_str}\n'
-                f' first {head} rows removed:\n  {rows_removed_str}\n'
-                f' first {head} dtypes changed:\n  {dtypes_changed_str}\n'
+                f' all cols shared:\n  {cols_shared_str}\n'
+                f' all cols added:\n  {cols_added_str}\n'
+                f' all cols removed:\n  {cols_removed_str}\n'
+                f' all rows shared:\n  {rows_shared_str}\n'
+                f' all rows added:\n  {rows_added_str}\n'
+                f' all rows removed:\n  {rows_removed_str}\n'
+                f' all dtypes changed:\n  {dtypes_changed_str}\n'
                 )
         return string
 
@@ -611,11 +597,6 @@ class Diffs:
             'rows added',
             'rows removed',
             'dtypes changed',
-            'first 5 cols added',
-            'first 5 cols removed',
-            'first 5 rows added',
-            'first 5 rows removed',
-            'first 5 dtypes changed',
             ]
 
 
@@ -830,7 +811,6 @@ class Diffs:
 
     def details(
             self,
-            head=5,
             separator=',',
             linebreak='\n',
             ):
@@ -855,14 +835,6 @@ class Diffs:
             'rows_added': 'rows added',
             'rows_removed': 'rows removed',
             'dtypes_changed': 'dtypes changed',
-            #first {head} changes
-            'cols_shared_head': f'first {head} cols shared',
-            'cols_added_head': f'first {head} cols added',
-            'cols_removed_head': f'first {head} cols removed',
-            'rows_shared_head': f'first {head} rows shared',
-            'rows_added_head': f'first {head} rows added',
-            'rows_removed_head': f'first {head} rows removed',
-            'dtypes_changed_head': f'first {head} dtypes changed',
             #all changes
             'cols_shared_all': 'all cols shared',
             'cols_added_all': 'all cols added',
@@ -874,7 +846,7 @@ class Diffs:
             }
 
         for diff in self.all:
-            diff_details = diff.details(head)
+            diff_details = diff.details()
             for key, col in cols.items():
                 string = _to_str(
                     diff_details[key],
@@ -892,14 +864,13 @@ class Diffs:
 
     def summary(
             self,
-            head=5,
             separator=',',
             linebreak='\n',
             ):
         """
         Summary of differences between datasets.
         """
-        details = self.details(head, separator, linebreak).data
+        details = self.details(separator, linebreak).data
         summary = details[self.cols_summary]
         summary = summary.style.set_properties(**{
             # 'text-align': 'left',
@@ -959,7 +930,6 @@ class Diffs:
             hide_info=True,
             hide_details=True,
             hide_summary=False,
-            summary_head=5,
             summary_separator=',',
             summary_linebreak='\n',
             ):
@@ -985,8 +955,6 @@ class Diffs:
             Whether to hide the details sheets in the Excel file
         hide_summary : bool, default False
             Whether to hide the summary sheet in the Excel file
-        summary_head : int, default 5
-            Number of added/removed/changed rows/cols to show in summary/details
         summary_separator : str, default ','
             Separator string for lists in summary/details
         summary_linebreak : str, default '\\n'
@@ -1007,7 +975,6 @@ class Diffs:
                 )
 
             summary = self.summary(
-                summary_head,
                 summary_separator,
                 summary_linebreak,
                 )
@@ -1022,7 +989,6 @@ class Diffs:
                 )
 
             details = self.details(
-                summary_head,
                 summary_separator,
                 summary_linebreak,
                 )
@@ -1113,15 +1079,6 @@ def _to_str(obj, separator=',', linebreak='\n'):
         string = str(obj)
 
     return string
-
-
-def _replace_gt_lt(x):
-    if isinstance(x, str):
-        return x.replace('<', '&lt;').replace('>', '&gt;')
-    elif isinstance(x, type):
-        return str(x).replace('<', '&lt;').replace('>', '&gt;')
-    else:
-        return x
 
 
 def diff(
