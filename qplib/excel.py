@@ -1,6 +1,10 @@
 import openpyxl
 import pandas as pd
-from .util import log, match
+from .util import (
+    log,
+    match,
+    _arg_to_list,
+    )
 
 
 def hide(
@@ -80,20 +84,43 @@ def hide(
 
 def format_excel(
         filename,
+        sheet=None,
+        freeze_panes='B2',
+        hide_sheets=None,
+        hide_cols=None,
         col_width_max=70,
         col_width_padding=2,
+        align_vertical='top',
+        align_horizontal='left',
+        wrap_text=True,
         verbosity=3,
         ):  #pragma: no cover (does not affect reading of xlsx files)
     """
     applies formatting to an Excel file:
     - adjust col width to max length of cell content (accounts for linebreaks)
     - set cell alignment to top-left and wrap text
+    - hide specified columns
     """
 
     wb = openpyxl.load_workbook(filename)
+    if sheet:
+        sheetnames = _arg_to_list(sheet)
+    else:
+        sheetnames = [sheetname for sheetname in wb.sheetnames]
+    sheets_hide = _arg_to_list(hide_sheets)
+    cols_hide = _arg_to_list(hide_cols)
 
-    for sheet in wb.worksheets:
-        data = pd.read_excel(filename, sheet_name=sheet.title)
+    for sheetname in sheetnames:
+        if sheetname in sheets_hide:
+            continue
+
+        data = pd.read_excel(filename, sheet_name=sheetname)
+        sheet = wb[sheetname]
+
+        if freeze_panes:
+            sheet.freeze_panes = freeze_panes
+
+        #adjust column widths, cell alignment and text wrapping
         for col in sheet.columns:
             if col[0].value is None:
                 text = (
@@ -101,6 +128,9 @@ def format_excel(
                     f' no header in sheet "{sheet.title}"'
                     )
                 log(text, 'qp.format_excel()', verbosity)
+                continue
+            if col[0].value in cols_hide:
+                sheet.column_dimensions[col[0].column_letter].hidden = True
                 continue
 
             colname = col[0].value
@@ -127,9 +157,9 @@ def format_excel(
 
             for cell in col:
                 cell.alignment = openpyxl.styles.Alignment(
-                    vertical='top',
-                    horizontal='left',
-                    wrap_text=True
+                    vertical=align_vertical,
+                    horizontal=align_horizontal,
+                    wrap_text=wrap_text
                     )
 
     wb.save(filename)
