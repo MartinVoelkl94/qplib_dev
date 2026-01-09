@@ -321,7 +321,7 @@ def test_mode_newplus(tmpdir):
         ).show('new+').data
 
     expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
+        columns=['diff', 'uid', 'd', 'b', 'b *old', 'a', 'a *old'],
         index=['y', 'x2', 'z'],
         )
 
@@ -329,27 +329,24 @@ def test_mode_newplus(tmpdir):
 
     expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'd'] = 2
-    expected.loc['y', 'old: d'] = ''
     expected.loc['y', 'b'] = 2
-    expected.loc['y', 'old: b'] = ''
+    expected.loc['y', 'b *old'] = ''
     expected.loc['y', 'a'] = 0
-    expected.loc['y', 'old: a'] = 2
+    expected.loc['y', 'a *old'] = 2
 
     expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'old: d'] = ''
     expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'old: b'] = ''
+    expected.loc['x2', 'b *old'] = ''
     expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'old: a'] = ''
+    expected.loc['x2', 'a *old'] = ''
 
     expected.loc['z', 'diff'] = 'vals added: 1\nvals removed: 1'
     expected.loc['z', 'd'] = 3
-    expected.loc['z', 'old: d'] = ''
     expected.loc['z', 'b'] = 3
-    expected.loc['z', 'old: b'] = None
+    expected.loc['z', 'b *old'] = None
     expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'old: a'] = 3
+    expected.loc['z', 'a *old'] = 3
 
 
     #reading from in memory df
@@ -397,7 +394,7 @@ def test_mode_newplus_ignore(tmpdir):
         ).show('new+').data
 
     expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
+        columns=['diff', 'uid', 'd', 'b', 'b *old', 'a'],
         index=['y', 'x2', 'z'],
         )
 
@@ -405,27 +402,21 @@ def test_mode_newplus_ignore(tmpdir):
 
     expected.loc['y', 'diff'] = ''
     expected.loc['y', 'd'] = 2
-    expected.loc['y', 'old: d'] = ''
     expected.loc['y', 'b'] = 2
-    expected.loc['y', 'old: b'] = ''
+    expected.loc['y', 'b *old'] = ''
     expected.loc['y', 'a'] = 0
-    expected.loc['y', 'old: a'] = ''
 
     expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'old: d'] = ''
     expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'old: b'] = ''
+    expected.loc['x2', 'b *old'] = ''
     expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'old: a'] = ''
 
     expected.loc['z', 'diff'] = 'vals added: 1'
     expected.loc['z', 'd'] = 3
-    expected.loc['z', 'old: d'] = ''
     expected.loc['z', 'b'] = 3
-    expected.loc['z', 'old: b'] = None
+    expected.loc['z', 'b *old'] = None
     expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'old: a'] = ''
 
 
     #reading from in memory df
@@ -476,7 +467,7 @@ def test_mode_newplus_ignore1(tmpdir):
         ).show('new+').data
 
     expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
+        columns=['diff', 'uid', 'd', 'b', 'a', 'a *old'],
         index=['y', 'x2', 'z'],
         )
 
@@ -484,27 +475,21 @@ def test_mode_newplus_ignore1(tmpdir):
 
     expected.loc['y', 'diff'] = 'vals changed: 1'
     expected.loc['y', 'd'] = 2
-    expected.loc['y', 'old: d'] = ''
     expected.loc['y', 'b'] = 2
-    expected.loc['y', 'old: b'] = ''
     expected.loc['y', 'a'] = 0
-    expected.loc['y', 'old: a'] = 2
+    expected.loc['y', 'a *old'] = 2
 
     expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'old: d'] = ''
     expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'old: b'] = ''
     expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'old: a'] = ''
+    expected.loc['x2', 'a *old'] = ''
 
     expected.loc['z', 'diff'] = 'vals removed: 1'
     expected.loc['z', 'd'] = 3
-    expected.loc['z', 'old: d'] = ''
     expected.loc['z', 'b'] = 3
-    expected.loc['z', 'old: b'] = ''
     expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'old: a'] = 3
+    expected.loc['z', 'a *old'] = 3
 
 
     #reading from in memory df
@@ -556,7 +541,7 @@ def test_mode_newplus_ignore2(tmpdir):
         ).show('new+').data
 
     expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'old: d', 'b', 'old: b', 'a', 'old: a'],
+        columns=['diff', 'uid', 'd', 'b', 'a'],
         index=['y', 'x2', 'z'],
         )
 
@@ -564,27 +549,18 @@ def test_mode_newplus_ignore2(tmpdir):
 
     expected.loc['y', 'diff'] = ''
     expected.loc['y', 'd'] = 2
-    expected.loc['y', 'old: d'] = ''
     expected.loc['y', 'b'] = 2
-    expected.loc['y', 'old: b'] = ''
     expected.loc['y', 'a'] = 0
-    expected.loc['y', 'old: a'] = ''
 
     expected.loc['x2', 'diff'] = 'row added'
     expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'old: d'] = ''
     expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'old: b'] = ''
     expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'old: a'] = ''
 
     expected.loc['z', 'diff'] = ''
     expected.loc['z', 'd'] = 3
-    expected.loc['z', 'old: d'] = ''
     expected.loc['z', 'b'] = 3
-    expected.loc['z', 'old: b'] = ''
     expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'old: a'] = ''
 
 
     #reading from in memory df

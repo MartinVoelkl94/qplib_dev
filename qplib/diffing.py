@@ -1,6 +1,5 @@
 
 import pandas as pd
-import openpyxl
 import os
 
 from .types import Container
@@ -8,7 +7,6 @@ from .pandas import deduplicate
 from .excel import format_excel
 from .util import (
     log,
-    match,
     _arg_to_list,
     ensure_unique_string,
     GREEN,
@@ -48,6 +46,7 @@ class Diff:
             self.old.index.name = 'index'
         if not self.new.index.name:
             self.new.index.name = 'index'
+        self.cols_shared_mapping = {}
 
     def rename_cols(self, mapping):
         if not isinstance(mapping, dict):
@@ -237,7 +236,7 @@ class Diff:
     def show(
             self,
             mode='mix',
-            prefix_old='old: ',
+            suffix_old=' *old',
             linebreak='\n',
             ):
         """
@@ -255,8 +254,8 @@ class Diff:
             - 'old': Show old DataFrame with removed elements highlighted
             - 'mix': Combine both DataFrames showing all changes
 
-        prefix_old : str, default 'old: '
-            Prefix for columns showing old values (used in 'new+' mode)
+        suffix_old : str, default ' *old'
+            Suffix for columns showing old values (used in 'new+' mode)
 
 
         Returns
@@ -275,6 +274,8 @@ class Diff:
         rows_added = details.rows_added_all
         rows_removed = details.rows_removed_all
         rows_shared = details.rows_shared_all
+        self.cols_shared_mapping = {}
+
 
         if mode not in ('new', 'new+', 'old', 'mix'):
             log(f'error: unknown mode: {mode}', 'qp.Diff', self.verbosity)
@@ -323,40 +324,43 @@ class Diff:
                 )
 
             #add metadata columns
+            cols_shared_mapping = {}
             if mode == 'new+':
-                cols_add = []
                 cols_reorder = []
                 for col in df_diff.columns:
                     cols_reorder.append(col)
-                    if col != uid:
-                        col_name = prefix_old + col
-                        cols_reorder.append(col_name)
-                        if col_name not in df_diff.columns:
-                            cols_add.append(col_name)
+                    if col != uid and col in cols_shared:
+                        col_meta = ensure_unique_string(
+                            col + suffix_old,
+                            taken=cols_reorder,
+                            strategy=f'suffix={suffix_old}',
+                            )
+                        cols_reorder.append(col_meta)
+                        cols_shared_mapping[col] = col_meta
+                self.cols_shared_mapping = cols_shared_mapping
 
-                df_diff_add = pd.DataFrame(
+                df_diff_meta = pd.DataFrame(
                     '',
                     index=df_diff.index,
-                    columns=cols_add,
+                    columns=cols_shared_mapping.values(),
                     )
-                df_diff_style_add = pd.DataFrame(
+                df_diff_style_meta = pd.DataFrame(
                     'font-style: italic',
                     index=df_diff.index,
-                    columns=cols_add
+                    columns=cols_shared_mapping.values(),
                     )
 
                 df_diff = pd.concat(
-                    [df_diff, df_diff_add],
+                    [df_diff, df_diff_meta],
                     axis=1,
                     )
                 df_diff_style = pd.concat(
-                    [df_diff_style, df_diff_style_add],
+                    [df_diff_style, df_diff_style_meta],
                     axis=1,
                     )
 
                 df_diff = df_diff[cols_reorder]
                 df_diff_style = df_diff_style[cols_reorder]
-
 
             df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
             df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
@@ -475,14 +479,14 @@ class Diff:
 
 
         if mode == 'new+':
-            cols_shared_metadata = [prefix_old + col for col in cols_shared]
             df_all_modifications = (df_added | df_removed | df_changed)
             df_old_changed = (
                 old
                 .loc[rows_shared, cols_shared]
                 .where(df_all_modifications, '')
+                .rename(columns=cols_shared_mapping)
                 )
-            df_diff.loc[rows_shared, cols_shared_metadata] = df_old_changed.values
+            df_diff.loc[rows_shared, cols_shared_mapping.values()] = df_old_changed
 
 
         if len(df_diff.columns) * len(df_diff.index) > 100_000:
@@ -502,6 +506,65 @@ class Diff:
         msg = 'debug: created df with highlighted differences'
         log(msg, 'qp.Diff', self.verbosity)
         return diff_styled
+
+
+    def to_excel(
+            self,
+            path,
+            mode='new+',
+            suffix_old=' *old',
+            linebreak='\n',
+            index=True,
+            apply_format=True,
+            ):
+        """
+        Export diff results to an Excel file with formatting.
+
+
+        Parameters
+        ----------
+        path : str
+            File path for the output Excel file
+        mode : str, default 'mix'
+            Display mode for differences (see show() method for options)
+        suffix_old : str, default ' *old'
+            Suffix for columns showing old values (used in 'new+' mode)
+        linebreak : str, default '\\n'
+            String to use for line breaks
+        separator : str, default ','
+            Separator string for lists
+        index : bool, default False
+            Whether to include row indices in the Excel output
+        """
+
+        with pd.ExcelWriter(path, mode='a', if_sheet_exists='replace') as writer:
+
+            result = self.show(
+                mode,
+                suffix_old,
+                linebreak,
+                )
+            result.to_excel(
+                writer,
+                sheet_name=self.name,
+                index=index,
+                )
+
+        #post-process excel file
+        if apply_format:
+            if mode == 'new+':
+                cols_hide = list(self.cols_shared_mapping.values())
+            else:
+                cols_hide = None
+            format_excel(
+                path,
+                sheet=self.name,
+                freeze_panes='C2',
+                hide_cols=cols_hide,
+                )
+
+        msg = f'info: differences saved to sheet "{self.name}" in file "{path}"'
+        log(msg, 'qp.Diff', self.verbosity)
 
 
     def str(self):
@@ -886,7 +949,7 @@ class Diffs:
             self,
             mode='mix',
             sheet=0,
-            prefix_old='old: ',
+            suffix_old=' *old',
             linebreak='\n',
             ):
         """
@@ -907,8 +970,8 @@ class Diffs:
         sheet : str | int, default 0
             Sheet name or index to show differences for (if there are multiple sheets)
 
-        prefix_old : str, default 'old: '
-            Prefix for columns showing old values (used in 'new+' mode)
+        suffix_old : str, default ' *old'
+            Suffix for columns showing old values (used in 'new+' mode)
 
         Returns
         -------
@@ -918,7 +981,7 @@ class Diffs:
         diff = self[sheet]
         result = diff.show(
             mode,
-            prefix_old,
+            suffix_old,
             linebreak,
             )
         return result
@@ -928,13 +991,14 @@ class Diffs:
             self,
             path,
             mode='new+',
+            suffix_old=' *old',
+            linebreak='\n',
+            separator=',',
             index=True,
-            prefix_old='old: ',
+            apply_format=True,
             hide_info=True,
             hide_details=True,
             hide_summary=False,
-            summary_separator=',',
-            summary_linebreak='\n',
             ):
         """
         Export diff results to an Excel file with formatting.
@@ -950,20 +1014,23 @@ class Diffs:
             File path for the output Excel file
         mode : str, default 'mix'
             Display mode for differences (see show() method for options)
+        suffix_old : str, default ' *old'
+            Suffix for columns showing old values (used in 'new+' mode)
+        linebreak : str, default '\\n'
+            String to use for line breaks in summary/details
+        separator : str, default ','
+            Separator string for lists in summary/details
         index : bool, default False
             Whether to include row indices in the Excel output
-        prefix_old : str, default 'old: '
-            Prefix for columns showing old values (used in 'new+' mode)
+        hide_info : bool, default True
+            Whether to hide the info sheet in the Excel file
         hide_details : bool, default True
-            Whether to hide the details sheets in the Excel file
+            Whether to hide the details sheet in the Excel file
         hide_summary : bool, default False
             Whether to hide the summary sheet in the Excel file
-        summary_separator : str, default ','
-            Separator string for lists in summary/details
-        summary_linebreak : str, default '\\n'
-            String to use for line breaks in summary/details
         """
 
+        #metadata sheets: info, summary, details
         with pd.ExcelWriter(path) as writer:
 
             info = self.info()
@@ -978,8 +1045,8 @@ class Diffs:
                 )
 
             summary = self.summary(
-                summary_separator,
-                summary_linebreak,
+                separator,
+                linebreak,
                 )
             sheet_summary = ensure_unique_string(
                 'summary',
@@ -992,8 +1059,8 @@ class Diffs:
                 )
 
             details = self.details(
-                summary_separator,
-                summary_linebreak,
+                separator,
+                linebreak,
                 )
             sheet_details = ensure_unique_string(
                 'details',
@@ -1005,35 +1072,31 @@ class Diffs:
                 index=True,
                 )
 
-            for diff in self.all:
-                result = diff.show(
-                    mode,
-                    prefix_old,
-                    summary_linebreak,
-                    )
-                result.to_excel(
-                    writer,
-                    sheet_name=diff.name,
-                    index=index,
-                    )
+        #diff sheets
+        for diff in self.all:
+            diff.to_excel(
+                path,
+                mode=mode,
+                suffix_old=suffix_old,
+                linebreak=linebreak,
+                index=index,
+                apply_format=apply_format,
+                )
 
         #post-process excel file
-        if hide_details or hide_summary or mode == 'new+':
-            wb = openpyxl.load_workbook(path)
-            for ws in wb.worksheets:
-                if hide_info and ws.title == sheet_info:
-                    ws.sheet_state = 'hidden'
-                if hide_summary and ws.title == sheet_summary:
-                    ws.sheet_state = 'hidden'
-                elif hide_details and ws.title == sheet_details:
-                    ws.sheet_state = 'hidden'
-                else:
-                    for col in ws.columns:
-                        if match(f'{prefix_old}.*', col[0].value, regex=True):
-                            ws.column_dimensions[col[0].column_letter].hidden = True
-            wb.save(path)
-            wb.close()
-        format_excel(path)
+        if apply_format:
+            sheets_hide = []
+            if hide_info:
+                sheets_hide.append(sheet_info)
+            if hide_summary:
+                sheets_hide.append(sheet_summary)
+            if hide_details:
+                sheets_hide.append(sheet_details)
+            format_excel(
+                path,
+                hide_sheets=sheets_hide,
+                freeze_panes='C2',
+                )
         log(f'info: differences saved to "{path}"', 'qp.Diff', self.verbosity)
 
 

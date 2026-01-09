@@ -215,9 +215,9 @@ def test_diff_new_plus():
     expected = pd.DataFrame({
         'diff': ['vals changed: 1', 'vals changed: 1', 'vals changed: 1'],
         'a': ['b', 'b', 'b'],
-        'old: a': [1, 2, 3],
+        'a *old': [1, 2, 3],
         })
-    expected['old: a'] = expected['old: a'].astype('object')
+    expected['a *old'] = expected['a *old'].astype('object')
     assert result.equals(expected), qp.diff(result, expected).str()
 
 
