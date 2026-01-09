@@ -338,6 +338,14 @@ def ensure_unique_string(
             string_temp = f"{base_string}_{datestamp}_v{counter}"
             counter += 1
         string = string_temp
+    elif strategy.startswith('prefix='):
+        prefix = strategy.split('=')[1]
+        while string in taken:
+            string = f"{prefix}{string}"
+    elif strategy.startswith('suffix='):
+        suffix = strategy.split('=')[1]
+        while string in taken:
+            string = f"{string}{suffix}"
     else:
         raise ValueError(f'Unknown strategy: {strategy}')
 
