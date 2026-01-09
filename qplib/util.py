@@ -311,6 +311,10 @@ def ensure_unique_string(
         * "timestamp": use a timestamp appended to the string.
         * "datestamp": append the current date to the string.
             If date is already taken, incrementing numbers are appended.
+        * "prefix=STR": prepend a custom prefix STR to the string.
+            Will keep prepending until the string is unique.
+        * "suffix=STR": append a custom suffix STR to the string.
+            Will keep appending until the string is unique.
 
     """
 

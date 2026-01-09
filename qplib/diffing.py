@@ -459,13 +459,12 @@ class Diff:
         changed = sum_changed[sum_changed > 0].index
 
         removed_and_changed = removed.intersection(changed)
-        added_and_removed = added.intersection(removed)
-        added_and_changed = added.intersection(changed)
-        added_and_removed_or_changed = added_and_removed.union(added_and_changed)
+        removed_or_changed = removed.union(changed)
+        removed_or_changed_and_added = removed_or_changed.intersection(added)
 
         df_diff.loc[added, col_diff] += 'vals added: '
         df_diff.loc[added, col_diff] += sum_added[added].astype(str)
-        df_diff.loc[added_and_removed_or_changed, col_diff] += linebreak
+        df_diff.loc[removed_or_changed_and_added, col_diff] += linebreak
 
         df_diff.loc[removed, col_diff] += 'vals removed: '
         df_diff.loc[removed, col_diff] += sum_removed[removed].astype(str)

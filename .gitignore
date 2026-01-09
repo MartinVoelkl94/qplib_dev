@@ -15,6 +15,7 @@
 **/temp/**
 **/.venv/**
 **/__pycache__/
+**/qplib_update0.8.2/**
 .vscode/
 *.xlsx
 *.csv
