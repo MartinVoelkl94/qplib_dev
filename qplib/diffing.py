@@ -1,5 +1,6 @@
 
 import pandas as pd
+import openpyxl
 import os
 
 from .types import Container
@@ -332,7 +333,7 @@ class Diff:
                     if col != uid and col in cols_shared:
                         col_meta = ensure_unique_string(
                             col + suffix_old,
-                            taken=cols_reorder,
+                            taken=df_diff.columns,
                             strategy=f'suffix={suffix_old}',
                             )
                         cols_reorder.append(col_meta)
@@ -506,65 +507,6 @@ class Diff:
         msg = 'debug: created df with highlighted differences'
         log(msg, 'qp.Diff', self.verbosity)
         return diff_styled
-
-
-    def to_excel(
-            self,
-            path,
-            mode='new+',
-            suffix_old=' *old',
-            linebreak='\n',
-            index=True,
-            apply_format=True,
-            ):
-        """
-        Export diff results to an Excel file with formatting.
-
-
-        Parameters
-        ----------
-        path : str
-            File path for the output Excel file
-        mode : str, default 'mix'
-            Display mode for differences (see show() method for options)
-        suffix_old : str, default ' *old'
-            Suffix for columns showing old values (used in 'new+' mode)
-        linebreak : str, default '\\n'
-            String to use for line breaks
-        separator : str, default ','
-            Separator string for lists
-        index : bool, default False
-            Whether to include row indices in the Excel output
-        """
-
-        with pd.ExcelWriter(path, mode='a', if_sheet_exists='replace') as writer:
-
-            result = self.show(
-                mode,
-                suffix_old,
-                linebreak,
-                )
-            result.to_excel(
-                writer,
-                sheet_name=self.name,
-                index=index,
-                )
-
-        #post-process excel file
-        if apply_format:
-            if mode == 'new+':
-                cols_hide = list(self.cols_shared_mapping.values())
-            else:
-                cols_hide = None
-            format_excel(
-                path,
-                sheet=self.name,
-                freeze_panes='C2',
-                hide_cols=cols_hide,
-                )
-
-        msg = f'info: differences saved to sheet "{self.name}" in file "{path}"'
-        log(msg, 'qp.Diff', self.verbosity)
 
 
     def str(self):
@@ -1030,8 +972,10 @@ class Diffs:
             Whether to hide the summary sheet in the Excel file
         """
 
-        #metadata sheets: info, summary, details
+        log(f'debug: saving differences to "{path}"', 'qp.Diff', self.verbosity)
         with pd.ExcelWriter(path) as writer:
+
+            #metadata sheets: info, summary, details
 
             info = self.info()
             sheet_info = ensure_unique_string(
@@ -1043,6 +987,7 @@ class Diffs:
                 sheet_name=sheet_info,
                 index=True,
                 )
+            log('debug: info sheet saved', 'qp.Diff', self.verbosity)
 
             summary = self.summary(
                 separator,
@@ -1057,6 +1002,7 @@ class Diffs:
                 sheet_name=sheet_summary,
                 index=True,
                 )
+            log('debug: summary sheet saved', 'qp.Diff', self.verbosity)
 
             details = self.details(
                 separator,
@@ -1071,20 +1017,29 @@ class Diffs:
                 sheet_name=sheet_details,
                 index=True,
                 )
+            log('debug: details sheet saved', 'qp.Diff', self.verbosity)
 
-        #diff sheets
-        for diff in self.all:
-            diff.to_excel(
-                path,
-                mode=mode,
-                suffix_old=suffix_old,
-                linebreak=linebreak,
-                index=index,
-                apply_format=apply_format,
-                )
+            #diff sheets
+            for diff in self.all:
+                result = diff.show(
+                    mode,
+                    suffix_old,
+                    linebreak,
+                    )
+                result.to_excel(
+                    writer,
+                    sheet_name=diff.name,
+                    index=index,
+                    )
+                msg = f'debug: diff sheet saved: "{diff.name}"'
+                log(msg, 'qp.Diff', self.verbosity)
 
-        #post-process excel file
+
+        #format excel file
         if apply_format:
+            wb = openpyxl.load_workbook(path)
+
+            #metadata sheets
             sheets_hide = []
             if hide_info:
                 sheets_hide.append(sheet_info)
@@ -1094,9 +1049,30 @@ class Diffs:
                 sheets_hide.append(sheet_details)
             format_excel(
                 path,
+                sheet=[sheet_info, sheet_summary, sheet_details],
                 hide_sheets=sheets_hide,
                 freeze_panes='C2',
+                openpyxl_workbook=wb,
                 )
+            msg = 'debug: info, summary, details sheets formatted'
+            log(msg, 'qp.Diff', self.verbosity)
+
+            #diff sheets
+            for diff in self.all:
+                if mode == 'new+':
+                    cols_hide = list(diff.cols_shared_mapping.values())
+                else:
+                    cols_hide = None
+                format_excel(
+                    path,
+                    sheet=diff.name,
+                    hide_cols=cols_hide,
+                    freeze_panes='C2',
+                    openpyxl_workbook=wb,
+                    )
+                msg = f'debug: diff sheet formatted: "{diff.name}"'
+                log(msg, 'qp.Diff', self.verbosity)
+
         log(f'info: differences saved to "{path}"', 'qp.Diff', self.verbosity)
 
 

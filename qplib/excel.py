@@ -83,7 +83,7 @@ def hide(
 
 
 def format_excel(
-        filename,
+        path,
         sheet=None,
         freeze_panes='B2',
         hide_sheets=None,
@@ -93,6 +93,7 @@ def format_excel(
         align_vertical='top',
         align_horizontal='left',
         wrap_text=True,
+        openpyxl_workbook=None,
         verbosity=3,
         ):  #pragma: no cover (does not affect reading of xlsx files)
     """
@@ -102,7 +103,10 @@ def format_excel(
     - hide specified columns
     """
 
-    wb = openpyxl.load_workbook(filename)
+    if openpyxl_workbook:
+        wb = openpyxl_workbook
+    else:
+        wb = openpyxl.load_workbook(path)
     if sheet:
         sheetnames = _arg_to_list(sheet)
     else:
@@ -110,12 +114,14 @@ def format_excel(
     sheets_hide = _arg_to_list(hide_sheets)
     cols_hide = _arg_to_list(hide_cols)
 
-    for sheetname in sheetnames:
-        if sheetname in sheets_hide:
-            continue
 
-        data = pd.read_excel(filename, sheet_name=sheetname)
+    for sheetname in sheetnames:
+
+        data = pd.read_excel(path, sheet_name=sheetname)
         sheet = wb[sheetname]
+
+        if sheetname in sheets_hide:
+            sheet.sheet_state = 'hidden'
 
         if freeze_panes:
             sheet.freeze_panes = freeze_panes
@@ -131,7 +137,6 @@ def format_excel(
                 continue
             if col[0].value in cols_hide:
                 sheet.column_dimensions[col[0].column_letter].hidden = True
-                continue
 
             colname = col[0].value
             col_letter = col[0].column_letter
@@ -162,5 +167,5 @@ def format_excel(
                     wrap_text=wrap_text
                     )
 
-    wb.save(filename)
+    wb.save(path)
     wb.close()
