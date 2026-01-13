@@ -205,6 +205,18 @@ def _arg_to_list(arg):
         return [arg]
 
 
+nums_str = [
+    '0',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    ]
 def fetch(path, before='now', verbosity=3):
     """
     returns the path to the most recent version of a file
@@ -257,6 +269,8 @@ def fetch(path, before='now', verbosity=3):
         if os.path.isfile(f'{folder}/{file}') and file.startswith(name):
             try:
                 timestamp_str_full = file.split(name)[-1]
+                if timestamp_str_full[0] not in nums_str:
+                    continue
                 extension = '.' + timestamp_str_full.split('.')[-1]
                 timestamp_str = timestamp_str_full.replace(f'{extension}', '')
                 timestamp = _datetime(timestamp_str)
