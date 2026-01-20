@@ -32,6 +32,9 @@ class Diff:
             uid=None,
             rename_cols=None,
             ignore_cols=None,
+            remove_cols=None,
+            remove_cols_by_suffix=None,
+            retain_cols=None,
             name='data',
             verbosity=3,
             ):
@@ -39,42 +42,31 @@ class Diff:
         self.name = name
         self.old = old.copy()
         self.new = new.copy()
-        if rename_cols:
-            self.rename_cols(rename_cols)
-        self.ignore_cols(ignore_cols)  #sets: self.cols_ignore
-        self.set_uid(uid)  #sets: self.uid, self.old.index, self.new.index
+        self.cols_ignore = pd.Index([])
+
+        #this col will be used as unique identifier for rows
+        self.set_uid(uid)
+
+        #these cols are renamed in both datasets
+        self.rename_cols(rename_cols)
+
+        #these cols stay in the datasets, but are ignored for diffing
+        self.ignore_cols(ignore_cols)
+
+        #these cols are completely removed from the datasets
+        self.remove_cols(remove_cols)
+        self.remove_cols_by_suffix(remove_cols_by_suffix)
+
+        #these cols are removed from the old dataset,
+        #and then readded to the diff result later
+        self.retain_cols(retain_cols)
+
         if not self.old.index.name:
             self.old.index.name = 'index'
         if not self.new.index.name:
             self.new.index.name = 'index'
+
         self.cols_shared_mapping = {}
-
-    def rename_cols(self, mapping):
-        if not isinstance(mapping, dict):
-            msg = (
-                'error: mapping for renaming columns must'
-                f' be a dict but is {type(mapping)!r}'
-                )
-            log(msg, 'qp.Diff', self.verbosity)
-            return self
-        self.old = self.old.rename(columns=mapping)
-        self.new = self.new.rename(columns=mapping)
-        msg = f'trace: renamed columns for {self.name!r}'
-        log(msg, 'qp.Diff', self.verbosity)
-        return self
-
-    def ignore_cols(self, cols):
-        if cols is None:
-            cols_ignore = pd.Index([])
-        else:
-            cols_ignore = (
-                self.old
-                .columns
-                .union(self.new.columns)
-                .intersection(_arg_to_list(cols))
-                )
-        self.cols_ignore = cols_ignore
-        return self
 
 
     def set_uid(self, uid=None):
@@ -142,6 +134,69 @@ class Diff:
             log(msg, 'qp.Diff', self.verbosity)
 
         return uid
+
+
+    def rename_cols(self, mapping):
+        if mapping is None:
+            return self
+        if not isinstance(mapping, dict):
+            msg = (
+                'error: mapping for renaming columns must'
+                f' be a dict but is {type(mapping)!r}'
+                )
+            log(msg, 'qp.Diff', self.verbosity)
+            return self
+        self.old = self.old.rename(columns=mapping)
+        self.new = self.new.rename(columns=mapping)
+        msg = f'trace: renamed columns for {self.name!r}'
+        log(msg, 'qp.Diff', self.verbosity)
+        return self
+
+
+    def ignore_cols(self, cols):
+        if cols is None:
+            return self
+        cols_ignore = (
+            self.old
+            .columns
+            .union(self.new.columns)
+            .intersection(_arg_to_list(cols))
+            )
+        self.cols_ignore = self.cols_ignore.append(cols_ignore)
+        return self
+
+
+    def remove_cols(self, cols):
+        if cols is None:
+            return self
+        else:
+            cols_remove = _arg_to_list(cols)
+        cols_remove_old = self.old.columns.intersection(cols_remove)
+        cols_remove_new = self.new.columns.intersection(cols_remove)
+        self.old = self.old.drop(columns=cols_remove_old)
+        self.new = self.new.drop(columns=cols_remove_new)
+        return self
+
+
+    def remove_cols_by_suffix(self, suffix):
+        if suffix is None:
+            return self
+        cols_remove_old = [col for col in self.old.columns if col.endswith(suffix)]
+        cols_remove_new = [col for col in self.new.columns if col.endswith(suffix)]
+        self.old = self.old.drop(columns=cols_remove_old)
+        self.new = self.new.drop(columns=cols_remove_new)
+        return self
+
+
+    def retain_cols(self, cols):
+        if cols is None:
+            self.cols_retain = None
+            return self
+        cols_retain = _arg_to_list(cols)
+        cols_retain = self.old.columns.intersection(cols_retain)
+        self.cols_retain = self.old[cols_retain].copy()
+        self.old = self.old.drop(columns=cols_retain)
+        return self
 
 
     def details(self):
@@ -366,6 +421,10 @@ class Diff:
             df_diff_style.loc[:, cols_added] = f'background-color: {GREEN}'
             df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
 
+            if self.cols_retain is not None:
+                idx_shared = df_diff.index.intersection(self.cols_retain.index)
+                df_retain = self.cols_retain.loc[idx_shared, :]
+                df_diff = pd.concat([df_retain, df_diff], axis=1)
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
             df_diff.loc[rows_added, col_diff] += 'row added'
@@ -382,6 +441,10 @@ class Diff:
             df_diff_style.loc[:, cols_removed] = f'background-color: {RED}'
             df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
 
+            if self.cols_retain is not None:
+                idx_shared = df_diff.index.intersection(self.cols_retain.index)
+                df_retain = self.cols_retain.loc[idx_shared, :]
+                df_diff = pd.concat([df_retain, df_diff], axis=1)
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
             df_diff.loc[rows_removed, col_diff] += 'row removed'
@@ -405,6 +468,10 @@ class Diff:
             df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
             df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
 
+            if self.cols_retain is not None:
+                idx_shared = df_diff.index.intersection(self.cols_retain.index)
+                df_retain = self.cols_retain.loc[idx_shared, :]
+                df_diff = pd.concat([df_retain, df_diff], axis=1)
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
             df_diff.loc[rows_added, col_diff] += 'row added'
@@ -585,6 +652,10 @@ class Diffs:
             uid=None,
             rename_cols=None,
             ignore_cols=None,
+            remove_cols=None,
+            remove_cols_by_suffix=None,
+            retain_cols=None,
+            remove_sheets=None,
             verbosity=3,
             ):
         self.verbosity = verbosity
@@ -594,6 +665,10 @@ class Diffs:
             uid=uid,
             rename_cols=rename_cols,
             ignore_cols=ignore_cols,
+            remove_cols=remove_cols,
+            remove_cols_by_suffix=remove_cols_by_suffix,
+            retain_cols=retain_cols,
+            remove_sheets=remove_sheets,
             )
         self.cols_summary = [
             'uid',
@@ -615,6 +690,10 @@ class Diffs:
             uid=None,
             rename_cols=None,
             ignore_cols=None,
+            remove_cols=None,
+            remove_cols_by_suffix=None,
+            retain_cols=None,
+            remove_sheets=None,
             ):
         """
         Loads dataframes from various sources (pd.DataFrame, CSV files, Excel files)
@@ -640,6 +719,10 @@ class Diffs:
                 uid=uid,
                 rename_cols=rename_cols,
                 ignore_cols=ignore_cols,
+                remove_cols=remove_cols,
+                remove_cols_by_suffix=remove_cols_by_suffix,
+                retain_cols=retain_cols,
+                remove_sheets=remove_sheets,
                 )
             return diffs
 
@@ -684,6 +767,9 @@ class Diffs:
                 uid=uid,
                 rename_cols=rename_cols,
                 ignore_cols=ignore_cols,
+                remove_cols=remove_cols,
+                remove_cols_by_suffix=remove_cols_by_suffix,
+                retain_cols=retain_cols,
                 verbosity=self.verbosity,
                 )
             diff.sheet = ''
@@ -699,6 +785,10 @@ class Diffs:
             uid=None,
             rename_cols=None,
             ignore_cols=None,
+            remove_cols=None,
+            remove_cols_by_suffix=None,
+            retain_cols=None,
+            remove_sheets=None,
             ):
         """
         Read all sheets from two Excel files.
@@ -708,9 +798,14 @@ class Diffs:
         sheets_old = pd.ExcelFile(old).sheet_names
         sheets_new = pd.ExcelFile(new).sheet_names
         sheets_all = list(dict.fromkeys(sheets_new + sheets_old))  #preserves order
+        sheets_remove = _arg_to_list(remove_sheets)
 
         for sheet in sheets_all:
-            if sheet in sheets_old and sheet in sheets_new:
+            if sheet in sheets_remove:
+                msg = f'trace: removing sheet {sheet!r} before diffing'
+                log(msg, 'qp.Diffs', self.verbosity)
+                continue
+            elif sheet in sheets_old and sheet in sheets_new:
                 df_old = pd.read_excel(old, sheet_name=sheet)
                 df_new = pd.read_excel(new, sheet_name=sheet)
                 in_both_datasets = 'yes'
@@ -734,6 +829,9 @@ class Diffs:
                 uid=uid_sheet,
                 rename_cols=rename_cols,
                 ignore_cols=ignore_cols,
+                remove_cols=remove_cols,
+                remove_cols_by_suffix=remove_cols_by_suffix,
+                retain_cols=retain_cols,
                 name=sheet,
                 verbosity=self.verbosity,
                 )
@@ -745,12 +843,14 @@ class Diffs:
         log(msg, 'qp.Diffs', self.verbosity)
         return diffs
 
+
     def rename_cols(self, mappings):
         for sheet, mapping in mappings.items():
             diff = self[sheet]
             if diff is not None:
                 diff.rename_cols(mapping)
         return self
+
 
     def ignore_cols(self, cols):
         if isinstance(cols, dict):
@@ -763,6 +863,43 @@ class Diffs:
                 diff.ignore_cols(cols)
         return self
 
+
+    def remove_cols(self, cols):
+        if isinstance(cols, dict):
+            for sheet, cols_sheet in cols.items():
+                diff = self[sheet]
+                if diff is not None:
+                    diff.remove_cols(cols_sheet)
+        else:
+            for diff in self.all:
+                diff.remove_cols(cols)
+        return self
+
+
+    def remove_cols_by_suffix(self, cols):
+        if isinstance(cols, dict):
+            for sheet, cols_sheet in cols.items():
+                diff = self[sheet]
+                if diff is not None:
+                    diff.remove_cols_by_suffix(cols_sheet)
+        else:
+            for diff in self.all:
+                diff.remove_cols_by_suffix(cols)
+        return self
+
+
+    def retain_cols(self, cols):
+        if isinstance(cols, dict):
+            for sheet, cols_sheet in cols.items():
+                diff = self[sheet]
+                if diff is not None:
+                    diff.retain_cols(cols_sheet)
+        else:
+            for diff in self.all:
+                diff.retain_cols(cols)
+        return self
+
+
     def set_uid(self, uids=None):
         if isinstance(uids, dict):
             for sheet, uid in uids.items():
@@ -773,6 +910,7 @@ class Diffs:
             for diff in self.all:
                 diff.set_uid(uids)
         return self
+
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -978,10 +1116,29 @@ class Diffs:
             #metadata sheets: info, summary, details
 
             info = self.info()
+            summary = self.summary(
+                separator,
+                linebreak,
+                )
+            details = self.details(
+                separator,
+                linebreak,
+                )
+
+            sheets = summary.index
             sheet_info = ensure_unique_string(
                 'info',
-                info.index,
+                sheets,
                 )
+            sheet_summary = ensure_unique_string(
+                'summary',
+                sheets,
+                )
+            sheet_details = ensure_unique_string(
+                'details',
+                sheets,
+                )
+
             info.to_excel(
                 writer,
                 sheet_name=sheet_info,
@@ -989,14 +1146,6 @@ class Diffs:
                 )
             log('debug: info sheet saved', 'qp.Diff', self.verbosity)
 
-            summary = self.summary(
-                separator,
-                linebreak,
-                )
-            sheet_summary = ensure_unique_string(
-                'summary',
-                summary.index,  #contains all sheet names
-                )
             summary.to_excel(
                 writer,
                 sheet_name=sheet_summary,
@@ -1004,14 +1153,6 @@ class Diffs:
                 )
             log('debug: summary sheet saved', 'qp.Diff', self.verbosity)
 
-            details = self.details(
-                separator,
-                linebreak,
-                )
-            sheet_details = ensure_unique_string(
-                'details',
-                details.index,  #contains all sheet names
-                )
             details.to_excel(
                 writer,
                 sheet_name=sheet_details,
@@ -1051,7 +1192,7 @@ class Diffs:
                 path,
                 sheet=[sheet_info, sheet_summary, sheet_details],
                 hide_sheets=sheets_hide,
-                freeze_panes='C2',
+                freeze_panes='B2',
                 openpyxl_workbook=wb,
                 )
             msg = 'debug: info, summary, details sheets formatted'
@@ -1129,6 +1270,10 @@ def diff(
         uid=None,
         rename_cols=None,
         ignore_cols=None,
+        remove_cols=None,
+        remove_cols_by_suffix=None,
+        retain_cols=None,
+        remove_sheets=None,
         verbosity=3,
         ) -> Diffs:
     """
@@ -1191,6 +1336,10 @@ def diff(
         uid=uid,
         rename_cols=rename_cols,
         ignore_cols=ignore_cols,
+        remove_cols=remove_cols,
+        remove_cols_by_suffix=remove_cols_by_suffix,
+        retain_cols=retain_cols,
+        remove_sheets=remove_sheets,
         verbosity=verbosity,
         )
     return diffs
