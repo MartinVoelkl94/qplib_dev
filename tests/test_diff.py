@@ -31,18 +31,7 @@ def setup_csv(df_old, df_new, tmpdir):
     return path_df_old, path_df_new
 
 
-
-def test_mode_new(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        verbosity=0,
-        ).show('new').data
-
+def get_expected_new():
     expected = pd.DataFrame(
         columns=['diff', 'uid', 'd', 'b', 'a'],
         index=['y', 'x2', 'z']
@@ -64,262 +53,10 @@ def test_mode_new(tmpdir):
     expected.loc['z', 'd'] = 3
     expected.loc['z', 'b'] = 3
     expected.loc['z', 'a'] = np.nan
+    return expected
 
 
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        verbosity=0,
-        ).show('new', 'Sheet1').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-def test_mode_new_ignore(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols='a',
-        verbosity=0,
-        ).show('new').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a'],
-        index=['y', 'x2', 'z']
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = ''
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-
-    expected.loc['z', 'diff'] = 'vals added: 1'
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-def test_mode_new_ignore1(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols=['b'],
-        verbosity=0
-        ).show('new').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a'],
-        index=['y', 'x2', 'z'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = 'vals changed: 1'
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-
-    expected.loc['z', 'diff'] = 'vals removed: 1'
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['b'],
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['b'],
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols=['b'],
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-def test_mode_new_ignore2(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols=['a', 'b'],
-        verbosity=0,
-        ).show('new').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a'],
-        index=['y', 'x2', 'z']
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = ''
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-
-    expected.loc['z', 'diff'] = ''
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['a', 'b'],
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['a', 'b'],
-        verbosity=0,
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols=['a', 'b'],
-        verbosity=0
-        ).show('new').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-
-
-
-
-
-def test_mode_newplus(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        uid='uid',
-        verbosity=0,
-        ).show('new+').data
-
+def get_expected_newplus():
     expected = pd.DataFrame(
         columns=['diff', 'uid', 'd', 'b', 'b *old', 'a', 'a *old'],
         index=['y', 'x2', 'z'],
@@ -348,266 +85,10 @@ def test_mode_newplus(tmpdir):
     expected.loc['z', 'a'] = np.nan
     expected.loc['z', 'a *old'] = 3
 
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+    return expected
 
 
-
-def test_mode_newplus_ignore(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        uid='uid',
-        ignore_cols=['a'],
-        verbosity=0,
-        ).show('new+').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'b *old', 'a'],
-        index=['y', 'x2', 'z'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = ''
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'b *old'] = ''
-    expected.loc['y', 'a'] = 0
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'b *old'] = ''
-    expected.loc['x2', 'a'] = 1
-
-    expected.loc['z', 'diff'] = 'vals added: 1'
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'b *old'] = None
-    expected.loc['z', 'a'] = np.nan
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['a'],
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['a'],
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols=['a'],
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-def test_mode_newplus_ignore1(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        uid='uid',
-        ignore_cols='b',
-        verbosity=0,
-        ).show('new+').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a', 'a *old'],
-        index=['y', 'x2', 'z'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = 'vals changed: 1'
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-    expected.loc['y', 'a *old'] = 2
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'a *old'] = ''
-
-    expected.loc['z', 'diff'] = 'vals removed: 1'
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'a *old'] = 3
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols='b',
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols='b',
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols='b',
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-
-def test_mode_newplus_ignore2(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        uid='uid',
-        ignore_cols=['b', 'a'],
-        verbosity=0,
-        ).show('new+').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a'],
-        index=['y', 'x2', 'z'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = ''
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-
-    expected.loc['z', 'diff'] = ''
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['b', 'a'],
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['b', 'a'],
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols=['b', 'a'],
-        verbosity=0,
-        ).show('new+').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-def test_mode_old(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        verbosity=0,
-        ).show('old').data
-
+def get_expected_old():
     expected = pd.DataFrame(
         columns=['diff', 'uid', 'a', 'b', 'c'],
         index=['x', 'y', 'z'],
@@ -630,571 +111,211 @@ def test_mode_old(tmpdir):
     expected.loc['z', 'b'] = None
     expected.loc['z', 'c'] = 3
 
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+    return expected
 
 
-
-
-def test_mode_old_ignore(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols='a',
-        verbosity=0,
-        ).show('old').data
-
+def get_expected_mix():
     expected = pd.DataFrame(
-        columns=['diff', 'uid', 'a', 'b', 'c'],
-        index=['x', 'y', 'z'],
+        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
+        index=['y', 'x2', 'z', 'x'],
         )
 
     expected['uid'] = expected.index
-
-    expected.loc['x', 'diff'] = 'row removed'
-    expected.loc['x', 'a'] = 1
-    expected.loc['x', 'b'] = 1
-    expected.loc['x', 'c'] = 1
-
-    expected.loc['y', 'diff'] = ''
-    expected.loc['y', 'a'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'c'] = 2
-
-    expected.loc['z', 'diff'] = 'vals added: 1'
-    expected.loc['z', 'a'] = 3
-    expected.loc['z', 'b'] = None
-    expected.loc['z', 'c'] = 3
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-
-def test_mode_old_ignore1(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols='b',
-        verbosity=0,
-        ).show('old').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'a', 'b', 'c'],
-        index=['x', 'y', 'z'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['x', 'diff'] = 'row removed'
-    expected.loc['x', 'a'] = 1
-    expected.loc['x', 'b'] = 1
-    expected.loc['x', 'c'] = 1
 
     expected.loc['y', 'diff'] = 'vals changed: 1'
-    expected.loc['y', 'a'] = 2
+    expected.loc['y', 'd'] = 2
     expected.loc['y', 'b'] = 2
+    expected.loc['y', 'a'] = 0
     expected.loc['y', 'c'] = 2
 
-    expected.loc['z', 'diff'] = 'vals removed: 1'
-    expected.loc['z', 'a'] = 3
-    expected.loc['z', 'b'] = None
+    expected.loc['x2', 'diff'] = 'row added'
+    expected.loc['x2', 'd'] = 1
+    expected.loc['x2', 'b'] = 1
+    expected.loc['x2', 'a'] = 1
+    expected.loc['x2', 'c'] = np.nan
+
+    expected.loc['z', 'diff'] = 'vals added: 1\nvals removed: 1'
+    expected.loc['z', 'd'] = 3
+    expected.loc['z', 'b'] = 3
+    expected.loc['z', 'a'] = np.nan
     expected.loc['z', 'c'] = 3
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols='b',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols='b',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols='b',
-        verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-
-def test_mode_old_ignore2(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols=['a', 'b'],
-        verbosity=0,
-        ).show('old').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'a', 'b', 'c'],
-        index=['x', 'y', 'z'],
-        )
-
-    expected['uid'] = expected.index
 
     expected.loc['x', 'diff'] = 'row removed'
-    expected.loc['x', 'a'] = 1
+    expected.loc['x', 'd'] = None
     expected.loc['x', 'b'] = 1
+    expected.loc['x', 'a'] = 1
     expected.loc['x', 'c'] = 1
 
-    expected.loc['y', 'diff'] = ''
-    expected.loc['y', 'a'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'c'] = 2
-
-    expected.loc['z', 'diff'] = ''
-    expected.loc['z', 'a'] = 3
-    expected.loc['z', 'b'] = None
-    expected.loc['z', 'c'] = 3
+    return expected
 
 
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+def test_mode_new(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+    expected = get_expected_new()
 
-    #reading from files
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        verbosity=0,
+        ).show('new').data
+    assert result.equals(expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
-        ignore_cols=['a', 'b'],
         verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+        ).show('new', 'Sheet1').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
-    #reading from file and in memory df
+    #in memory df and file
     result = qp.diff(
         df_old,
         df_new_file,
-        uid='uid',
-        ignore_cols=['a', 'b'],
         verbosity=0,
-        ).show('old').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
-    #reading from file and in memory df
+    #file and in memory df
     result = qp.diff(
         df_old_file,
         df_new,
-        uid='uid',
-        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+def test_mode_newplus(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+    expected = get_expected_newplus()
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        verbosity=0,
+        ).show('new+').data
+    assert result.equals(expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+def test_mode_old(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+    expected = get_expected_old()
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        verbosity=0,
+        ).show('old').data
+    assert result.equals(expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
         verbosity=0,
         ).show('old').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
 
 
 def test_mode_mix(tmpdir):
     df_old, df_new = qp.get_dfs()
     df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+    expected = get_expected_mix()
 
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         verbosity=0,
         ).show('mix').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
-        index=['y', 'x2', 'z', 'x'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = 'vals changed: 1'
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-    expected.loc['y', 'c'] = 2
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'c'] = np.nan
-
-    expected.loc['z', 'diff'] = 'vals added: 1\nvals removed: 1'
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'c'] = 3
-
-    expected.loc['x', 'diff'] = 'row removed'
-    expected.loc['x', 'd'] = None
-    expected.loc['x', 'b'] = 1
-    expected.loc['x', 'a'] = 1
-    expected.loc['x', 'c'] = 1
-
-
-    #reading from in memory df
     assert result.equals(expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
-    #reading from file and in memory df
+    #in memory df and file
     result = qp.diff(
         df_old,
         df_new_file,
-        uid='uid',
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
-    #reading from file and in memory df
+    #file and in memory df
     result = qp.diff(
         df_old_file,
         df_new,
-        uid='uid',
         verbosity=0,
         ).show('mix').data.astype('object')
     assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
 
 
 
-def test_mode_mix_ignore(tmpdir):
+
+
+
+
+def test_summary(tmpdir):
     df_old, df_new = qp.get_dfs()
     df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols='a',
-        verbosity=0,
-        ).show('mix').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
-        index=['y', 'x2', 'z', 'x'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = ''
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-    expected.loc['y', 'c'] = 2
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'c'] = np.nan
-
-    expected.loc['z', 'diff'] = 'vals added: 1'
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'c'] = 3
-
-    expected.loc['x', 'diff'] = 'row removed'
-    expected.loc['x', 'd'] = None
-    expected.loc['x', 'b'] = 1
-    expected.loc['x', 'a'] = 1
-    expected.loc['x', 'c'] = 1
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols='a',
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-
-
-def test_mode_mix_ignore1(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols=['b'],
-        verbosity=0,
-        ).show('mix').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
-        index=['y', 'x2', 'z', 'x'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = 'vals changed: 1'
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-    expected.loc['y', 'c'] = 2
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'c'] = np.nan
-
-    expected.loc['z', 'diff'] = 'vals removed: 1'
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'c'] = 3
-
-    expected.loc['x', 'diff'] = 'row removed'
-    expected.loc['x', 'd'] = None
-    expected.loc['x', 'b'] = 1
-    expected.loc['x', 'a'] = 1
-    expected.loc['x', 'c'] = 1
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['b'],
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['b'],
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols=['b'],
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-def test_mode_mix_ignore2(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    result = qp.diff(
-        df_old,
-        df_new,
-        ignore_cols=['a', 'b'],
-        verbosity=0,
-        ).show('mix').data
-
-    expected = pd.DataFrame(
-        columns=['diff', 'uid', 'd', 'b', 'a', 'c'],
-        index=['y', 'x2', 'z', 'x'],
-        )
-
-    expected['uid'] = expected.index
-
-    expected.loc['y', 'diff'] = ''
-    expected.loc['y', 'd'] = 2
-    expected.loc['y', 'b'] = 2
-    expected.loc['y', 'a'] = 0
-    expected.loc['y', 'c'] = 2
-
-    expected.loc['x2', 'diff'] = 'row added'
-    expected.loc['x2', 'd'] = 1
-    expected.loc['x2', 'b'] = 1
-    expected.loc['x2', 'a'] = 1
-    expected.loc['x2', 'c'] = np.nan
-
-    expected.loc['z', 'diff'] = ''
-    expected.loc['z', 'd'] = 3
-    expected.loc['z', 'b'] = 3
-    expected.loc['z', 'a'] = np.nan
-    expected.loc['z', 'c'] = 3
-
-    expected.loc['x', 'diff'] = 'row removed'
-    expected.loc['x', 'd'] = None
-    expected.loc['x', 'b'] = 1
-    expected.loc['x', 'a'] = 1
-    expected.loc['x', 'c'] = 1
-
-
-    #reading from in memory df
-    assert result.equals(expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from files
-    result = qp.diff(
-        df_old_file,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['a', 'b'],
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old,
-        df_new_file,
-        uid='uid',
-        ignore_cols=['a', 'b'],
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-    #reading from file and in memory df
-    result = qp.diff(
-        df_old_file,
-        df_new,
-        uid='uid',
-        ignore_cols=['a', 'b'],
-        verbosity=0,
-        ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
-
-
-
-def test_summary_stats(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    #reading from in memory df
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         ).summary().data
-
     assert result.at['data', 'uid'] == 'uid'
     assert result.at['data', 'in both datasets'] == 'yes'
     assert result.at['data', 'cols shared'] == '2'
@@ -1205,13 +326,11 @@ def test_summary_stats(tmpdir):
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
 
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ).summary().data
-
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '2'
     assert result.at['Sheet1', 'rows shared'] == '2'
@@ -1222,17 +341,14 @@ def test_summary_stats(tmpdir):
     assert result.at['Sheet1', 'dtypes changed'] == '2'
 
 
-def test_summary_stats_ignore(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+    #ignore a
 
-    #reading from in memory df
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         ignore_cols='a',
         ).summary().data
-
     assert result.at['data', 'uid'] == 'uid'
     assert result.at['data', 'in both datasets'] == 'yes'
     assert result.at['data', 'cols shared'] == '1'
@@ -1243,14 +359,12 @@ def test_summary_stats_ignore(tmpdir):
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
 
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols='a',
         ).summary().data
-
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '1'
     assert result.at['Sheet1', 'rows shared'] == '2'
@@ -1261,17 +375,14 @@ def test_summary_stats_ignore(tmpdir):
     assert result.at['Sheet1', 'dtypes changed'] == '1'
 
 
-def test_summary_stats_ignore1(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+    #ignore b
 
-    #reading from in memory df
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         ignore_cols=['b'],
         ).summary().data
-
     assert result.at['data', 'uid'] == 'uid'
     assert result.at['data', 'in both datasets'] == 'yes'
     assert result.at['data', 'cols shared'] == '1'
@@ -1282,14 +393,12 @@ def test_summary_stats_ignore1(tmpdir):
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
 
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols=['b'],
         ).summary().data
-
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '1'
     assert result.at['Sheet1', 'rows shared'] == '2'
@@ -1300,18 +409,14 @@ def test_summary_stats_ignore1(tmpdir):
     assert result.at['Sheet1', 'dtypes changed'] == '1'
 
 
+    #ignore a and b
 
-def test_summary_stats_ignore2(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    #reading from in memory df
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         ignore_cols=['a', 'b'],
         ).summary().data
-
     assert result.at['data', 'uid'] == 'uid'
     assert result.at['data', 'in both datasets'] == 'yes'
     assert result.at['data', 'cols shared'] == ''
@@ -1322,15 +427,12 @@ def test_summary_stats_ignore2(tmpdir):
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
 
-
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols=['a', 'b'],
         ).summary().data
-
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == ''
     assert result.at['Sheet1', 'rows shared'] == '2'
@@ -1341,16 +443,16 @@ def test_summary_stats_ignore2(tmpdir):
     assert result.at['Sheet1', 'dtypes changed'] == ''
 
 
-def test_details_stats(tmpdir):
+def test_details(tmpdir):
     df_old, df_new = qp.get_dfs()
     df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
-    #reading from in memory df
+
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         ).details().data
-
     assert result.at['data', 'uid'] == 'uid'
     assert result.at['data', 'in both datasets'] == 'yes'
     assert result.at['data', 'cols shared'] == '2'
@@ -1360,24 +462,18 @@ def test_details_stats(tmpdir):
     assert result.at['data', 'rows added'] == '1'
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
-
     assert result.at['data', 'all cols added'] == "'d'"
     assert result.at['data', 'all cols removed'] == "'c'"
     assert result.at['data', 'all rows added'] == "'x2'"
     assert result.at['data', 'all rows removed'] == "'x'"
     assert result.at['data', 'all dtypes changed'] == ''
 
-
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ).details().data
-
     dtypes_changed = "'a': 'int64' -> 'float64',\n'b': 'float64' -> 'int64'"
-
-
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '2'
     assert result.at['Sheet1', 'rows shared'] == '2'
@@ -1386,7 +482,6 @@ def test_details_stats(tmpdir):
     assert result.at['Sheet1', 'rows added'] == '1'
     assert result.at['Sheet1', 'rows removed'] == '1'
     assert result.at['Sheet1', 'dtypes changed'] == '2'
-
     assert result.at['Sheet1', 'all cols added'] == "'d'"
     assert result.at['Sheet1', 'all cols removed'] == "'c'"
     assert result.at['Sheet1', 'all rows added'] == "'x2'"
@@ -1394,18 +489,14 @@ def test_details_stats(tmpdir):
     assert result.at['Sheet1', 'all dtypes changed'] == dtypes_changed
 
 
+    #ignore a
 
-def test_details_stats_ignore(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    #reading from in memory df
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         ignore_cols='a',
         ).details().data
-
     assert result.at['data', 'uid'] == 'uid'
     assert result.at['data', 'in both datasets'] == 'yes'
     assert result.at['data', 'cols shared'] == '1'
@@ -1415,25 +506,19 @@ def test_details_stats_ignore(tmpdir):
     assert result.at['data', 'rows added'] == '1'
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
-
     assert result.at['data', 'all cols added'] == "'d'"
     assert result.at['data', 'all cols removed'] == "'c'"
     assert result.at['data', 'all rows added'] == "'x2'"
     assert result.at['data', 'all rows removed'] == "'x'"
     assert result.at['data', 'all dtypes changed'] == ''
 
-
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols='a',
         ).details().data
-
     dtypes_changed = "'b': 'float64' -> 'int64'"
-
-
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '1'
     assert result.at['Sheet1', 'rows shared'] == '2'
@@ -1442,7 +527,6 @@ def test_details_stats_ignore(tmpdir):
     assert result.at['Sheet1', 'rows added'] == '1'
     assert result.at['Sheet1', 'rows removed'] == '1'
     assert result.at['Sheet1', 'dtypes changed'] == '1'
-
     assert result.at['Sheet1', 'all cols added'] == "'d'"
     assert result.at['Sheet1', 'all cols removed'] == "'c'"
     assert result.at['Sheet1', 'all rows added'] == "'x2'"
@@ -1450,18 +534,14 @@ def test_details_stats_ignore(tmpdir):
     assert result.at['Sheet1', 'all dtypes changed'] == dtypes_changed
 
 
+    #ignore b
 
-def test_details_stats_ignore1(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    #reading from in memory df
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         ignore_cols=['b'],
         ).details().data
-
     assert result.at['data', 'uid'] == 'uid'
     assert result.at['data', 'in both datasets'] == 'yes'
     assert result.at['data', 'cols shared'] == '1'
@@ -1471,25 +551,21 @@ def test_details_stats_ignore1(tmpdir):
     assert result.at['data', 'rows added'] == '1'
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
-
     assert result.at['data', 'all cols added'] == "'d'"
     assert result.at['data', 'all cols removed'] == "'c'"
     assert result.at['data', 'all rows added'] == "'x2'"
     assert result.at['data', 'all rows removed'] == "'x'"
     assert result.at['data', 'all dtypes changed'] == ''
 
-
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols=['b'],
         ).details().data
 
     dtypes_changed = "'a': 'int64' -> 'float64'"
 
-
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == '1'
     assert result.at['Sheet1', 'rows shared'] == '2'
@@ -1506,18 +582,14 @@ def test_details_stats_ignore1(tmpdir):
     assert result.at['Sheet1', 'all dtypes changed'] == dtypes_changed
 
 
+    #ignore a and b
 
-def test_details_stats_ignore2(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    #reading from in memory df
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
         ignore_cols=['a', 'b'],
         ).details().data
-
     assert result.at['data', 'uid'] == 'uid'
     assert result.at['data', 'in both datasets'] == 'yes'
     assert result.at['data', 'cols shared'] == ''
@@ -1527,25 +599,19 @@ def test_details_stats_ignore2(tmpdir):
     assert result.at['data', 'rows added'] == '1'
     assert result.at['data', 'rows removed'] == '1'
     assert result.at['data', 'dtypes changed'] == ''
-
     assert result.at['data', 'all cols added'] == "'d'"
     assert result.at['data', 'all cols removed'] == "'c'"
     assert result.at['data', 'all rows added'] == "'x2'"
     assert result.at['data', 'all rows removed'] == "'x'"
     assert result.at['data', 'all dtypes changed'] == ''
 
-
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols=['a', 'b'],
         ).details().data
-
     dtypes_changed = ''
-
-
     assert result.at['Sheet1', 'uid'] == 'uid'
     assert result.at['Sheet1', 'cols shared'] == ''
     assert result.at['Sheet1', 'rows shared'] == '2'
@@ -1554,12 +620,12 @@ def test_details_stats_ignore2(tmpdir):
     assert result.at['Sheet1', 'rows added'] == '1'
     assert result.at['Sheet1', 'rows removed'] == '1'
     assert result.at['Sheet1', 'dtypes changed'] == ''
-
     assert result.at['Sheet1', 'all cols added'] == "'d'"
     assert result.at['Sheet1', 'all cols removed'] == "'c'"
     assert result.at['Sheet1', 'all rows added'] == "'x2'"
     assert result.at['Sheet1', 'all rows removed'] == "'x'"
     assert result.at['Sheet1', 'all dtypes changed'] == dtypes_changed
+
 
 
 
@@ -1567,13 +633,11 @@ def test_str(tmpdir):
     df_old, df_new = qp.get_dfs()
     df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
 
-    #reading from in memory df
+    #in memory dfs
     result = qp.diff(
         df_old,
         df_new,
-        uid='uid',
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -1599,19 +663,14 @@ def test_str(tmpdir):
           all rows removed:
             'x'
           all dtypes changed:
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from files
+    #files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'Sheet1':
@@ -1639,19 +698,14 @@ def test_str(tmpdir):
             all dtypes changed:
               'a': 'int64' -> 'float64',
               'b': 'float64' -> 'int64'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from file and in memory df
+    #in memory df and file
     result = qp.diff(
         df_old,
         df_new_file,
-        uid='uid',
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -1679,19 +733,14 @@ def test_str(tmpdir):
           all dtypes changed:
             'a': 'object' -> 'float64',
             'b': 'object' -> 'int64'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from file and in memory df
+    #file and in memory df
     result = qp.diff(
         df_old_file,
         df_new,
-        uid='uid',
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -1719,25 +768,16 @@ def test_str(tmpdir):
           all dtypes changed:
             'a': 'int64' -> 'object',
             'b': 'float64' -> 'object'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
 
-
-def test_str_ignore(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    #reading from in memory df
+    #ignore a, in memory dfs
     result = qp.diff(
         df_old,
         df_new,
-        uid='uid',
         ignore_cols='a',
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -1762,20 +802,15 @@ def test_str_ignore(tmpdir):
           all rows removed:
             'x'
           all dtypes changed:
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from files
+    #ignore a, files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols='a',
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'Sheet1':
@@ -1801,20 +836,15 @@ def test_str_ignore(tmpdir):
               'x'
             all dtypes changed:
               'b': 'float64' -> 'int64'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from file and in memory df
+    #ignore a, in memory df and file
     result = qp.diff(
         df_old,
         df_new_file,
-        uid='uid',
         ignore_cols='a',
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -1840,20 +870,15 @@ def test_str_ignore(tmpdir):
             'x'
           all dtypes changed:
             'b': 'object' -> 'int64'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from file and in memory df
+    #ignore a, file and in memory df
     result = qp.diff(
         df_old_file,
         df_new,
-        uid='uid',
         ignore_cols='a',
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -1879,25 +904,17 @@ def test_str_ignore(tmpdir):
             'x'
           all dtypes changed:
             'b': 'float64' -> 'object'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
 
 
-def test_str_ignore1(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    #reading from in memory df
+    #ignore b, in memory dfs
     result = qp.diff(
         df_old,
         df_new,
-        uid='uid',
         ignore_cols=['b'],
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -1922,20 +939,15 @@ def test_str_ignore1(tmpdir):
           all rows removed:
             'x'
           all dtypes changed:
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from files
+    #ignore b, files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols=['b'],
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'Sheet1':
@@ -1961,20 +973,15 @@ def test_str_ignore1(tmpdir):
               'x'
             all dtypes changed:
               'a': 'int64' -> 'float64'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from file and in memory df
+    #ignore b, in memory df and file
     result = qp.diff(
         df_old,
         df_new_file,
-        uid='uid',
         ignore_cols=['b'],
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -2000,20 +1007,16 @@ def test_str_ignore1(tmpdir):
             'x'
           all dtypes changed:
             'a': 'object' -> 'float64'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
 
-    #reading from file and in memory df
+    #ignore b, file and in memory df
     result = qp.diff(
         df_old_file,
         df_new,
-        uid='uid',
         ignore_cols=['b'],
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -2039,25 +1042,17 @@ def test_str_ignore1(tmpdir):
             'x'
           all dtypes changed:
             'a': 'int64' -> 'object'
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
 
 
-def test_str_ignore2(tmpdir):
-    df_old, df_new = qp.get_dfs()
-    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
-
-    #reading from in memory df
+    #ignore a and b, in memory dfs
     result = qp.diff(
         df_old,
         df_new,
-        uid='uid',
         ignore_cols=['a', 'b'],
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -2081,20 +1076,15 @@ def test_str_ignore2(tmpdir):
           all rows removed:
             'x'
           all dtypes changed:
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from files
+    #ignore a and b, files
     result = qp.diff(
         df_old_file,
         df_new_file,
-        uid='uid',
         ignore_cols=['a', 'b'],
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'Sheet1':
@@ -2118,20 +1108,15 @@ def test_str_ignore2(tmpdir):
             all rows removed:
               'x'
             all dtypes changed:
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from file and in memory df
+    #ignore a and b, in memory df and file
     result = qp.diff(
         df_old,
         df_new_file,
-        uid='uid',
         ignore_cols=['a', 'b'],
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -2155,20 +1140,15 @@ def test_str_ignore2(tmpdir):
           all rows removed:
             'x'
           all dtypes changed:
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
-
-    #reading from file and in memory df
+    #ignore a and b, file and in memory df
     result = qp.diff(
         df_old_file,
         df_new,
-        uid='uid',
         ignore_cols=['a', 'b'],
         ).str()
-
     expected = """
         Diffs summary:
           Diff of 'data':
@@ -2192,9 +1172,7 @@ def test_str_ignore2(tmpdir):
           all rows removed:
             'x'
           all dtypes changed:
-
         """
-
     assert process_str(result) == process_str(expected), f'\nRESULT\n{result}\nEXPECTED:\n{expected}'  # noqa E501
 
 
@@ -2206,48 +1184,40 @@ def test_csv(tmpdir):
     result_df = qp.diff(
         df_old,
         df_new,
-        uid='uid',
         ).show('new').data.astype('object')
     result_csv = qp.diff(
         df_old_csv,
         df_new_csv,
-        uid='uid',
         ).show('new').data.astype('object')
     assert result_df.equals(result_csv), f'failed test for csv mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
 
     result_df = qp.diff(
         df_old,
         df_new,
-        uid='uid',
         ).show('new+').data.astype('object')
     result_csv = qp.diff(
         df_old_csv,
         df_new_csv,
-        uid='uid',
         ).show('new+').data.astype('object')
     assert result_df.equals(result_csv), f'failed test for csv mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
 
     result_df = qp.diff(
         df_old,
         df_new,
-        uid='uid',
         ).show('new+').data.astype('object')
     result_csv = qp.diff(
         df_old_csv,
         df_new_csv,
-        uid='uid',
         ).show('new+').data.astype('object')
     assert result_df.equals(result_csv), f'failed test for csv mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
 
     result_df = qp.diff(
         df_old,
         df_new,
-        uid='uid',
         ).show('new+').data.astype('object')
     result_csv = qp.diff(
         df_old_csv,
         df_new_csv,
-        uid='uid',
         ).show('new+').data.astype('object')
     assert result_df.equals(result_csv), f'failed test for csv mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
 
@@ -2261,17 +1231,14 @@ def test_identical(tmpdir):
     diff1 = qp.diff(
         df_new,
         df_new,
-        uid='uid',
         )
     diff2 = qp.diff(
         df_new_xlsx,
         df_new_xlsx,
-        uid='uid',
         )
     diff3 = qp.diff(
         df_new_csv,
         df_new_csv,
-        uid='uid',
         )
 
     df1 = diff1.show('mix').data
@@ -2351,3 +1318,524 @@ def test_identical(tmpdir):
         assert details.at['data', 'all rows added'] == ''
         assert details.at['data', 'all rows removed'] == ''
         assert details.at['data', 'all dtypes changed'] == ''
+
+
+
+
+def test_ignore_cols(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_file, df_new_file = setup(df_old, df_new, tmpdir)
+
+
+    #mode new, ignore a
+    expected = get_expected_new()
+    expected.loc['y', 'diff'] = ''
+    expected.loc['z', 'diff'] = 'vals added: 1'
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('new').data
+    assert result.equals(expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode new, ignore b
+    expected = get_expected_new()
+    expected.loc['z', 'diff'] = 'vals removed: 1'
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['b'],
+        verbosity=0
+        ).show('new').data
+    assert result.equals(expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols=['b'],
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols=['b'],
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols=['b'],
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode new, ignore a and b
+    expected = get_expected_new()
+    expected.loc['y', 'diff'] = ''
+    expected.loc['z', 'diff'] = ''
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('new').data
+    assert result.equals(expected), f'failed test for mode: "new".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols=['a', 'b'],
+        verbosity=0
+        ).show('new').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode new+, ignore a
+    expected = get_expected_newplus()
+    expected.drop(columns=['a *old'], inplace=True)
+    expected.loc['y', 'diff'] = ''
+    expected.loc['z', 'diff'] = 'vals added: 1'
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['a'],
+        verbosity=0,
+        ).show('new+').data
+    assert result.equals(expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols=['a'],
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols=['a'],
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols=['a'],
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode new+, ignore b
+    expected = get_expected_newplus()
+    expected.drop(columns=['b *old'], inplace=True)
+    expected.loc['z', 'diff'] = 'vals removed: 1'
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols='b',
+        verbosity=0,
+        ).show('new+').data
+    assert result.equals(expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols='b',
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols='b',
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols='b',
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode new+, ignore a and b
+    expected = get_expected_newplus()
+    expected.drop(columns=['a *old', 'b *old'], inplace=True)
+    expected.loc['y', 'diff'] = ''
+    expected.loc['z', 'diff'] = ''
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['b', 'a'],
+        verbosity=0,
+        ).show('new+').data
+    assert result.equals(expected), f'failed test for mode: "new+".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols=['b', 'a'],
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols=['b', 'a'],
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols=['b', 'a'],
+        verbosity=0,
+        ).show('new+').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "new+".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode old, ignore a
+    expected = get_expected_old()
+    expected.loc['y', 'diff'] = ''
+    expected.loc['z', 'diff'] = 'vals added: 1'
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('old').data
+    assert result.equals(expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode old, ignore b
+    expected = get_expected_old()
+    expected.loc['z', 'diff'] = 'vals removed: 1'
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols='b',
+        verbosity=0,
+        ).show('old').data
+    assert result.equals(expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols='b',
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols='b',
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols='b',
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode old, ignore a and b
+    expected = get_expected_old()
+    expected.loc['y', 'diff'] = ''
+    expected.loc['z', 'diff'] = ''
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('old').data
+    assert result.equals(expected), f'failed test for mode: "old".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('old').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "old".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode mix, ignore a
+    expected = get_expected_mix()
+    expected.loc['y', 'diff'] = ''
+    expected.loc['z', 'diff'] = 'vals added: 1'
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('mix').data
+    assert result.equals(expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols='a',
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode mix, ignore b
+    expected = get_expected_mix()
+    expected.loc['z', 'diff'] = 'vals removed: 1'
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['b'],
+        verbosity=0,
+        ).show('mix').data
+    assert result.equals(expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols=['b'],
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols=['b'],
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols=['b'],
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+    #mode mix, ignore a and b
+    expected = get_expected_mix()
+    expected.loc['y', 'diff'] = ''
+    expected.loc['z', 'diff'] = ''
+
+    #in memory dfs
+    result = qp.diff(
+        df_old,
+        df_new,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('mix').data
+    assert result.equals(expected), f'failed test for mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #files
+    result = qp.diff(
+        df_old_file,
+        df_new_file,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #in memory df and file
+    result = qp.diff(
+        df_old,
+        df_new_file,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+    #file and in memory df
+    result = qp.diff(
+        df_old_file,
+        df_new,
+        ignore_cols=['a', 'b'],
+        verbosity=0,
+        ).show('mix').data.astype('object')
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
