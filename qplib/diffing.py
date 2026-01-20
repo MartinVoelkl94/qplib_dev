@@ -1193,6 +1193,16 @@ class Diffs:
 
             #diff sheets
             for diff in self.all:
+                if index:
+                    if diff.cols_retain is None:
+                        freeze_panes = 'C2'
+                    else:
+                        freeze_panes = 'D2'
+                else:
+                    if diff.cols_retain is None:
+                        freeze_panes = 'B2'
+                    else:
+                        freeze_panes = 'C2'
                 if mode == 'new+':
                     cols_hide = list(diff.cols_shared_mapping.values())
                 else:
@@ -1201,7 +1211,7 @@ class Diffs:
                     path,
                     sheet=diff.name,
                     hide_cols=cols_hide,
-                    freeze_panes='C2',
+                    freeze_panes=freeze_panes,
                     openpyxl_workbook=wb,
                     )
                 msg = f'debug: diff sheet formatted: "{diff.name}"'
