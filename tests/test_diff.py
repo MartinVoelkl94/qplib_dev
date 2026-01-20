@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import qplib as qp
-
+import openpyxl
 
 def process_str(string):
     return string.replace('\n', '').replace('\t', '').replace(' ', '')
@@ -1222,6 +1222,181 @@ def test_csv(tmpdir):
     assert result_df.equals(result_csv), f'failed test for csv mode: "mix".\nold df:\n{df_old}\nnew df:{df_new}\nEXPECTED:\n{result_df}\nRESULT:\n{result_csv}'  # noqa E501
 
 
+def test_excel(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old_unique_cols = pd.DataFrame({
+        'uid': [1],
+        'a': [10],
+        })
+    df_new_unique_cols = pd.DataFrame({
+        'uid': [1],
+        'b': [10],
+        })
+    df_old_unique_rows = pd.DataFrame({
+        'uid': [1],
+        'a': [10],
+        })
+    df_new_unique_rows = pd.DataFrame({
+        'uid': [2],
+        'a': [20],
+        })
+    df_empty = pd.DataFrame()
+
+    path_df_new = f'{tmpdir}/new.xlsx'
+    with pd.ExcelWriter(path_df_new) as writer:
+        df_new.to_excel(
+            writer,
+            sheet_name='df',
+            index=False,
+            index_label='uid',
+            )
+        df_new_unique_cols.to_excel(
+            writer,
+            sheet_name='unique_cols',
+            index=False,
+            index_label='uid',
+            )
+        df_new_unique_rows.to_excel(
+            writer,
+            sheet_name='unique_rows',
+            index=False,
+            index_label='uid',
+            )
+        df_empty.to_excel(
+            writer,
+            sheet_name='empty',
+            index=False,
+            index_label='uid',
+            )
+        df_empty.to_excel(
+            writer,
+            sheet_name='empty_new',
+            index=False,
+            index_label='uid',
+            )
+
+    path_df_old = f'{tmpdir}/old.xlsx'
+    with pd.ExcelWriter(path_df_old) as writer:
+        df_old.to_excel(
+            writer,
+            sheet_name='df',
+            index=False,
+            index_label='uid',
+            )
+        df_old_unique_cols.to_excel(
+            writer,
+            sheet_name='unique_cols',
+            index=False,
+            index_label='uid',
+            )
+        df_old_unique_rows.to_excel(
+            writer,
+            sheet_name='unique_rows',
+            index=False,
+            index_label='uid',
+            )
+        df_empty.to_excel(
+            writer,
+            sheet_name='empty',
+            index=False,
+            index_label='uid',
+            )
+        df_empty.to_excel(
+            writer,
+            sheet_name='empty_old',
+            index=False,
+            index_label='uid',
+            )
+
+    diff = qp.diff(
+        path_df_old,
+        path_df_new,
+        uid='uid',
+        verbosity=0,
+        )
+    diff.to_excel(f'{tmpdir}/diff.xlsx')
+
+    s = pd.read_excel(
+        f'{tmpdir}/diff.xlsx',
+        sheet_name='summary',
+        index_col=0,
+        ).fillna('')
+
+    col_val_mapping_df = {
+        'in both datasets': 'yes',
+        'cols shared': 2,
+        'cols added': 1,
+        'cols removed': 1,
+        'rows shared': 2,
+        'rows added': 1,
+        'rows removed': 1,
+        'dtypes changed': 2,
+        }
+    for col, val in col_val_mapping_df.items():
+        expected = val
+        result = s.loc['df', col]
+        assert result == expected, f'For "df" and "{col}": RESULT: "{result}" EXPECTED: "{expected}"'  # noqa E501
+
+
+    col_val_mapping_unique_cols = {
+        'in both datasets': 'yes',
+        'cols shared': '',
+        'cols added': 1,
+        'cols removed': 1,
+        'rows shared': 1,
+        'rows added': '',
+        'rows removed': '',
+        'dtypes changed': '',
+        }
+    for col, val in col_val_mapping_unique_cols.items():
+        expected = val
+        result = s.loc['unique_cols', col]
+        assert result == expected, f'For "unique_cols" and "{col}": RESULT: "{result}" EXPECTED: "{expected}"'  # noqa E501
+
+
+    col_val_mapping_unique_rows = {
+        'in both datasets': 'yes',
+        'cols shared': 1,
+        'cols added': '',
+        'cols removed': '',
+        'rows shared': '',
+        'rows added': 1,
+        'rows removed': 1,
+        'dtypes changed': '',
+        }
+    for col, val in col_val_mapping_unique_rows.items():
+        expected = val
+        result = s.loc['unique_rows', col]
+        assert result == expected, f'For "unique_rows" and "{col}": RESULT: "{result}" EXPECTED: "{expected}"'  # noqa E501
+
+
+    col_val_mapping_unique_cols = {
+        'in both datasets': 'yes',
+        'cols shared': '',
+        'cols added': 1,
+        'cols removed': 1,
+        'rows shared': 1,
+        'rows added': '',
+        'rows removed': '',
+        'dtypes changed': '',
+        }
+    for col, val in col_val_mapping_unique_cols.items():
+        expected = val
+        result = s.loc['unique_cols', col]
+        assert result == expected, f'For "unique_cols" and "{col}": RESULT: "{result}" EXPECTED: "{expected}"'  # noqa E501
+
+
+    assert s.loc['empty', 'in both datasets'] == 'yes'
+    assert s.loc['empty_new', 'in both datasets'] == 'only in new'
+    assert s.loc['empty_old', 'in both datasets'] == 'only in old'
+    for col in s.columns:
+        if col in ['uid', 'in both datasets']:
+            continue
+        assert s.loc['empty', col] == ''
+        assert s.loc['empty_new', col] == ''
+        assert s.loc['empty_old', col] == ''
+
+
 
 def test_identical(tmpdir):
     df_old, df_new = qp.get_dfs()
@@ -2368,4 +2543,70 @@ def test_remove_cols(tmpdir):
         remove_cols=['a', 'b'],
         verbosity=0,
         ).show('mix').data.astype('object')
-    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'
+    assert result.equals(expected), f'failed test for mode: "mix".\nEXPECTED:\n{expected}\nRESULT:\n{result}'  # noqa E501
+
+
+
+
+def test_diff_of_diffs(tmpdir):
+    df_old, df_new = qp.get_dfs()
+    df_old.insert(1, 'notes', ['note1', 'note2', 'note3'])
+    df_new.insert(1, 'notes', ['note3', 'note4', 'note5'])
+    df_new1 = df_new.copy()
+    df_new1.loc['y', 'a'] = 9
+
+    path_df_old = f'{tmpdir}/df_old.xlsx'
+    path_df_new = f'{tmpdir}/df_new.xlsx'
+    path_df_new1 = f'{tmpdir}/df_new1.xlsx'
+    path_diff1 = f'{tmpdir}/diff1.xlsx'
+    path_diff2 = f'{tmpdir}/diff2.xlsx'
+    df_old.to_excel(path_df_old, index=False)
+    df_new.to_excel(path_df_new, index=False)
+    df_new1.to_excel(path_df_new1, index=False)
+
+    qp.diff(
+        path_df_old,
+        path_df_new,
+        uid='uid',
+        ignore_cols='notes',
+        ).to_excel(path_diff1, index=False)
+
+    qp.diff(
+        path_diff1,
+        path_df_new1,
+        uid='uid',
+        remove_cols='diff',
+        remove_cols_by_suffix=' *old',
+        retain_cols='notes',
+        remove_sheets=['info', 'summary', 'details'],
+        ).to_excel(path_diff2)
+
+    sheets = openpyxl.load_workbook(path_diff2, read_only=True).sheetnames
+    info = pd.read_excel(path_diff2, sheet_name='info', index_col=0)
+    details = pd.read_excel(path_diff2, sheet_name='details', index_col=0).fillna('')
+
+    assert sheets == ['info', 'summary', 'details', 'Sheet1']
+    assert info.loc['old dataset', 'name'].split('/')[-1] == 'diff1.xlsx'
+    assert info.loc['new dataset', 'name'].split('/')[-1] == 'df_new1.xlsx'
+
+    col_val_mapping_details = {
+        'in both datasets': 'yes',
+        'cols shared': 3,
+        'cols added': '',
+        'cols removed': '',
+        'rows shared': 3,
+        'rows added': '',
+        'rows removed': '',
+        'dtypes changed': '',
+        'all cols shared': "'a',\n'b',\n'd'",
+        'all cols added': '',
+        'all cols removed': '',
+        'all rows shared': "'y',\n'x2',\n'z'",
+        'all rows added': '',
+        'all rows removed': '',
+        'all dtypes changed': '',
+        }
+    for col, val in col_val_mapping_details.items():
+        result = details.loc['Sheet1', col]
+        expected = val
+        assert result == expected, f'value in details: RESULT: {result}, EXPECTED: {expected}'  # noqa E501
