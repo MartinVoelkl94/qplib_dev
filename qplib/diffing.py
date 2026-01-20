@@ -196,6 +196,7 @@ class Diff:
         cols_retain = self.old.columns.intersection(cols_retain)
         self.cols_retain = self.old[cols_retain].copy()
         self.old = self.old.drop(columns=cols_retain)
+        self.new = self.new.drop(columns=cols_retain)
         return self
 
 
@@ -271,8 +272,6 @@ class Diff:
         details.rows_removed_all = rows_removed
         details.dtypes_changed_all = dtypes_changed
 
-        msg = 'debug: calculated (detailed) summary of differences'
-        log(msg, 'qp.Diff', self.verbosity)
         return details
 
 
@@ -422,9 +421,7 @@ class Diff:
             df_diff_style.loc[rows_added, :] = f'background-color: {GREEN}'
 
             if self.cols_retain is not None:
-                idx_shared = df_diff.index.intersection(self.cols_retain.index)
-                df_retain = self.cols_retain.loc[idx_shared, :]
-                df_diff = pd.concat([df_retain, df_diff], axis=1)
+                df_diff = _add_cols_retain(df_diff, self.cols_retain)
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
             df_diff.loc[rows_added, col_diff] += 'row added'
@@ -442,9 +439,7 @@ class Diff:
             df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
 
             if self.cols_retain is not None:
-                idx_shared = df_diff.index.intersection(self.cols_retain.index)
-                df_retain = self.cols_retain.loc[idx_shared, :]
-                df_diff = pd.concat([df_retain, df_diff], axis=1)
+                df_diff = _add_cols_retain(df_diff, self.cols_retain)
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
             df_diff.loc[rows_removed, col_diff] += 'row removed'
@@ -469,9 +464,7 @@ class Diff:
             df_diff_style.loc[rows_removed, :] = f'background-color: {RED}'
 
             if self.cols_retain is not None:
-                idx_shared = df_diff.index.intersection(self.cols_retain.index)
-                df_retain = self.cols_retain.loc[idx_shared, :]
-                df_diff = pd.concat([df_retain, df_diff], axis=1)
+                df_diff = _add_cols_retain(df_diff, self.cols_retain)
             col_diff = ensure_unique_string('diff', df_diff.columns)
             df_diff.insert(0, col_diff, '')
             df_diff.loc[rows_added, col_diff] += 'row added'
@@ -1262,6 +1255,18 @@ def _to_str(obj, separator=',', linebreak='\n'):
         string = str(obj)
 
     return string
+
+
+def _add_cols_retain(df, cols_retain):
+    idx_shared = df.index.intersection(cols_retain.index)
+    df_retain = pd.DataFrame(
+        '',
+        index=df.index,
+        columns=cols_retain.columns,
+        )
+    df_retain.loc[idx_shared, :] = cols_retain.loc[idx_shared, :]
+    df_new = pd.concat([df_retain, df], axis=1)
+    return df_new
 
 
 def diff(
