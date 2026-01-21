@@ -7,9 +7,10 @@ interactive_demo.ipynb
 pyproject.toml
 readme.md
 .github/workflows/run_tests.yml
-dist/qplib-0.8.0-py3-none-any.whl
-dist/qplib-0.8.0.tar.gz
+dist/qplib-0.8.1-py3-none-any.whl
+dist/qplib-0.8.1.tar.gz
 qplib/__init__.py
+qplib/diffing.py
 qplib/excel.py
 qplib/pandas.py
 qplib/qlang.py
