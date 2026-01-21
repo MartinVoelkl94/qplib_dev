@@ -22,7 +22,7 @@ from .util import (
 class Diff:
     """
     Stores differences between 2 dataframes.
-    For detailed documentation see qp.diff() function.
+    For more detailed documentation see diff() or Diffs.
     """
 
     def __init__(
@@ -111,6 +111,9 @@ class Diff:
 
 
     def _find_uid(self):
+        """
+        Used if no suitable uid column was provided.
+        """
         uids_potential = self.new.columns.intersection(self.old.columns)
         uids_by_uniqueness = {}
         for uid in uids_potential:
@@ -136,7 +139,15 @@ class Diff:
         return uid
 
 
-    def rename_cols(self, mapping):
+    def rename_cols(
+            self,
+            mapping,
+            in_old=True,
+            in_new=True,
+            ):
+        """
+        Rename columns in one or both datasets before diffing.
+        """
         if mapping is None:
             return self
         if not isinstance(mapping, dict):
@@ -146,14 +157,19 @@ class Diff:
                 )
             log(msg, 'qp.Diff', self.verbosity)
             return self
-        self.old = self.old.rename(columns=mapping)
-        self.new = self.new.rename(columns=mapping)
+        if in_old:
+            self.old = self.old.rename(columns=mapping)
+        if in_new:
+            self.new = self.new.rename(columns=mapping)
         msg = f'trace: renamed columns for {self.name!r}'
         log(msg, 'qp.Diff', self.verbosity)
         return self
 
 
     def ignore_cols(self, cols):
+        """
+        Ignore columns for diffing, but keep them in both datasets.
+        """
         if cols is None:
             return self
         cols_ignore = (
@@ -166,37 +182,65 @@ class Diff:
         return self
 
 
-    def remove_cols(self, cols):
+    def remove_cols(
+            self,
+            cols,
+            in_old=True,
+            in_new=True,
+            ):
+        """
+        Remove columns from one or both datasets before diffing.
+        """
         if cols is None:
             return self
         else:
             cols_remove = _arg_to_list(cols)
-        cols_remove_old = self.old.columns.intersection(cols_remove)
-        cols_remove_new = self.new.columns.intersection(cols_remove)
-        self.old = self.old.drop(columns=cols_remove_old)
-        self.new = self.new.drop(columns=cols_remove_new)
+        if in_old:
+            cols_remove_old = self.old.columns.intersection(cols_remove)
+            self.old = self.old.drop(columns=cols_remove_old)
+        if in_new:
+            cols_remove_new = self.new.columns.intersection(cols_remove)
+            self.new = self.new.drop(columns=cols_remove_new)
         return self
 
 
-    def remove_cols_by_suffix(self, suffix):
+    def remove_cols_by_suffix(
+            self,
+            suffix,
+            in_old=True,
+            in_new=True,
+            ):
+        """
+        Remove columns ending with a specific suffix
+        from one or both datasets before diffing.
+        """
         if suffix is None:
             return self
-        cols_remove_old = [col for col in self.old.columns if col.endswith(suffix)]
-        cols_remove_new = [col for col in self.new.columns if col.endswith(suffix)]
-        self.old = self.old.drop(columns=cols_remove_old)
-        self.new = self.new.drop(columns=cols_remove_new)
+        if in_old:
+            cols_remove_old = [col for col in self.old.columns if col.endswith(suffix)]
+            self.old = self.old.drop(columns=cols_remove_old)
+        if in_new:
+            cols_remove_new = [col for col in self.new.columns if col.endswith(suffix)]
+            self.new = self.new.drop(columns=cols_remove_new)
         return self
 
 
     def retain_cols(self, cols):
+        """
+        Remove columns from both datasets before diffing,
+        then readd them to the diff result later.
+        If both datasets contain the same column(s),
+        those from the old dataset are readded.
+        """
         if cols is None:
             self.cols_retain = None
             return self
         cols_retain = _arg_to_list(cols)
-        cols_retain = self.old.columns.intersection(cols_retain)
-        self.cols_retain = self.old[cols_retain].copy()
-        self.old = self.old.drop(columns=cols_retain)
-        self.new = self.new.drop(columns=cols_retain)
+        cols_retain_old = self.old.columns.intersection(cols_retain)
+        cols_retain_new = self.new.columns.intersection(cols_retain)
+        self.cols_retain = self.old[cols_retain_old].copy()
+        self.old = self.old.drop(columns=cols_retain_old)
+        self.new = self.new.drop(columns=cols_retain_new)
         return self
 
 
@@ -275,7 +319,7 @@ class Diff:
         return details
 
 
-    def summary(self, head=5):
+    def summary(self):
         """
         Summary of differences between datasets.
         """
@@ -296,27 +340,7 @@ class Diff:
             ):
         """
         Generate a styled DataFrame showing differences between datasets.
-        Differences are highlighted with color-coded styles,
-        supporting multiple visualization modes.
-
-        Parameters
-        ----------
-
-        mode : str, default 'mix'
-            Display mode for differences:
-            - 'new': Show new DataFrame with added and changed elements highlighted
-            - 'new+': Show new DataFrame with old values in additional (hidden) columns
-            - 'old': Show old DataFrame with removed elements highlighted
-            - 'mix': Combine both DataFrames showing all changes
-
-        suffix_old : str, default ' *old'
-            Suffix for columns showing old values (used in 'new+' mode)
-
-
-        Returns
-        -------
-        pandas.io.formats.style.Styler
-            Styled DataFrame with color-coded differences
+        For more detailed documentation see diff() or Diffs.
         """
 
         old = self.old
@@ -570,6 +594,9 @@ class Diff:
 
 
     def str(self):
+        """
+        String summary of differences between datasets.
+        """
         string = f'Diff of {self.name!r}:\n'
         if self.old.empty and self.new.empty:
             string += '  both datasets are empty\n'
@@ -635,7 +662,7 @@ class Diff:
 class Diffs:
     """
     Stores differences between (multiple) datasets.
-    Used as return type of the diff() function.
+    For more detailed documentation see diff().
     """
 
     def __init__(
@@ -837,75 +864,10 @@ class Diffs:
         return diffs
 
 
-    def rename_cols(self, mappings):
-        for sheet, mapping in mappings.items():
-            diff = self[sheet]
-            if diff is not None:
-                diff.rename_cols(mapping)
-        return self
-
-
-    def ignore_cols(self, cols):
-        if isinstance(cols, dict):
-            for sheet, cols_sheet in cols.items():
-                diff = self[sheet]
-                if diff is not None:
-                    diff.ignore_cols(cols_sheet)
-        else:
-            for diff in self.all:
-                diff.ignore_cols(cols)
-        return self
-
-
-    def remove_cols(self, cols):
-        if isinstance(cols, dict):
-            for sheet, cols_sheet in cols.items():
-                diff = self[sheet]
-                if diff is not None:
-                    diff.remove_cols(cols_sheet)
-        else:
-            for diff in self.all:
-                diff.remove_cols(cols)
-        return self
-
-
-    def remove_cols_by_suffix(self, cols):
-        if isinstance(cols, dict):
-            for sheet, cols_sheet in cols.items():
-                diff = self[sheet]
-                if diff is not None:
-                    diff.remove_cols_by_suffix(cols_sheet)
-        else:
-            for diff in self.all:
-                diff.remove_cols_by_suffix(cols)
-        return self
-
-
-    def retain_cols(self, cols):
-        if isinstance(cols, dict):
-            for sheet, cols_sheet in cols.items():
-                diff = self[sheet]
-                if diff is not None:
-                    diff.retain_cols(cols_sheet)
-        else:
-            for diff in self.all:
-                diff.retain_cols(cols)
-        return self
-
-
-    def set_uid(self, uids=None):
-        if isinstance(uids, dict):
-            for sheet, uid in uids.items():
-                diff = self[sheet]
-                if diff is not None:
-                    diff.set_uid(uid)
-        else:
-            for diff in self.all:
-                diff.set_uid(uids)
-        return self
-
-
     def __getitem__(self, key):
+        """
+        Get a specific Diff by sheet name or index.
+        """
         if isinstance(key, int):
             item = self.all[key]
         else:
@@ -1035,10 +997,10 @@ class Diffs:
 
         mode : str, default 'mix'
             Display mode for differences:
-            - 'new': Show new DataFrame with added and changed elements highlighted
-            - 'new+': Show new DataFrame with old values in additional (hidden) columns
-            - 'old': Show old DataFrame with removed elements highlighted
-            - 'mix': Combine both DataFrames showing all changes
+            * 'new': Show new DataFrame with added and changed elements highlighted
+            * 'new+': Show new DataFrame with old values in additional (hidden) columns
+            * 'old': Show old DataFrame with removed elements highlighted
+            * 'mix': Combine both DataFrames showing all changes
 
         sheet : str | int, default 0
             Sheet name or index to show differences for (if there are multiple sheets)
@@ -1293,29 +1255,26 @@ def diff(
         ) -> Diffs:
     """
     Calculates differences between dataframes,
-    csv or excel files and returns a Diff object.
+    csv or excel files and returns a Diffs object.
 
 
     Parameters
     ----------
 
-    old, new : pd.DataFrame of filepath to CSV or Excel file
+    old, new : pd.DataFrame or filepath to CSV or Excel file
 
-    uid : which column to use as a unique identifier to specify
-        which rows correspond to each other in old and new data.
-        If None, the function will try to find a suitable column automatically.
-        If no suitable column is found, the index will be used.
-        If False, the index will be used.
-        when comparing multiple sheets from excel files, a dictionary
+    uid : identifies corresponding rows in old and new data.
+        * "COLNAME": use the specified column as unique identifier.
+        * None: try to find a suitable column automatically.
+        * False: use the index as unique identifier.
+        * dict: when comparing multiple sheets from excel files, a dictionary
         with sheet names as keys and uid column names as values can be provided.
-
     rename_cols : dictionary to rename columns before comparison.
-        Note that renaming is done before uid and columns to ignore
-        are determined, meaning that those must use the new column names.
-        This can also be used to fix situations where corrresponding columns
-        in old and new data have different names (see examples)
-
-    ignore_cols : column name or list of column names to ignore for comparison
+    ignore_cols : column(s) to ignore for comparison.
+    remove_cols : column(s) to remove before comparison.
+    remove_cols_by_suffix : remove columns that end with the specified suffix.
+    retain_cols : column(s) to remove from both datasets, then readd to the result.
+    remove_sheets : sheet name(s) to remove before comparison (only for excel files).
 
 
     Examples
@@ -1325,25 +1284,52 @@ def diff(
 
     >>> import qplib as qp
     >>> diffs = qp.diff('old.xlsx', 'new.xlsx')
-    >>> diffs.summary()  #returns df with summary stats
-    >>> diffs.details()  #returns df with more detailed stats
-    >>> diffs.show()  #returns df.style with highlighted differences
+    >>> diffs.info()  #df of compared datasets and their sizes
+    >>> diffs.summary()  #df with summary stats
+    >>> diffs.details()  #df with more detailed stats
+    >>> diffs.show()   #df.style with highlighted differences
     >>> diffs.str()  #string version of summary stats
     >>> diffs.print()  #prints the string version
     >>> diffs.to_excel('diffs.xlsx')  #writes summary and dfs to file
 
+    access individual sheet diffs:
+    >>> diff_sheet1 = diffs[0]  #get diff for first sheet
+    >>> diff_sheet1 = diffs['Sheet1']  #get by name
+    >>> diff_sheet1.show()
+    >>> diff_sheet1.rename_cols({'old_name': 'new_name'})
+    """
+    diffs = Diffs(
+        old=old,
+        new=new,
+        uid=uid,
+        rename_cols=rename_cols,
+        ignore_cols=ignore_cols,
+        remove_cols=remove_cols,
+        remove_cols_by_suffix=remove_cols_by_suffix,
+        retain_cols=retain_cols,
+        remove_sheets=remove_sheets,
+        verbosity=verbosity,
+        )
+    return diffs
 
-    align inconsistently named columns before comparison:
 
-    >>> corrections = {
-            'year of birth': 'yob',
-            'birthyear': 'yob',
-            },
-    >>> qp.diff(
-            'old.xlsx',
-            'new.xlsx',
-            rename=corrections,
-            )
+def rediff(
+        old: pd.DataFrame | str,
+        new: pd.DataFrame | str,
+        uid=None,
+        rename_cols=None,
+        ignore_cols=None,
+        remove_cols=('diff', 'uid.1'),
+        remove_cols_by_suffix=' *old',
+        retain_cols='notes',
+        remove_sheets=('info', 'summary', 'details'),
+        verbosity=3,
+        ) -> Diffs:
+    """
+    Same as diff(), but using defaults appropriate for
+    when the old dataset is already a diff output.
+    Can be imagined as diffing the data while managing
+    metadata appropriately.
     """
     diffs = Diffs(
         old=old,

@@ -1,5 +1,5 @@
 from .qlang import query
-from .diffing import diff
+from .diffing import diff, rediff
 from .excel import hide, format_excel
 
 from .pandas import (
@@ -49,6 +49,7 @@ from .types import (
 __all__ = (
     'query',
     'diff',
+    'rediff',
 
     'hide',
     'format_excel',
