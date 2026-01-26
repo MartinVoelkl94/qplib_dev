@@ -30,11 +30,11 @@ class Diff:
             old: pd.DataFrame,
             new: pd.DataFrame,
             uid=None,
-            rename_cols=None,
             ignore_cols=None,
+            rename_cols=None,
+            retain_cols=None,
             remove_cols=None,
             remove_cols_by_suffix=None,
-            retain_cols=None,
             name='data',
             verbosity=3,
             ):
@@ -47,19 +47,19 @@ class Diff:
         #this col will be used as unique identifier for rows
         self.set_uid(uid)
 
-        #these cols are renamed in both datasets
-        self.rename_cols(rename_cols)
-
         #these cols stay in the datasets, but are ignored for diffing
         self.ignore_cols(ignore_cols)
 
-        #these cols are completely removed from the datasets
-        self.remove_cols(remove_cols)
-        self.remove_cols_by_suffix(remove_cols_by_suffix)
+        #these cols are renamed in both datasets
+        self.rename_cols(rename_cols)
 
         #these cols are removed from the old dataset,
         #and then readded to the diff result later
         self.retain_cols(retain_cols)
+
+        #these cols are completely removed from the datasets
+        self.remove_cols(remove_cols)
+        self.remove_cols_by_suffix(remove_cols_by_suffix)
 
         if not self.old.index.name:
             self.old.index.name = 'index'
@@ -139,6 +139,22 @@ class Diff:
         return uid
 
 
+    def ignore_cols(self, cols):
+        """
+        Ignore columns for diffing, but keep them in both datasets.
+        """
+        if cols is None:
+            return self
+        cols_ignore = (
+            self.old
+            .columns
+            .union(self.new.columns)
+            .intersection(_arg_to_list(cols))
+            )
+        self.cols_ignore = self.cols_ignore.append(cols_ignore)
+        return self
+
+
     def rename_cols(
             self,
             mapping,
@@ -166,19 +182,22 @@ class Diff:
         return self
 
 
-    def ignore_cols(self, cols):
+    def retain_cols(self, cols):
         """
-        Ignore columns for diffing, but keep them in both datasets.
+        Remove columns from both datasets before diffing,
+        then readd them to the diff result later.
+        If both datasets contain the same column(s),
+        those from the old dataset are readded.
         """
         if cols is None:
+            self.cols_retain = None
             return self
-        cols_ignore = (
-            self.old
-            .columns
-            .union(self.new.columns)
-            .intersection(_arg_to_list(cols))
-            )
-        self.cols_ignore = self.cols_ignore.append(cols_ignore)
+        cols_retain = _arg_to_list(cols)
+        cols_retain_old = self.old.columns.intersection(cols_retain)
+        cols_retain_new = self.new.columns.intersection(cols_retain)
+        self.cols_retain = self.old[cols_retain_old].copy()
+        self.old = self.old.drop(columns=cols_retain_old)
+        self.new = self.new.drop(columns=cols_retain_new)
         return self
 
 
@@ -222,25 +241,6 @@ class Diff:
         if in_new:
             cols_remove_new = [col for col in self.new.columns if col.endswith(suffix)]
             self.new = self.new.drop(columns=cols_remove_new)
-        return self
-
-
-    def retain_cols(self, cols):
-        """
-        Remove columns from both datasets before diffing,
-        then readd them to the diff result later.
-        If both datasets contain the same column(s),
-        those from the old dataset are readded.
-        """
-        if cols is None:
-            self.cols_retain = None
-            return self
-        cols_retain = _arg_to_list(cols)
-        cols_retain_old = self.old.columns.intersection(cols_retain)
-        cols_retain_new = self.new.columns.intersection(cols_retain)
-        self.cols_retain = self.old[cols_retain_old].copy()
-        self.old = self.old.drop(columns=cols_retain_old)
-        self.new = self.new.drop(columns=cols_retain_new)
         return self
 
 
@@ -670,11 +670,11 @@ class Diffs:
             old: pd.DataFrame | str,
             new: pd.DataFrame | str,
             uid=None,
-            rename_cols=None,
             ignore_cols=None,
+            rename_cols=None,
+            retain_cols=None,
             remove_cols=None,
             remove_cols_by_suffix=None,
-            retain_cols=None,
             remove_sheets=None,
             verbosity=3,
             ):
@@ -683,11 +683,11 @@ class Diffs:
             old=old,
             new=new,
             uid=uid,
-            rename_cols=rename_cols,
             ignore_cols=ignore_cols,
+            rename_cols=rename_cols,
+            retain_cols=retain_cols,
             remove_cols=remove_cols,
             remove_cols_by_suffix=remove_cols_by_suffix,
-            retain_cols=retain_cols,
             remove_sheets=remove_sheets,
             )
         self.cols_summary = [
@@ -708,11 +708,11 @@ class Diffs:
             old,
             new,
             uid=None,
-            rename_cols=None,
             ignore_cols=None,
+            rename_cols=None,
+            retain_cols=None,
             remove_cols=None,
             remove_cols_by_suffix=None,
-            retain_cols=None,
             remove_sheets=None,
             ):
         """
@@ -737,11 +737,11 @@ class Diffs:
                 old=old,
                 new=new,
                 uid=uid,
-                rename_cols=rename_cols,
                 ignore_cols=ignore_cols,
+                rename_cols=rename_cols,
+                retain_cols=retain_cols,
                 remove_cols=remove_cols,
                 remove_cols_by_suffix=remove_cols_by_suffix,
-                retain_cols=retain_cols,
                 remove_sheets=remove_sheets,
                 )
             return diffs
@@ -785,11 +785,11 @@ class Diffs:
                 old=df_old,
                 new=df_new,
                 uid=uid,
-                rename_cols=rename_cols,
                 ignore_cols=ignore_cols,
+                rename_cols=rename_cols,
+                retain_cols=retain_cols,
                 remove_cols=remove_cols,
                 remove_cols_by_suffix=remove_cols_by_suffix,
-                retain_cols=retain_cols,
                 verbosity=self.verbosity,
                 )
             diff.sheet = ''
@@ -803,11 +803,11 @@ class Diffs:
             old,
             new,
             uid=None,
-            rename_cols=None,
             ignore_cols=None,
+            rename_cols=None,
+            retain_cols=None,
             remove_cols=None,
             remove_cols_by_suffix=None,
-            retain_cols=None,
             remove_sheets=None,
             ):
         """
@@ -847,11 +847,11 @@ class Diffs:
                 old=df_old,
                 new=df_new,
                 uid=uid_sheet,
-                rename_cols=rename_cols,
                 ignore_cols=ignore_cols,
+                rename_cols=rename_cols,
+                retain_cols=retain_cols,
                 remove_cols=remove_cols,
                 remove_cols_by_suffix=remove_cols_by_suffix,
-                retain_cols=retain_cols,
                 name=sheet,
                 verbosity=self.verbosity,
                 )
@@ -1245,11 +1245,11 @@ def diff(
         old: pd.DataFrame | str,
         new: pd.DataFrame | str,
         uid=None,
-        rename_cols=None,
         ignore_cols=None,
+        rename_cols=None,
+        retain_cols=None,
         remove_cols=None,
         remove_cols_by_suffix=None,
-        retain_cols=None,
         remove_sheets=None,
         verbosity=3,
         ) -> Diffs:
@@ -1269,11 +1269,11 @@ def diff(
         * False: use the index as unique identifier.
         * dict: when comparing multiple sheets from excel files, a dictionary
         with sheet names as keys and uid column names as values can be provided.
-    rename_cols : dictionary to rename columns before comparison.
     ignore_cols : column(s) to ignore for comparison.
+    rename_cols : dictionary to rename columns before comparison.
+    retain_cols : column(s) to remove from both datasets, then readd to the result.
     remove_cols : column(s) to remove before comparison.
     remove_cols_by_suffix : remove columns that end with the specified suffix.
-    retain_cols : column(s) to remove from both datasets, then readd to the result.
     remove_sheets : sheet name(s) to remove before comparison (only for excel files).
 
 
@@ -1302,11 +1302,11 @@ def diff(
         old=old,
         new=new,
         uid=uid,
-        rename_cols=rename_cols,
         ignore_cols=ignore_cols,
+        rename_cols=rename_cols,
+        retain_cols=retain_cols,
         remove_cols=remove_cols,
         remove_cols_by_suffix=remove_cols_by_suffix,
-        retain_cols=retain_cols,
         remove_sheets=remove_sheets,
         verbosity=verbosity,
         )
@@ -1317,11 +1317,11 @@ def rediff(
         old: pd.DataFrame | str,
         new: pd.DataFrame | str,
         uid=None,
-        rename_cols=None,
         ignore_cols=None,
+        rename_cols=None,
+        retain_cols='notes',
         remove_cols=('diff', 'uid.1'),
         remove_cols_by_suffix=' *old',
-        retain_cols='notes',
         remove_sheets=('info', 'summary', 'details'),
         verbosity=3,
         ) -> Diffs:
@@ -1335,11 +1335,11 @@ def rediff(
         old=old,
         new=new,
         uid=uid,
-        rename_cols=rename_cols,
         ignore_cols=ignore_cols,
+        rename_cols=rename_cols,
+        retain_cols=retain_cols,
         remove_cols=remove_cols,
         remove_cols_by_suffix=remove_cols_by_suffix,
-        retain_cols=retain_cols,
         remove_sheets=remove_sheets,
         verbosity=verbosity,
         )
