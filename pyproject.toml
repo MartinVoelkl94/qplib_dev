@@ -21,7 +21,7 @@ classifiers = [
 
 keywords = ["pandas", "query", "utility"]
 dependencies = [
-    "pandas",
+    "pandas<=2.3.3",
     "numpy",
     "IPython",
     "ipywidgets",
